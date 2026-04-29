@@ -1,31 +1,17 @@
 """
 Orquesta el onboarding completo: extracción de CV + entrevista guiada.
-Genera PERFIL.md en la raíz del proyecto sin tocar la base de datos.
+Genera PERFIL.md y guarda el perfil en candidate_profile (DB).
 """
 
 import logging
 import sys
 from pathlib import Path
 
+from src.db.models import normalize_skills_for_db, save_candidate_profile
 from src.onboarding.cv_extractor import extract_cv_data
 from src.onboarding.interviewer import run_interview
 
 log = logging.getLogger(__name__)
-
-
-def normalize_skills(skills: list) -> list[str]:
-    """Normaliza la lista de skills técnicas a strings legibles."""
-    normalized: list[str] = []
-    for item in skills:
-        if isinstance(item, str):
-            normalized.append(item)
-        elif isinstance(item, dict):
-            for skill_name, level in item.items():
-                if level is None:
-                    normalized.append(skill_name)
-                else:
-                    normalized.append(f"{skill_name}: {level}")
-    return normalized
 
 
 def generate_perfil_md(profile: dict) -> str:
@@ -47,7 +33,7 @@ def generate_perfil_md(profile: dict) -> str:
     # Skills técnicas
     lines += ["## Skills técnicas", ""]
     raw_skills = profile.get("skills_technical", [])
-    for skill in normalize_skills(raw_skills):
+    for skill in normalize_skills_for_db(raw_skills):
         lines += [f"- {skill}"]
     lines += [""]
 
@@ -141,7 +127,10 @@ def main() -> None:
     output_path.write_text(md_content, encoding="utf-8")
     log.info("PERFIL.md generado en %s", output_path.resolve())
 
-    print("\n=== PERFIL.md generado ===\n")
+    log.info("Guardando perfil en base de datos...")
+    save_candidate_profile(profile, version="1.0")
+
+    print("\n=== PERFIL.md generado y guardado en DB ===\n")
     print("Revisa el archivo y edítalo manualmente si es necesario.")
     print("El sistema lee PERFIL.md en cada sesión de evaluación.\n")
 

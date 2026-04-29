@@ -10,9 +10,9 @@
 ## FASE 2 — Onboarding
   [x] cv_extractor.py (qwen2.5 → datos estructurados)
   [x] interviewer.py (gemma4 → preguntas secuenciales)
-  [ ] Generación de PERFIL.md
-  [ ] Guardado en candidate_profile (DB)
-  [ ] run.py orquesta el onboarding completo
+  [x] Generación de PERFIL.md
+  [x] Guardado en candidate_profile (DB)
+  [x] run.py orquesta el onboarding completo
 
 ## FASE 3 — Pipeline base
   [ ] fetch.py (InfoJobs API → limpieza → upsert en DB)
