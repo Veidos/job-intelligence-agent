@@ -9,13 +9,14 @@ import os
 import re
 import sys
 from datetime import datetime
+from dotenv import load_dotenv
 from pathlib import Path
 from typing import Any
 
 from apify_client import ApifyClient
 
-# Asegurar que src/ está en sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Asegurar que la raíz del proyecto está en sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.db.init_db import get_connection
 from src.utils.ollama_client import ollama_call
@@ -237,7 +238,7 @@ def run_fetch(search_config: dict, profile: dict, since_date: str | None = None)
 
     run_input = {
         "startUrls": [{"url": u} for u in search_urls],
-        "maxItems": 100,
+        "maxItems": 5,
     }
 
     try:
@@ -267,3 +268,21 @@ def run_fetch(search_config: dict, profile: dict, since_date: str | None = None)
     conn.close()
     log.info("Fetch completado: %d ofertas guardadas", count)
     return count
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    logging.basicConfig(level=logging.INFO)
+
+    search_config = {"geo_hierarchy": '["nacional"]', "role_hierarchy": '["data analyst"]'}
+    profile = {}
+    inserted = run_fetch(search_config, profile, since_date=None)
+    print(f"Ofertas insertadas: {inserted}")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT source_id, title, city, company_name FROM offers LIMIT 5")
+    rows = cursor.fetchall()
+    for row in rows:
+        print(row)
+    conn.close()
