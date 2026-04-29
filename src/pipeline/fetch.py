@@ -11,42 +11,33 @@ import time
 from pathlib import Path
 from typing import Any
 
-import httpx
+from apify_client import ApifyClient
 
 # Asegurar que src/ está en sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.db.init_db import get_connection
 from src.db.models import get_active_candidate_profile
-from src.ollama_client import ollama_call
+from src.utils.ollama_client import ollama_call
 from src.utils.cleaner import clean_description
 
 log = logging.getLogger(__name__)
 
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
-APIFY_URL = (
-    "https://api.apify.com/v2/acts/easyapi~infojobs-job-scraper/"
-    "run-sync-get-dataset-items"
-)
 
 MAX_RETRIES = 3
-TIMEOUT_S = 120
 
 
 def build_search_urls(search_config: dict, profile: dict) -> list[str]:
-    """Construye searchUrls según active_geo_level y active_role_level."""
-    base = "https://www.infojobs.net/job-search/l-"
+    """Construye searchUrls válidas de InfoJobs."""
+    base = "https://www.infojobs.net/ofertas-trabajo/espana"
     urls: list[str] = []
 
     geo_level = search_config.get("active_geo_level", 0)
 
-    # Geo: 0=nacional, 1=provincia preferida, 2=ciudad preferida
-    geo_map = {
-        0: "",
-        1: "41/",  # Cádiz (Jerez) — ajustar desde profile si hace falta
-        2: "41/jerez-de-la-frontera/",
-    }
-    geo_segment = geo_map.get(geo_level, "")
+    # Provincias: 5=Cádiz, 40=Sevilla (según InfoJobs)
+    province_map = {1: "5", 2: "40"}
+    province_id = province_map.get(geo_level, "")
 
     # Roles desde role_hierarchy o defaults
     roles_raw = search_config.get("role_hierarchy")
@@ -57,14 +48,17 @@ def build_search_urls(search_config: dict, profile: dict) -> list[str]:
             roles = []
     else:
         roles = [
-            "data-analyst",
-            "analista-de-datos",
-            "business-intelligence",
-            "cientifico-de-datos-junior",
+            "data analyst",
+            "analista de datos",
+            "business intelligence",
+            "cientifico de datos junior",
         ]
 
-    for role in roles[:5]:  # máximo 5 queries por run
-        urls.append(f"{base}{geo_segment}{role}")
+    for query in roles[:5]:
+        url = f"{base}?keyword={query}&sinceDate=LAST_DAY"
+        if province_id:
+            url += f"&provinceIds={province_id}"
+        urls.append(url)
 
     log.info("searchUrls generadas (%d): %s", len(urls), urls)
     return urls
@@ -143,51 +137,30 @@ PERFIL:
 
 
 def call_apify(urls: list[str]) -> list[dict]:
-    """Llama a Apify con reintentos y devuelve la lista de ofertas."""
+    """Llama a Apify usando ApifyClient y devuelve la lista de ofertas."""
     if not APIFY_TOKEN:
         log.error("APIFY_TOKEN no configurado")
         return []
 
-    payload = {"searchUrls": urls, "maxItems": 30}
-    headers = {
-        "Authorization": f"Bearer {APIFY_TOKEN}",
-        "Content-Type": "application/json",
+    client = ApifyClient(APIFY_TOKEN)
+    run_input = {
+        "searchUrls": urls,
+        "maxItems": 30,
+        "proxyConfiguration": {"useApifyProxy": False},
     }
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            resp = httpx.post(
-                f"{APIFY_URL}?token={APIFY_TOKEN}",
-                json=payload,
-                headers=headers,
-                timeout=TIMEOUT_S,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            log.info("Apify OK (intento %d): %d items", attempt, len(data))
-            # Log coste si está disponible
-            usage = resp.headers.get("x-apify-pricing-usage") or ""
-            if usage:
-                log.info("Apify usage info: %s", usage)
-            return data if isinstance(data, list) else []
-        except httpx.TimeoutException:
-            log.warning("Timeout Apify (intento %d/%d)", attempt, MAX_RETRIES)
-        except httpx.HTTPStatusError as e:
-            log.warning(
-                "HTTP %d Apify (intento %d/%d): %s",
-                e.response.status_code,
-                attempt,
-                MAX_RETRIES,
-                e,
-            )
-        except Exception as e:
-            log.warning("Error Apify (intento %d/%d): %s", attempt, MAX_RETRIES, e)
-
-        if attempt < MAX_RETRIES:
-            time.sleep(2**attempt)
-
-    log.error("Apify falló tras %d intentos", MAX_RETRIES)
-    return []
+    try:
+        run = client.actor("easyapi~infojobs-job-scraper").call(run_input=run_input)
+        items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
+        log.info(
+            "Apify OK: %d items, coste $%.5f",
+            len(items),
+            run.get("usageTotalUsd", 0),
+        )
+        return items
+    except Exception as e:
+        log.error("Error Apify: %s", e)
+        return []
 
 
 def extract_fields_with_qwen(offer: dict) -> dict:
