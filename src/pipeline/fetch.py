@@ -6,7 +6,9 @@ Construye searchUrls desde search_config, limpia datos y hace upsert en DB.
 import json
 import logging
 import os
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -86,15 +88,30 @@ def build_search_urls(
     return urls
 
 
+def parse_salary(text: str) -> tuple[float | None, float | None]:
+    """Extrae salary_min y salary_max de un texto de salario."""
+    if not text or text in ("No especificado", "No especificada"):
+        return None, None
+    # Buscar patrones como "20.000 - 25.000", "20000€", "20k-25k"
+    text = text.lower().replace(".", "").replace("€", "").replace("k", "000")
+    numbers = re.findall(r"\d+", text)
+    if len(numbers) >= 2:
+        return float(numbers[0]), float(numbers[1])
+    if len(numbers) == 1:
+        return float(numbers[0]), None
+    return None, None
+
+
 def extract_fields_with_qwen(item: dict) -> dict[str, Any]:
     """Usa qwen2.5 para extraer campos estructurados de una oferta."""
     prompt = f"""
 Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
 - description_clean: descripción limpia (sin HTML)
-- skills_required: lista de skills técnicas requeridas
-- experience_years: años de experiencia requeridos (int, 0 si no se menciona)
-- education_level: nivel educativo requerido
-- salary_range: rango salarial o "No especificado"
+- skills_required: lista de skills técnicas requeridas (array de strings)
+- experience_min: años mínimos de experiencia requeridos (int, 0 si no se menciona)
+- education_level: nivel educativo requerido (string)
+- salary_min: salario mínimo anual en número (float o null)
+- salary_max: salario máximo anual en número (float o null)
 
 Oferta:
 {json.dumps(item, ensure_ascii=False)}
@@ -132,17 +149,23 @@ def upsert_offer(item: dict, conn) -> None:
     contract_type = offer_data.get("contractType")
     work_mode_raw = offer_data.get("teleworking")
     published_at = offer_data.get("publishedAt")
-    description = offer_data.get("description", "")
+    description_raw = offer_data.get("description", "")
 
     # Enriquecer con qwen2.5 usando el item completo
     enriched = extract_fields_with_qwen(item)
     description_clean = enriched.get(
-        "description_clean", clean_description(description)
+        "description_clean", clean_description(description_raw)
     )
     skills_required = json.dumps(enriched.get("skills_required", []))
-    experience_years = enriched.get("experience_years", 0)
+    experience_min = enriched.get("experience_min", 0)
     education_level = enriched.get("education_level", "")
-    salary_range = enriched.get("salary_range", "")
+
+    # Parsear salario
+    salary_min = enriched.get("salary_min")
+    salary_max = enriched.get("salary_max")
+    salary_text = enriched.get("salary_text", "")
+    if (salary_min is None or salary_max is None) and salary_text:
+        salary_min, salary_max = parse_salary(salary_text)
 
     work_mode = work_mode_raw or "Presencial"
 
@@ -151,9 +174,9 @@ def upsert_offer(item: dict, conn) -> None:
         """
         INSERT INTO offers (
             source_id, title, city, company_name, url, contract_type,
-            work_mode, published_at, description, description_clean,
-            skills_required, experience_years, education_level, salary_range,
-            scraped_at, search_url, is_active
+            work_mode, published_at, description_raw, description_clean,
+            skills_required, experience_min, education_level,
+            salary_min, salary_max, fetched_at, is_active
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(source_id) DO UPDATE SET
             title=excluded.title,
@@ -163,14 +186,14 @@ def upsert_offer(item: dict, conn) -> None:
             contract_type=excluded.contract_type,
             work_mode=excluded.work_mode,
             published_at=excluded.published_at,
-            description=excluded.description,
+            description_raw=excluded.description_raw,
             description_clean=excluded.description_clean,
             skills_required=excluded.skills_required,
-            experience_years=excluded.experience_years,
+            experience_min=excluded.experience_min,
             education_level=excluded.education_level,
-            salary_range=excluded.salary_range,
-            scraped_at=excluded.scraped_at,
-            search_url=excluded.search_url,
+            salary_min=excluded.salary_min,
+            salary_max=excluded.salary_max,
+            fetched_at=excluded.fetched_at,
             updated_at=CURRENT_TIMESTAMP
         """,
         (
@@ -182,14 +205,14 @@ def upsert_offer(item: dict, conn) -> None:
             contract_type,
             work_mode,
             published_at,
-            description,
+            description_raw,
             description_clean,
             skills_required,
-            experience_years,
+            experience_min,
             education_level,
-            salary_range,
-            item.get("scrapedAt"),
-            item.get("searchUrl"),
+            salary_min,
+            salary_max,
+            item.get("scrapedAt") or datetime.now().isoformat(),
             True,
         ),
     )
