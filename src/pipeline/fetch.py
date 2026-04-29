@@ -320,6 +320,8 @@ def run_fetch() -> dict:
                 log.error("Error procesando oferta: %s", e)
                 if not stats["errors"]:
                     stats["errors"] = str(e)
+
+        conn.commit()
         stats["new_offers"] = new_count
         log.info(
             "Fetch completado: %d nuevas de %d total",
@@ -327,7 +329,7 @@ def run_fetch() -> dict:
             len(raw_offers),
         )
 
-        # Lógica de expansión de capas (antes de cerrar la conexión)
+        # Lógica de expansión de capas (misma conexión)
         settings = get_user_settings()
         max_offers = settings.max_offers_day or 3
 
@@ -367,7 +369,6 @@ def run_fetch() -> dict:
                 )
                 conn.commit()
 
-        conn.commit()
         conn.close()
 
     except Exception as e:
