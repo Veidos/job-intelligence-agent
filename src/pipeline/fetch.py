@@ -236,7 +236,7 @@ def upsert_offer(item: dict, conn) -> bool:
         return False
 
 
-def run_fetch(search_config: dict, profile: dict, since_date: str | None = None) -> int:
+def run_fetch(search_config: dict, profile: dict, since_date: str | None = None, max_items: int = 30) -> int:
     """Ejecuta el fetch completo desde Apify y guarda en DB."""
     if not APIFY_TOKEN:
         log.error("APIFY_TOKEN no configurado")
@@ -253,7 +253,7 @@ def run_fetch(search_config: dict, profile: dict, since_date: str | None = None)
 
     run_input = {
         "searchUrls": search_urls,
-        "maxItems": 5,
+        "maxItems": max_items,
     }
 
     try:
@@ -290,9 +290,9 @@ if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
 
-    search_config = {"geo_hierarchy": '["nacional"]', "role_hierarchy": '["data analyst"]'}
+    search_config = {"geo_hierarchy": '["nacional"]', "role_hierarchy": ""}
     profile = {}
-    inserted = run_fetch(search_config, profile, since_date=None)
+    inserted = run_fetch(search_config, profile, since_date=None, max_items=30)
     print(f"Ofertas insertadas: {inserted}")
 
     conn = get_connection()
