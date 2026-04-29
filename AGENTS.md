@@ -516,9 +516,11 @@ FASE 5 — Automatización
 
 ## ARCHIVOS QUE LEER AL INICIO DE CADA SESIÓN
 
-1. `PERFIL.md` — contexto del candidato
-2. `PLANS.md` — estado actual del proyecto
-3. `MEMORIES.md` — aprendizajes previos relevantes
+Lectura obligatoria antes de tocar cualquier archivo de código:
+
+1. `AGENTS.md`   ← contexto técnico y reglas
+2. `PLANS.md`    ← estado actual del proyecto y tareas
+3. `MEMORIES.md` ← aprendizajes acumulados
 
 Si alguno no existe, crearlo antes de continuar.
 
