@@ -212,12 +212,16 @@ DESCRIPCIÓN: {description[:3000]}
     return result
 
 
-def upsert_offer(cur, offer: dict, search_layer: int, role_level: int) -> bool:
+def upsert_offer(cur, item: dict, search_layer: int, role_level: int) -> bool:
     """
     Hace upsert de una oferta en la tabla offers.
     Devuelve True si es nueva (insertada), False si ya existía.
+
+    El actor Apify devuelve: {"searchUrl": "...", "scrapedAt": "...", "offer": {...}}
     """
-    source_id = offer.get("id") or offer.get("sourceId") or str(offer.get("url", ""))
+    offer = item.get("offer", item)
+
+    source_id = offer.get("code") or offer.get("id") or str(offer.get("link", ""))
     if not source_id:
         return False
 
@@ -232,7 +236,7 @@ def upsert_offer(cur, offer: dict, search_layer: int, role_level: int) -> bool:
     raw_desc = offer.get("description", "")
     clean_desc = clean_description(raw_desc)
 
-    # Extraer campos con qwen2.5
+    # Extraer campos con qwen2.5 (usar datos ya normalizados de la oferta)
     extracted = extract_fields_with_qwen(offer)
 
     # Construir dict de inserción
@@ -247,7 +251,7 @@ def upsert_offer(cur, offer: dict, search_layer: int, role_level: int) -> bool:
         ) VALUES (?, 'infojobs', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             source_id,
-            offer.get("url"),
+            offer.get("link") or offer.get("url"),
             offer.get("title"),
             offer.get("companyName") or offer.get("company_name"),
             offer.get("province") or offer.get("provinceName"),
@@ -256,7 +260,9 @@ def upsert_offer(cur, offer: dict, search_layer: int, role_level: int) -> bool:
             offer.get("salaryMax") or offer.get("salary_max"),
             offer.get("salaryPeriod") or offer.get("salary_period"),
             offer.get("contractType") or offer.get("contract_type"),
-            extracted.get("work_mode_norm", offer.get("workMode")),
+            extracted.get(
+                "work_mode_norm", offer.get("teleworking", offer.get("workMode"))
+            ),
             offer.get("experienceMin") or offer.get("experience_min"),
             offer.get("experienceMax") or offer.get("experience_max"),
             offer.get("educationLevel") or offer.get("education_level"),
@@ -314,9 +320,6 @@ def run_fetch() -> dict:
                 log.error("Error procesando oferta: %s", e)
                 if not stats["errors"]:
                     stats["errors"] = str(e)
-        conn.commit()
-        conn.close()
-
         stats["new_offers"] = new_count
         log.info(
             "Fetch completado: %d nuevas de %d total",
@@ -324,7 +327,7 @@ def run_fetch() -> dict:
             len(raw_offers),
         )
 
-        # Lógica de expansión de capas
+        # Lógica de expansión de capas (antes de cerrar la conexión)
         settings = get_user_settings()
         max_offers = settings.max_offers_day or 3
 
@@ -363,6 +366,9 @@ def run_fetch() -> dict:
                     (new_role, cfg["id"]),
                 )
                 conn.commit()
+
+        conn.commit()
+        conn.close()
 
     except Exception as e:
         log.error("Error en fetch: %s", e)
