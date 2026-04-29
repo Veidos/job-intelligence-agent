@@ -70,7 +70,7 @@ class CandidateProfile(Base):
     personal_concerns = Column(Text)
     environment_avoid_keywords = Column(Text)
     environment_prefer_keywords = Column(Text)
-    min_score_to_recommend = Column(Integer, default=45)
+    min_score_to_recommend = Column(Integer, default=35)
     cv_version_id = Column(Integer)
 
     @property
@@ -165,7 +165,7 @@ def save_candidate_profile(profile: dict, version: str = "1.0") -> CandidateProf
             environment_prefer_keywords=json_serialize(
                 profile.get("environment_prefer_keywords", [])
             ),
-            min_score_to_recommend=profile.get("min_score_to_recommend", 45),
+            min_score_to_recommend=profile.get("min_score_to_recommend", 35),
         )
         session.add(record)
         session.commit()

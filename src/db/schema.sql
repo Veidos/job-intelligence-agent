@@ -81,13 +81,14 @@ CREATE TABLE IF NOT EXISTS candidate_profile (
     projects TEXT,
     employment_gap_years REAL,
     salary_min_viable REAL,
+    salary_notes TEXT,
     location_preference TEXT,
     relocation_conditions TEXT,
     work_mode_preference TEXT,
     personal_concerns TEXT,
     environment_avoid_keywords TEXT,
     environment_prefer_keywords TEXT,
-    min_score_to_recommend INTEGER DEFAULT 45,
+    min_score_to_recommend INTEGER DEFAULT 35,
     cv_version_id INTEGER REFERENCES cv_versions(id)
 );
 
