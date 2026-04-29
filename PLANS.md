@@ -19,6 +19,9 @@
   [ ] fetch_company.py (datos empresa → DB)
   [ ] evaluate.py (qwen2.5 técnico + gemma4 HR → offer_evaluations)
   [ ] send.py (formato Telegram → envío)
+  [ ] run.py (orquestador del pipeline completo)
+  [x] Añadir campos search_layer, role_level, relevance_flag a offers
+  [x] Crear tabla search_config para configuración geográfica y de rol
 
 ## FASE 4 — Inteligencia
   [ ] role_discovery.py

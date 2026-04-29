@@ -61,7 +61,10 @@ CREATE TABLE IF NOT EXISTS offers (
     fetched_at DATETIME NOT NULL DEFAULT (datetime('now')),
     updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
     is_active INTEGER NOT NULL DEFAULT 1,
-    is_evaluated INTEGER NOT NULL DEFAULT 0
+    is_evaluated INTEGER NOT NULL DEFAULT 0,
+    search_layer INTEGER,
+    role_level INTEGER,
+    relevance_flag TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_offers_source_id ON offers(source_id);
 CREATE INDEX IF NOT EXISTS idx_offers_fetched_at ON offers(fetched_at);
@@ -169,4 +172,15 @@ CREATE TABLE IF NOT EXISTS strategic_insights (
     sent_telegram INTEGER DEFAULT 0,
     user_acted INTEGER DEFAULT 0,
     outcome_notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS search_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    generated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    profile_id INTEGER REFERENCES candidate_profile(id),
+    geo_hierarchy TEXT,
+    role_hierarchy TEXT,
+    active_geo_level INTEGER,
+    active_role_level INTEGER,
+    last_updated DATETIME NOT NULL DEFAULT (datetime('now'))
 );

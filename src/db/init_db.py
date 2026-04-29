@@ -2,6 +2,7 @@
 Inicializa la base de datos SQLite desde schema.sql.
 Uso: python src/db/init_db.py
 """
+
 import logging
 import os
 import sqlite3
@@ -11,12 +12,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = PROJECT_ROOT / "src" / "db" / "schema.sql"
 DB_PATH = PROJECT_ROOT / os.getenv("DB_PATH", "data/jobs.db")
+
+
+def get_connection():
+    """Devuelve una conexión sqlite3 a la DB configurada."""
+    return sqlite3.connect(DB_PATH)
 
 
 def init_db() -> None:

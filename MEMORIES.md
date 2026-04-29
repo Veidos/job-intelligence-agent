@@ -15,3 +15,10 @@
 ## Prompts efectivos
 - qwen2.5-coder:7b: instrucción explícita "responde UNICAMENTE con JSON valido" + esquema de campos
 - Temperatura baja (0.1) para extracción determinista
+
+## Arquitectura de búsqueda y escalabilidad
+- El sistema usa **source_adapter pattern** para escalabilidad multi-país.
+  Ahora solo InfoJobs (España). Diseñado para añadir Indeed, LinkedIn etc
+  sin reescribir fetch.py.
+- La expansión geográfica y de rol es genérica: se infiere desde PERFIL.md
+  vía qwen2.5, nunca hardcodeada.
