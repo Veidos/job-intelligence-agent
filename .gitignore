@@ -1,0 +1,10 @@
+.env
+.venv/
+data/
+logs/
+PERFIL.md
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+assets/
