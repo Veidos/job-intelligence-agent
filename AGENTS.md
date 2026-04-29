@@ -131,7 +131,7 @@ from src.utils.ollama_client import ollama_call
 result = ollama_call(
     model="qwen2.5-coder:7b",
     prompt=prompt,
-    expect_json=True  # valida y reintenta si no es JSON válido
+    expect_json=True
 )
 
 # Para gemma4 (texto libre o JSON según contexto)
@@ -219,7 +219,12 @@ EMPRESA:
 EVALÚA estos aspectos con rigor:
 1. ¿El trayecto profesional tiene sentido para este puesto?
 2. ¿El gap laboral es descalificante para esta oferta concreta?
-3. ¿La empresa y su cultura son compatibles con el perfil del candidato?
+3. ¿La empresa y su cultura presentan factores relevantes para este candidato?
+   IMPORTANTE: Los factores de entorno (ritmo, presencialidad, cultura) NO son
+   filtros de descarte. Son criterios de priorización cuando hay varias opciones
+   y señales de preparación para entrevista cuando es la única opción viable.
+   Para cada factor relevante detectado, indica qué preparación concreta
+   necesitaría el candidato si llegara a entrevista.
 4. ¿Qué haría un recruiter real con este CV en el primer filtro?
 5. Dado el contexto personal declarado, ¿es prudente invertir energía aquí?
 
@@ -234,19 +239,42 @@ Responde en JSON con exactamente estos campos:
   "hr_concerns": ["string"],
   "strengths": ["string"],
   "red_flags": ["string"],
+  "interview_prep": ["consejo concreto de preparación si hay factores a gestionar"],
   "verdict": "string (párrafo libre del recruiter)"
 }
 ```
 
-### Recomendación final
+### Rating intrínseco de la oferta
 
 ```python
-RECOMENDACIONES = {
+RATING = {
     range(75, 101): "Prioritario",
     range(55, 75):  "Aplicar",
-    range(35, 55):  "Aplicar con expectativas bajas",
-    range(0, 35):   "No aplicar"
+    range(35, 55):  "Con expectativas bajas",
+    range(0, 35):   "No aplicar",
 }
+```
+
+### Lógica de selección diaria (top 3)
+
+El rating intrínseco y la selección diaria son conceptos independientes.
+
+```python
+def select_daily_top3(ofertas: list) -> list:
+    """
+    Selecciona las mejores ofertas del día para enviar por Telegram.
+
+    Prioridad: mayor score primero.
+    Umbral mínimo de inclusión: score >= 35.
+    Máximo: 3 ofertas.
+    Si no hay ninguna >= 35: enviar aviso "Sin ofertas relevantes hoy."
+
+    El rango 35-54 ("Con expectativas bajas") solo aparece en el mensaje
+    si no hay suficientes ofertas de rango superior para completar el top 3.
+    Las ofertas de este rango llevan nota explícita en el mensaje de Telegram.
+    """
+    candidatas = [o for o in ofertas if o.match_score >= 35]
+    return sorted(candidatas, key=lambda o: o.match_score, reverse=True)[:3]
 ```
 
 ---
@@ -260,6 +288,8 @@ RECOMENDACIONES = {
   búsqueda o análisis estratégico.
 - El campo `personal_concerns` es texto libre. No estructurar, no parsear,
   no resumir. Pasarlo íntegro a gemma4 como contexto.
+- El campo `Entorno preferido / a evitar` NO es un filtro de descarte.
+  Es información de priorización y preparación. Ver lógica de selección diaria.
 - Si `PERFIL.md` no existe, ejecutar onboarding antes de cualquier otra tarea.
 - Las secciones "Skills ausentes frecuentes" y "Headline sugerido" se
   actualizan automáticamente por `market_signals.py`. No editar manualmente.
@@ -349,16 +379,18 @@ export TELEGRAM_CHAT_ID="..."
 ### Formato del mensaje diario (top 3 ofertas)
 
 ```
-OFERTAS DEL DIA — {fecha}
+📋 OFERTAS DEL DÍA — {fecha}
 
-[verde/amarillo/naranja] {titulo} | {empresa}
-Modalidad: {modalidad} | {ciudad} | {salario_rango}
-Inscritos: {inscritos} | Rating empresa: {rating_empresa}/5
-Match: {match_score}/100
-Aviso: {primer_hr_concern si existe}
-URL: {url_oferta}
+🟢/🟡/🟠 {titulo} | {empresa}
+📍 {modalidad} | {ciudad} | {salario_rango}
+👥 {inscritos} inscritos | ⭐ {rating_empresa}/5
+✅ Match: {match_score}/100 — {rating_label}
+⚠️ {primer hr_concern si existe}
+🎯 {primer interview_prep si existe}
+🔗 {url_oferta}
 
-[repetir para oferta 2 y 3]
+— Si score 35-54: añadir nota "Incluida por falta de opciones superiores"
+— Si no hay ofertas >= 35: enviar "Sin ofertas relevantes hoy."
 ```
 
 ### Formato del resumen semanal
@@ -440,15 +472,16 @@ esté testeada y funcionando.
 
 ```
 FASE 1 — Cimientos
-  [ ] init_db.py + schema.sql completo
-  [ ] ollama_client.py con reintentos y validación JSON
+  [x] init_db.py + schema.sql completo
+  [x] ollama_client.py con reintentos y validación JSON
+  [x] Test de conexión Telegram
+  [x] Test de conexión Ollama
   [ ] Test de conexión InfoJobs API
-  [ ] Test de conexión Telegram
 
 FASE 2 — Onboarding
-  [ ] cv_extractor.py (qwen2.5 → datos estructurados)
-  [ ] interviewer.py (gemma4 → preguntas secuenciales)
-  [ ] Generación de PERFIL.md
+  [x] cv_extractor.py (qwen2.5 → datos estructurados)
+  [x] interviewer.py (gemma4 → preguntas secuenciales)
+  [x] Generación de PERFIL.md
   [ ] Guardado en candidate_profile (DB)
 
 FASE 3 — Pipeline base
@@ -456,6 +489,7 @@ FASE 3 — Pipeline base
   [ ] fetch_company.py (datos empresa → DB)
   [ ] evaluate.py (qwen2.5 técnico + gemma4 HR → offer_evaluations)
   [ ] send.py (formato Telegram → envío)
+  [ ] run.py (orquestador del pipeline completo)
 
 FASE 4 — Inteligencia
   [ ] role_discovery.py
