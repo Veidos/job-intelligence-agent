@@ -131,8 +131,12 @@ Responde SOLO con el JSON, sin markdown.
         return {}
 
 
-def upsert_offer(item: dict, conn) -> None:
-    """Inserta o actualiza una oferta en la base de datos."""
+def upsert_offer(item: dict, conn) -> bool:
+    """Inserta o actualiza una oferta en la base de datos.
+
+    Returns:
+        True si fue inserción nueva, False si fue actualización.
+    """
     offer_data = item.get("offer", {})
 
     source_id = offer_data.get("code")
@@ -141,7 +145,7 @@ def upsert_offer(item: dict, conn) -> None:
             "source_id es None, saltando oferta: %s",
             offer_data.get("title", "sin título"),
         )
-        return
+        return False
 
     title = offer_data.get("title")
     city = offer_data.get("city")
@@ -169,56 +173,67 @@ def upsert_offer(item: dict, conn) -> None:
         salary_min, salary_max = parse_salary(salary_text)
 
     work_mode = work_mode_raw or "Presencial"
+    fetched_at = item.get("scrapedAt") or datetime.now().isoformat()
 
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO offers (
-            source_id, title, city, company_name, url, contract_type,
-            work_mode, published_at, description_raw, description_clean,
-            skills_required, experience_min, education_level,
-            salary_min, salary_max, fetched_at, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(source_id) DO UPDATE SET
-            title=excluded.title,
-            city=excluded.city,
-            company_name=excluded.company_name,
-            url=excluded.url,
-            contract_type=excluded.contract_type,
-            work_mode=excluded.work_mode,
-            published_at=excluded.published_at,
-            description_raw=excluded.description_raw,
-            description_clean=excluded.description_clean,
-            skills_required=excluded.skills_required,
-            experience_min=excluded.experience_min,
-            education_level=excluded.education_level,
-            salary_min=excluded.salary_min,
-            salary_max=excluded.salary_max,
-            fetched_at=excluded.fetched_at,
-            updated_at=CURRENT_TIMESTAMP
-        """,
-        (
-            source_id,
-            title,
-            city,
-            company_name,
-            url,
-            contract_type,
-            work_mode,
-            published_at,
-            description_raw,
-            description_clean,
-            skills_required,
-            experience_min,
-            education_level,
-            salary_min,
-            salary_max,
-            item.get("scrapedAt") or datetime.now().isoformat(),
-            True,
-        ),
-    )
-    conn.commit()
-    log.debug("Upsert oferta %s: %s", source_id, title)
+
+    # 1. Comprobar si source_id ya existe
+    cursor.execute("SELECT COUNT(*) FROM offers WHERE source_id = ?", (source_id,))
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        # No existe → INSERT completo
+        cursor.execute(
+            """
+            INSERT INTO offers (
+                source_id, title, city, company_name, url, contract_type,
+                work_mode, published_at, description_raw, description_clean,
+                skills_required, experience_min, education_level,
+                salary_min, salary_max, fetched_at, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                source_id, title, city, company_name, url, contract_type,
+                work_mode, published_at, description_raw, description_clean,
+                skills_required, experience_min, education_level,
+                salary_min, salary_max, fetched_at, True,
+            ),
+        )
+        conn.commit()
+        log.debug("Inserción nueva oferta %s: %s", source_id, title)
+        return True
+    else:
+        # Ya existe → UPDATE sin tocar fetched_at ni source_id
+        cursor.execute(
+            """
+            UPDATE offers SET
+                title=?,
+                city=?,
+                company_name=?,
+                url=?,
+                contract_type=?,
+                work_mode=?,
+                published_at=?,
+                description_raw=?,
+                description_clean=?,
+                skills_required=?,
+                experience_min=?,
+                education_level=?,
+                salary_min=?,
+                salary_max=?,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE source_id=?
+            """,
+            (
+                title, city, company_name, url, contract_type,
+                work_mode, published_at, description_raw, description_clean,
+                skills_required, experience_min, education_level,
+                salary_min, salary_max, source_id,
+            ),
+        )
+        conn.commit()
+        log.debug("Actualización oferta %s: %s", source_id, title)
+        return False
 
 
 def run_fetch(search_config: dict, profile: dict, since_date: str | None = None) -> int:
@@ -257,17 +272,18 @@ def run_fetch(search_config: dict, profile: dict, since_date: str | None = None)
     log.info("Apify devolvió %d items", len(items))
 
     conn = get_connection()
-    count = 0
+    new_count = 0
     for item in items:
         try:
-            upsert_offer(item, conn)
-            count += 1
+            is_new = upsert_offer(item, conn)
+            if is_new:
+                new_count += 1
         except Exception as e:
             log.warning("Error procesando oferta: %s", e)
 
     conn.close()
-    log.info("Fetch completado: %d ofertas guardadas", count)
-    return count
+    log.info("Fetch completado: %d ofertas nuevas guardadas (de %d total)", new_count, len(items))
+    return new_count
 
 
 if __name__ == "__main__":
