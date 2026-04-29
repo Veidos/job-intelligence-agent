@@ -196,3 +196,30 @@ def get_active_candidate_profile() -> CandidateProfile | None:
             .limit(1)
         )
         return session.scalar(stmt)
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True)
+    updated_at = Column(DateTime, default=func.datetime("now"))
+    send_time = Column(String, default="09:00")
+    max_offers_day = Column(Integer, default=3)
+    send_mode = Column(String, default="morning")
+    min_score_send = Column(Integer, default=35)
+    weekly_summary = Column(Integer, default=1)
+    strategic_alerts = Column(Integer, default=1)
+
+
+def get_user_settings() -> UserSettings:
+    """Devuelve el registro de user_settings, o crea uno con defaults."""
+    with SessionLocal() as session:
+        stmt = select(UserSettings).order_by(UserSettings.id).limit(1)
+        record = session.scalar(stmt)
+        if record is None:
+            record = UserSettings()
+            session.add(record)
+            session.commit()
+            session.refresh(record)
+            log.info("user_settings creado con valores por defecto")
+        return record

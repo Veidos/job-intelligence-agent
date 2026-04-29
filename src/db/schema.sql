@@ -184,3 +184,14 @@ CREATE TABLE IF NOT EXISTS search_config (
     active_role_level INTEGER,
     last_updated DATETIME NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS user_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    send_time TEXT DEFAULT '09:00',
+    max_offers_day INTEGER DEFAULT 3,
+    send_mode TEXT DEFAULT 'morning',
+    min_score_send INTEGER DEFAULT 35,
+    weekly_summary INTEGER DEFAULT 1,
+    strategic_alerts INTEGER DEFAULT 1
+);
