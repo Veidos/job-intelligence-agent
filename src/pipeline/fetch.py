@@ -237,12 +237,12 @@ def run_fetch(search_config: dict, profile: dict, since_date: str | None = None)
     log.info("Iniciando Apify actor para %d URLs", len(search_urls))
 
     run_input = {
-        "startUrls": [{"url": u} for u in search_urls],
+        "searchUrls": search_urls,
         "maxItems": 5,
     }
 
     try:
-        actor_client = client.actor("XkZvxV7rJbKjXh8NA")
+        actor_client = client.actor("lRxJmbuhggr0LU3uj")
         run_result = actor_client.call(run_input=run_input)
     except Exception as e:
         log.error("Error ejecutando Apify actor: %s", e)
