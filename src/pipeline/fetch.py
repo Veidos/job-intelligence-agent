@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +16,6 @@ from apify_client import ApifyClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.db.init_db import get_connection
-from src.db.models import get_active_candidate_profile, get_user_settings
 from src.utils.ollama_client import ollama_call
 from src.utils.cleaner import clean_description
 
@@ -28,8 +26,16 @@ APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 MAX_RETRIES = 3
 
 
-def build_search_urls(search_config: dict, profile: dict) -> list[str]:
-    """Construye searchUrls válidas de InfoJobs."""
+def build_search_urls(
+    search_config: dict, profile: dict, since_date: str | None = None
+) -> list[str]:
+    """Construye searchUrls válidas de InfoJobs.
+
+    Args:
+        search_config: Configuración de búsqueda
+        profile: Perfil del candidato
+        since_date: Filtro de fecha (ej: "LAST_WEEK"). None = sin filtro.
+    """
     base = "https://www.infojobs.net/ofertas-trabajo/espana"
     urls: list[str] = []
 
@@ -67,6 +73,8 @@ def build_search_urls(search_config: dict, profile: dict) -> list[str]:
 
     for query in roles[:5]:
         url = f"{base}?keyword={query}&sortBy=PUBLICATION_DATE"
+        if since_date:
+            url += f"&sinceDate={since_date}"
         if current_geo and current_geo != "nacional":
             if current_geo.isdigit():
                 url += f"&provinceIds={current_geo}"
@@ -78,331 +86,161 @@ def build_search_urls(search_config: dict, profile: dict) -> list[str]:
     return urls
 
 
-def ensure_search_config() -> dict:
-    """
-    Verifica que exista search_config activo.
-    Si no, lo genera con qwen2.5 desde PERFIL.md.
-    """
-    conn = get_connection()
-    cur = conn.cursor()
-    row = cur.execute(
-        "SELECT * FROM search_config ORDER BY last_updated DESC LIMIT 1"
-    ).fetchone()
+def extract_fields_with_qwen(item: dict) -> dict[str, Any]:
+    """Usa qwen2.5 para extraer campos estructurados de una oferta."""
+    prompt = f"""
+Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
+- description_clean: descripción limpia (sin HTML)
+- skills_required: lista de skills técnicas requeridas
+- experience_years: años de experiencia requeridos (int, 0 si no se menciona)
+- education_level: nivel educativo requerido
+- salary_range: rango salarial o "No especificado"
 
-    if row:
-        cols = [d[0] for d in cur.description]
-        cfg = dict(zip(cols, row))
-        conn.close()
-        return cfg
+Oferta:
+{json.dumps(item, ensure_ascii=False)}
 
-    # Generar desde PERFIL.md
-    log.info("search_config no existe, generando desde PERFIL.md...")
-    perfil_text = Path("PERFIL.md").read_text(encoding="utf-8")
-
-    prompt = f"""Lee este perfil y genera la jerarquía geográfica y de roles para búsqueda de empleo.
-Responde SOLO con JSON válido (sin markdown) con este esquema:
-{{
-  "geo_hierarchy": ["nacional", "provincia_X", "ciudad_Y"],
-  "role_hierarchy": ["data-analyst", "analista-de-datos", "business-intelligence"],
-  "active_geo_level": 0,
-  "active_role_level": 0
-}}
-
-PERFIL:
-{perfil_text}
+Responde SOLO con el JSON, sin markdown.
 """
-
-    result = ollama_call(
-        model="qwen2.5-coder:7b",
-        prompt=prompt,
-        expect_json=True,
-    )
-
-    if not result or "error" in str(result).lower():
-        log.error("Fallo generando search_config desde qwen2.5")
-        conn.close()
-        return {
-            "geo_hierarchy": "[]",
-            "role_hierarchy": "[]",
-            "active_geo_level": 0,
-            "active_role_level": 0,
-        }
-
-    cur.execute(
-        """INSERT INTO search_config
-           (geo_hierarchy, role_hierarchy, active_geo_level, active_role_level)
-           VALUES (?, ?, ?, ?)""",
-        (
-            json.dumps(result.get("geo_hierarchy", [])),
-            json.dumps(result.get("role_hierarchy", [])),
-            result.get("active_geo_level", 0),
-            result.get("active_role_level", 0),
-        ),
-    )
-    conn.commit()
-    row = cur.execute(
-        "SELECT * FROM search_config ORDER BY last_updated DESC LIMIT 1"
-    ).fetchone()
-    cols = [d[0] for d in cur.description]
-    cfg = dict(zip(cols, row))
-    conn.close()
-    log.info("search_config generado (id=%d)", cfg["id"])
-    return cfg
-
-
-def call_apify(urls: list[str]) -> list[dict]:
-    """Llama a Apify usando ApifyClient y devuelve la lista de ofertas."""
-    if not APIFY_TOKEN:
-        log.error("APIFY_TOKEN no configurado")
-        return []
-
-    client = ApifyClient(APIFY_TOKEN)
-    run_input = {
-        "searchUrls": urls,
-        "maxItems": 30,
-        "proxyConfiguration": {"useApifyProxy": False},
-    }
-
     try:
-        run = client.actor("easyapi~infojobs-job-scraper").call(run_input=run_input)
-        items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
-        log.info(
-            "Apify OK: %d items, coste $%.5f",
-            len(items),
-            run.get("usageTotalUsd", 0),
+        result = ollama_call(
+            model="qwen2.5-coder:7b",
+            prompt=prompt,
+            expect_json=True,
         )
-        return items
+        return result if isinstance(result, dict) else {}
     except Exception as e:
-        log.error("Error Apify: %s", e)
-        return []
+        log.warning("qwen2.5 falló extrayendo campos: %s", e)
+        return {}
 
 
-def extract_fields_with_qwen(offer: dict) -> dict:
-    """Usa qwen2.5 para extraer/normalizar campos de la oferta."""
-    title = offer.get("title", "")
-    description = offer.get("description", "")
+def upsert_offer(item: dict, conn) -> None:
+    """Inserta o actualiza una oferta en la base de datos."""
+    offer_data = item.get("offer", {})
 
-    prompt = f"""Analiza esta oferta de empleo y extrae campos normalizados.
-Responde SOLO con JSON válido (sin markdown):
-{{
-  "sector_norm": "string (sector normalizado)",
-  "sector_tags": ["string"],
-  "relevance_flag": "core|adjacent|stretch|temporal",
-  "skills_required": ["string"],
-  "work_mode_norm": "remote|hybrid|onsite|unknown"
-}}
-
-TÍTULO: {title}
-DESCRIPCIÓN: {description[:3000]}
-"""
-
-    result = ollama_call(
-        model="qwen2.5-coder:7b",
-        prompt=prompt,
-        expect_json=True,
-    )
-    if not result or "error" in str(result).lower():
-        return {
-            "sector_norm": None,
-            "sector_tags": [],
-            "relevance_flag": "stretch",
-            "skills_required": [],
-            "work_mode_norm": "unknown",
-        }
-    return result
-
-
-def upsert_offer(cur, item: dict, search_layer: int, role_level: int) -> bool:
-    """
-    Hace upsert de una oferta en la tabla offers.
-    Devuelve True si es nueva (insertada), False si ya existía.
-
-    El actor Apify devuelve: {"searchUrl": "...", "scrapedAt": "...", "offer": {...}}
-    """
-    offer = item.get("offer", item)
-
-    source_id = offer.get("code") or offer.get("id") or str(offer.get("link", ""))
+    source_id = offer_data.get("code")
     if not source_id:
-        return False
+        log.warning(
+            "source_id es None, saltando oferta: %s",
+            offer_data.get("title", "sin título"),
+        )
+        return
 
-    # Verificar si ya existe
-    existing = cur.execute(
-        "SELECT id FROM offers WHERE source_id = ?", (source_id,)
-    ).fetchone()
-    if existing:
-        return False
+    title = offer_data.get("title")
+    city = offer_data.get("city")
+    company_name = offer_data.get("companyName")
+    url = offer_data.get("link")
+    contract_type = offer_data.get("contractType")
+    work_mode_raw = offer_data.get("teleworking")
+    published_at = offer_data.get("publishedAt")
+    description = offer_data.get("description", "")
 
-    # Limpiar descripción
-    raw_desc = offer.get("description", "")
-    clean_desc = clean_description(raw_desc)
+    # Enriquecer con qwen2.5 usando el item completo
+    enriched = extract_fields_with_qwen(item)
+    description_clean = enriched.get(
+        "description_clean", clean_description(description)
+    )
+    skills_required = json.dumps(enriched.get("skills_required", []))
+    experience_years = enriched.get("experience_years", 0)
+    education_level = enriched.get("education_level", "")
+    salary_range = enriched.get("salary_range", "")
 
-    # Extraer campos con qwen2.5 (usar datos ya normalizados de la oferta)
-    extracted = extract_fields_with_qwen(offer)
+    work_mode = work_mode_raw or "Presencial"
 
-    # Construir dict de inserción
-    cur.execute(
-        """INSERT INTO offers (
-            source_id, source, url, title, company_name,
-            province, city, salary_min, salary_max, salary_period,
-            contract_type, work_mode, experience_min, experience_max,
-            education_level, skills_required, description_raw, description_clean,
-            applications_count, published_at, search_layer, role_level,
-            relevance_flag
-        ) VALUES (?, 'infojobs', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO offers (
+            source_id, title, city, company_name, url, contract_type,
+            work_mode, published_at, description, description_clean,
+            skills_required, experience_years, education_level, salary_range,
+            scraped_at, search_url, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(source_id) DO UPDATE SET
+            title=excluded.title,
+            city=excluded.city,
+            company_name=excluded.company_name,
+            url=excluded.url,
+            contract_type=excluded.contract_type,
+            work_mode=excluded.work_mode,
+            published_at=excluded.published_at,
+            description=excluded.description,
+            description_clean=excluded.description_clean,
+            skills_required=excluded.skills_required,
+            experience_years=excluded.experience_years,
+            education_level=excluded.education_level,
+            salary_range=excluded.salary_range,
+            scraped_at=excluded.scraped_at,
+            search_url=excluded.search_url,
+            updated_at=CURRENT_TIMESTAMP
+        """,
         (
             source_id,
-            offer.get("link") or offer.get("url"),
-            offer.get("title"),
-            offer.get("companyName") or offer.get("company_name"),
-            offer.get("province") or offer.get("provinceName"),
-            offer.get("city") or offer.get("cityName"),
-            offer.get("salaryMin") or offer.get("salary_min"),
-            offer.get("salaryMax") or offer.get("salary_max"),
-            offer.get("salaryPeriod") or offer.get("salary_period"),
-            offer.get("contractType") or offer.get("contract_type"),
-            extracted.get(
-                "work_mode_norm", offer.get("teleworking", offer.get("workMode"))
-            ),
-            offer.get("experienceMin") or offer.get("experience_min"),
-            offer.get("experienceMax") or offer.get("experience_max"),
-            offer.get("educationLevel") or offer.get("education_level"),
-            json.dumps(extracted.get("skills_required", [])),
-            raw_desc,
-            clean_desc,
-            offer.get("applicationsCount") or offer.get("applications_count", 0),
-            offer.get("publishedAt") or offer.get("published_at"),
-            search_layer,
-            role_level,
-            extracted.get("relevance_flag", "stretch"),
-        ),
-    )
-    return True
-
-
-def run_fetch() -> dict:
-    """Ejecuta el fetch completo. Devuelve stats para search_runs."""
-    t0 = time.monotonic()
-    stats: dict[str, Any] = {
-        "offers_fetched": 0,
-        "new_offers": 0,
-        "errors": None,
-        "status": "ok",
-    }
-
-    try:
-        cfg = ensure_search_config()
-        profile = get_active_candidate_profile()
-        if not profile:
-            log.warning("No hay perfil activo, usando PERFIL.md")
-
-        urls = build_search_urls(cfg, {})
-        if not urls:
-            stats["status"] = "no_urls"
-            return stats
-
-        raw_offers = call_apify(urls)
-        stats["offers_fetched"] = len(raw_offers)
-
-        conn = get_connection()
-        cur = conn.cursor()
-        new_count = 0
-        for offer in raw_offers:
-            try:
-                is_new = upsert_offer(
-                    cur,
-                    offer,
-                    cfg.get("active_geo_level", 0),
-                    cfg.get("active_role_level", 0),
-                )
-                if is_new:
-                    new_count += 1
-            except Exception as e:
-                log.error("Error procesando oferta: %s", e)
-                if not stats["errors"]:
-                    stats["errors"] = str(e)
-
-        conn.commit()
-        stats["new_offers"] = new_count
-        log.info(
-            "Fetch completado: %d nuevas de %d total",
-            new_count,
-            len(raw_offers),
-        )
-
-        # Lógica de expansión de capas (misma conexión)
-        settings = get_user_settings()
-        max_offers = settings.max_offers_day or 3
-
-        if new_count < max_offers:
-            geo_raw = cfg.get("geo_hierarchy")
-            try:
-                geo_hierarchy = (
-                    json.loads(geo_raw) if isinstance(geo_raw, str) else geo_raw
-                )
-                if not isinstance(geo_hierarchy, list):
-                    geo_hierarchy = ["nacional"]
-            except (json.JSONDecodeError, TypeError):
-                geo_hierarchy = ["nacional"]
-
-            active_geo = cfg.get("active_geo_level", 0)
-            active_role = cfg.get("active_role_level", 0)
-
-            if active_geo < len(geo_hierarchy) - 1:
-                new_geo = active_geo + 1
-                log.info(
-                    "Expandiendo capa geo: %d → %d (%s)",
-                    active_geo,
-                    new_geo,
-                    geo_hierarchy[new_geo],
-                )
-                cur.execute(
-                    "UPDATE search_config SET active_geo_level = ?, last_updated = datetime('now') WHERE id = ?",
-                    (new_geo, cfg["id"]),
-                )
-                conn.commit()
-            elif active_role < 10:
-                new_role = active_role + 1
-                log.info("Expandiendo capa role: %d → %d", active_role, new_role)
-                cur.execute(
-                    "UPDATE search_config SET active_role_level = ?, last_updated = datetime('now') WHERE id = ?",
-                    (new_role, cfg["id"]),
-                )
-                conn.commit()
-
-        conn.close()
-
-    except Exception as e:
-        log.error("Error en fetch: %s", e)
-        stats["status"] = "error"
-        stats["errors"] = str(e)
-
-    stats["duration_ms"] = int((time.monotonic() - t0) * 1000)
-    return stats
-
-
-def log_search_run(stats: dict) -> None:
-    """Registra el run en search_runs."""
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute(
-        """INSERT INTO search_runs
-           (offers_fetched, new_offers, errors, duration_ms, status)
-           VALUES (?, ?, ?, ?, ?)""",
-        (
-            stats.get("offers_fetched", 0),
-            stats.get("new_offers", 0),
-            stats.get("errors"),
-            stats.get("duration_ms"),
-            stats.get("status", "ok"),
+            title,
+            city,
+            company_name,
+            url,
+            contract_type,
+            work_mode,
+            published_at,
+            description,
+            description_clean,
+            skills_required,
+            experience_years,
+            education_level,
+            salary_range,
+            item.get("scrapedAt"),
+            item.get("searchUrl"),
+            True,
         ),
     )
     conn.commit()
+    log.debug("Upsert oferta %s: %s", source_id, title)
+
+
+def run_fetch(search_config: dict, profile: dict, since_date: str | None = None) -> int:
+    """Ejecuta el fetch completo desde Apify y guarda en DB."""
+    if not APIFY_TOKEN:
+        log.error("APIFY_TOKEN no configurado")
+        return 0
+
+    client = ApifyClient(APIFY_TOKEN)
+    search_urls = build_search_urls(search_config, profile, since_date)
+
+    if not search_urls:
+        log.warning("No hay searchUrls para procesar")
+        return 0
+
+    log.info("Iniciando Apify actor para %d URLs", len(search_urls))
+
+    run_input = {
+        "startUrls": [{"url": u} for u in search_urls],
+        "maxItems": 100,
+    }
+
+    try:
+        actor_client = client.actor("XkZvxV7rJbKjXh8NA")
+        run_result = actor_client.call(run_input=run_input)
+    except Exception as e:
+        log.error("Error ejecutando Apify actor: %s", e)
+        return 0
+
+    if not run_result or "defaultDatasetId" not in run_result:
+        log.error("Apify no devolvió dataset válido")
+        return 0
+
+    dataset = client.dataset(run_result["defaultDatasetId"])
+    items = list(dataset.iterate_items())
+    log.info("Apify devolvió %d items", len(items))
+
+    conn = get_connection()
+    count = 0
+    for item in items:
+        try:
+            upsert_offer(item, conn)
+            count += 1
+        except Exception as e:
+            log.warning("Error procesando oferta: %s", e)
+
     conn.close()
-    log.info("search_runs registrado")
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    stats = run_fetch()
-    log_search_run(stats)
-    print(f"Stats: {stats}")
+    log.info("Fetch completado: %d ofertas guardadas", count)
+    return count
