@@ -518,11 +518,18 @@ FASE 5 — Automatización
 
 Lectura obligatoria antes de tocar cualquier archivo de código:
 
-1. `AGENTS.md`   ← contexto técnico y reglas
-2. `PLANS.md`    ← estado actual del proyecto y tareas
-3. `MEMORIES.md` ← aprendizajes acumulados
+1. `AGENTS.md`         ← contexto técnico y reglas
+2. `PLANS.md`          ← estado actual y tareas
+3. `MEMORIES.md`       ← aprendizajes acumulados
+4. `PERFIL.md`         ← perfil del candidato (si existe)
+5. `src/db/schema.sql` ← fuente de verdad de la DB (leer siempre antes de
+                           tocar cualquier archivo que interactúe con la base
+                           de datos)
 
 Si alguno no existe, crearlo antes de continuar.
+
+**Nota:** Cualquier cambio en modelos, pipeline o evaluación debe ser
+validado contra `schema.sql` antes de escribir código.
 
 ---
 
