@@ -17,7 +17,7 @@ from apify_client import ApifyClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.db.init_db import get_connection
-from src.db.models import get_active_candidate_profile
+from src.db.models import get_active_candidate_profile, get_user_settings
 from src.utils.ollama_client import ollama_call
 from src.utils.cleaner import clean_description
 
@@ -33,13 +33,24 @@ def build_search_urls(search_config: dict, profile: dict) -> list[str]:
     base = "https://www.infojobs.net/ofertas-trabajo/espana"
     urls: list[str] = []
 
-    geo_level = search_config.get("active_geo_level", 0)
+    # Parse geo_hierarchy
+    geo_raw = search_config.get("geo_hierarchy")
+    if geo_raw:
+        try:
+            geo_hierarchy = json.loads(geo_raw) if isinstance(geo_raw, str) else geo_raw
+        except (json.JSONDecodeError, TypeError):
+            geo_hierarchy = ["nacional"]
+    else:
+        geo_hierarchy = ["nacional"]
 
-    # Provincias: 5=Cádiz, 40=Sevilla (según InfoJobs)
-    province_map = {1: "5", 2: "40"}
-    province_id = province_map.get(geo_level, "")
+    active_geo_level = search_config.get("active_geo_level", 0)
+    current_geo = (
+        geo_hierarchy[active_geo_level]
+        if active_geo_level < len(geo_hierarchy)
+        else None
+    )
 
-    # Roles desde role_hierarchy o defaults
+    # Parse role_hierarchy
     roles_raw = search_config.get("role_hierarchy")
     if roles_raw:
         try:
@@ -55,9 +66,12 @@ def build_search_urls(search_config: dict, profile: dict) -> list[str]:
         ]
 
     for query in roles[:5]:
-        url = f"{base}?keyword={query}&sinceDate=LAST_DAY"
-        if province_id:
-            url += f"&provinceIds={province_id}"
+        url = f"{base}?keyword={query}&sortBy=PUBLICATION_DATE"
+        if current_geo and current_geo != "nacional":
+            if current_geo.isdigit():
+                url += f"&provinceIds={current_geo}"
+            else:
+                url += f"+{current_geo}"
         urls.append(url)
 
     log.info("searchUrls generadas (%d): %s", len(urls), urls)
@@ -309,6 +323,46 @@ def run_fetch() -> dict:
             new_count,
             len(raw_offers),
         )
+
+        # Lógica de expansión de capas
+        settings = get_user_settings()
+        max_offers = settings.max_offers_day or 3
+
+        if new_count < max_offers:
+            geo_raw = cfg.get("geo_hierarchy")
+            try:
+                geo_hierarchy = (
+                    json.loads(geo_raw) if isinstance(geo_raw, str) else geo_raw
+                )
+                if not isinstance(geo_hierarchy, list):
+                    geo_hierarchy = ["nacional"]
+            except (json.JSONDecodeError, TypeError):
+                geo_hierarchy = ["nacional"]
+
+            active_geo = cfg.get("active_geo_level", 0)
+            active_role = cfg.get("active_role_level", 0)
+
+            if active_geo < len(geo_hierarchy) - 1:
+                new_geo = active_geo + 1
+                log.info(
+                    "Expandiendo capa geo: %d → %d (%s)",
+                    active_geo,
+                    new_geo,
+                    geo_hierarchy[new_geo],
+                )
+                cur.execute(
+                    "UPDATE search_config SET active_geo_level = ?, last_updated = datetime('now') WHERE id = ?",
+                    (new_geo, cfg["id"]),
+                )
+                conn.commit()
+            elif active_role < 10:
+                new_role = active_role + 1
+                log.info("Expandiendo capa role: %d → %d", active_role, new_role)
+                cur.execute(
+                    "UPDATE search_config SET active_role_level = ?, last_updated = datetime('now') WHERE id = ?",
+                    (new_role, cfg["id"]),
+                )
+                conn.commit()
 
     except Exception as e:
         log.error("Error en fetch: %s", e)

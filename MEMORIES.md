@@ -23,6 +23,11 @@
 - `search_config` se genera desde PERFIL.md vía qwen2.5 si no existe; controla búsqueda geográfica y de rol.
 - Dedupicación por `source_id`; upsert con `search_layer` y `role_level` asignados.
 
+## URLs de InfoJobs
+- `sinceDate=LAST_DAY` no funciona en URLs de InfoJobs (parámetro no soportado).
+- Deduplicación se hace exclusivamente por `source_id` en DB (ya implementado).
+- Usar `sortBy=PUBLICATION_DATE` para priorizar ofertas recientes en los resultados.
+
 ## Arquitectura de búsqueda y escalabilidad
 - El sistema usa **source_adapter pattern** para escalabilidad multi-país.
   Ahora solo InfoJobs (España). Diseñado para añadir Indeed, LinkedIn etc
