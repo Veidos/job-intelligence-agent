@@ -521,3 +521,13 @@ FASE 5 — Automatización
 3. `MEMORIES.md` — aprendizajes previos relevantes
 
 Si alguno no existe, crearlo antes de continuar.
+
+---
+
+## CIERRE DE SESIÓN
+
+Al finalizar cualquier sesión de trabajo, hacer siempre:
+  git add -A
+  git commit -m "descripción breve de los cambios"
+  git push
+Esto es obligatorio. No terminar una sesión sin haber pusheado.
