@@ -5,7 +5,7 @@
   [x] ollama_client.py con reintentos y validación JSON
   [x] Test de conexión Telegram
   [x] Test de conexión Ollama (qwen2.5-coder:7b y gemma4:e4b)
-  [ ] Test de conexión InfoJobs API
+  [x] Test de conexión InfoJobs API (vía Apify)
 
 ## FASE 2 — Onboarding
   [x] cv_extractor.py (qwen2.5 → datos estructurados)
