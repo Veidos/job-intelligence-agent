@@ -17,11 +17,14 @@
 - Temperatura baja (0.1) para extracción determinista
 
 ## Fetch y extracción de campos
-- `fetch.py` usa Apify (easyapi~infojobs-job-scraper) con httpx, timeout 120s, reintentos x3.
+- `fetch.py` usa Apify (actor XkZvxV7rJbKjXh8NA) para scrapear InfoJobs.
+- Estructura del actor: `item["offer"]["code"]`, `item["offer"]["teleworking"]`, etc.
+- `upsert_offer` debe usar nombres exactos del schema.sql: `description_raw` (no `description`), `experience_min` (no `experience_years`), `fetched_at` (no `scraped_at`).
+- Salarios: el schema tiene `salary_min` (REAL) y `salary_max` (REAL). Parsear desde texto con regex o desde qwen2.5.
+- `search_url` NO existe en la tabla `offers`; no incluir en INSERT.
+- `source_id` puede ser None si el actor falla; validar siempre antes de upsert.
+- qwen2.5 enriquece campos pasando el item completo (no solo `offer_data`) para contexto.
 - `cleaner.py` limpia descripciones eliminando exceso de saltos de línea y espacios.
-- qwen2.5 extrae `sector_norm`, `sector_tags`, `relevance_flag`, `skills_required`, `work_mode_norm`.
-- `search_config` se genera desde PERFIL.md vía qwen2.5 si no existe; controla búsqueda geográfica y de rol.
-- Dedupicación por `source_id`; upsert con `search_layer` y `role_level` asignados.
 
 ## URLs de InfoJobs
 - `sinceDate=LAST_DAY` no funciona en URLs de InfoJobs (parámetro no soportado).
