@@ -15,7 +15,7 @@
   [x] run.py orquesta el onboarding completo
 
 ## FASE 3 — Pipeline base
-  [ ] fetch.py (InfoJobs API → limpieza → upsert en DB)
+  [x] fetch.py (InfoJobs API → limpieza → upsert en DB)
   [ ] fetch_company.py (datos empresa → DB)
   [ ] evaluate.py (qwen2.5 técnico + gemma4 HR → offer_evaluations)
   [ ] send.py (formato Telegram → envío)

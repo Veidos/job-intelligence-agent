@@ -16,6 +16,13 @@
 - qwen2.5-coder:7b: instrucción explícita "responde UNICAMENTE con JSON valido" + esquema de campos
 - Temperatura baja (0.1) para extracción determinista
 
+## Fetch y extracción de campos
+- `fetch.py` usa Apify (easyapi~infojobs-job-scraper) con httpx, timeout 120s, reintentos x3.
+- `cleaner.py` limpia descripciones eliminando exceso de saltos de línea y espacios.
+- qwen2.5 extrae `sector_norm`, `sector_tags`, `relevance_flag`, `skills_required`, `work_mode_norm`.
+- `search_config` se genera desde PERFIL.md vía qwen2.5 si no existe; controla búsqueda geográfica y de rol.
+- Dedupicación por `source_id`; upsert con `search_layer` y `role_level` asignados.
+
 ## Arquitectura de búsqueda y escalabilidad
 - El sistema usa **source_adapter pattern** para escalabilidad multi-país.
   Ahora solo InfoJobs (España). Diseñado para añadir Indeed, LinkedIn etc
