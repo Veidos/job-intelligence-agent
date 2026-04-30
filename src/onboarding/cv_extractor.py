@@ -52,79 +52,6 @@ TEXTO DEL CV:
 """
 
 
-def populate_candidate_skills(profile_text: str) -> None:
-    """
-    Extrae skills del perfil via gemma4 y popula candidate_skills.
-
-    Args:
-        profile_text: Texto completo del PERFIL.md
-    """
-    prompt = f"""Lee este perfil profesional y extrae TODAS las skills tecnicas mencionadas.
-Para cada skill, infiere el nivel basandote unicamente en lo que aparece
-en el perfil: proyectos, experiencia laboral, formacion.
-
-Si no hay evidencia de nivel, usa 'basico'.
-Niveles: basico | intermedio | avanzado | experto
-
-Responde SOLO con JSON valido sin texto adicional:
-{{
-  "skills": [
-    {{
-      "name": "nombre exacto de la skill",
-      "level": "nivel inferido",
-      "evidence": "frase o contexto del perfil que justifica este nivel"
-    }}
-  ]
-}}
-
-PERFIL:
-{profile_text}"""
-
-    log.info("Llamando a %s para extraccion de skills", MODEL_HR)
-    response = ollama_call(
-        model=MODEL_HR,
-        prompt=prompt,
-        expect_json=True,
-    )
-
-    skills_data = response.get("skills", [])
-    if not skills_data:
-        log.warning("No se extrajeron skills del perfil")
-        return
-
-    log.info("Skills extraidas: %d", len(skills_data))
-
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM candidate_skills WHERE source = 'PERFIL.md'")
-
-        for skill in skills_data:
-            name = skill.get("name", "").strip()
-            level = skill.get("level", "basico").strip()
-            evidence = skill.get("evidence", "").strip()
-
-            if not name:
-                continue
-
-            conn.execute(
-                "INSERT OR IGNORE INTO skills (name) VALUES (?)",
-                (name,),
-            )
-
-            conn.execute(
-                """INSERT INTO candidate_skills (skill_id, level_current, evidence, source)
-                   SELECT id, ?, ?, 'PERFIL.md' FROM skills WHERE name = ?
-                   ON CONFLICT(skill_id) DO UPDATE SET
-                     level_current = excluded.level_current,
-                     evidence = excluded.evidence,
-                     updated_at = datetime('now')""",
-                (level, evidence, name),
-            )
-
-        conn.commit()
-
-    print(f"Skills extraidas: {len(skills_data)} → candidate_skills actualizado")
-
-
 def extract_cv_data(cv_path: str | Path) -> dict[str, Any]:
     """
     Extrae datos estructurados del CV via qwen2.5-coder:7b.
@@ -162,13 +89,12 @@ def main() -> None:
         perfil_path = PROJECT_ROOT / "PERFIL.md"
         if perfil_path.exists():
             profile_text = perfil_path.read_text(encoding="utf-8")
-            populate_candidate_skills(profile_text)
-
-            # Extraer y guardar skills con la nueva funcion
             with sqlite3.connect(DB_PATH) as conn:
                 extract_and_save_candidate_skills(conn, profile_text)
         else:
-            log.warning("PERFIL.md no encontrado, saltando populate_candidate_skills")
+            log.warning(
+                "PERFIL.md no encontrado, saltando extract_and_save_candidate_skills"
+            )
     except Exception:
         log.exception("Error extrayendo CV")
         sys.exit(1)
