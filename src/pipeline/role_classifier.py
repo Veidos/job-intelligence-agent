@@ -10,6 +10,7 @@ import json
 import logging
 import sqlite3
 import time
+import argparse
 from pathlib import Path
 from typing import Any
 
@@ -35,8 +36,6 @@ INITIAL_ROLES = [
     "technical_support",
     "temporal",
 ]
-
-MAX_OFFERS_PER_RUN = 20
 
 
 def ensure_columns_exist(conn: sqlite3.Connection) -> None:
@@ -191,7 +190,21 @@ Responde SOLO JSON:
 
 def main() -> None:
     """Main function to classify unclassified offers."""
-    logger.info("Starting role classifier")
+    parser = argparse.ArgumentParser(
+        description="Classify unclassified job offers using gemma4."
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Max offers to process per run (default: all pending)",
+    )
+    args = parser.parse_args()
+    limit = args.limit
+
+    logger.info(
+        "Starting role classifier (limit=%s)", limit if limit is not None else "all"
+    )
     perfil_path = Path(__file__).resolve().parent.parent.parent / "PERFIL.md"
     if not perfil_path.exists():
         logger.error("PERFIL.md not found. Cannot continue.")
@@ -204,10 +217,16 @@ def main() -> None:
         ensure_columns_exist(conn)
         catalog = get_role_catalog(conn)
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, source_id, title, description_clean, description_raw FROM offers WHERE relevance_flag IS NULL LIMIT ?",
-            (MAX_OFFERS_PER_RUN,),
-        )
+        query = """
+            SELECT id, source_id, title, description_clean, description_raw
+            FROM offers
+            WHERE relevance_flag IS NULL
+        """
+        params = ()
+        if limit is not None:
+            query += " LIMIT ?"
+            params = (limit,)
+        cursor.execute(query, params)
         offers = cursor.fetchall()
         if not offers:
             logger.info("No unclassified offers found")
