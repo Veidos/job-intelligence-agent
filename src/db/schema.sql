@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS offers (
     is_evaluated INTEGER NOT NULL DEFAULT 0,
     search_layer INTEGER,
     role_level INTEGER,
-    relevance_flag TEXT
+    relevance_flag TEXT,
+    role_normalized TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_offers_source_id ON offers(source_id);
 CREATE INDEX IF NOT EXISTS idx_offers_fetched_at ON offers(fetched_at);
@@ -182,7 +183,9 @@ CREATE TABLE IF NOT EXISTS search_config (
     role_hierarchy TEXT,
     active_geo_level INTEGER,
     active_role_level INTEGER,
-    last_updated DATETIME NOT NULL DEFAULT (datetime('now'))
+    last_full_fetch DATETIME,
+    last_updated DATETIME NOT NULL DEFAULT (datetime('now')),
+    role_catalog TEXT
 );
 
 CREATE TABLE IF NOT EXISTS user_settings (

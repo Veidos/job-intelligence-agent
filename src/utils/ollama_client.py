@@ -2,13 +2,19 @@
 Wrapper para llamadas a Ollama con reintentos, backoff y validacion JSON.
 Modelos secuenciales — nunca en paralelo (VRAM limitada).
 """
+
 import json
 import logging
 import time
 from typing import Any
 
 import requests
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +40,9 @@ class OllamaJSONError(OllamaError):
 
 def _call_ollama_raw(model: str, prompt: str, temperature: float | None = None) -> str:
     """Llamada directa a la API de Ollama. Sin reintentos."""
-    temp = temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)
+    temp = (
+        temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)
+    )
     payload = {
         "model": model,
         "prompt": prompt,

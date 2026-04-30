@@ -24,6 +24,7 @@
   [x] Crear tabla search_config para configuración geográfica y de rol
 
 ## FASE 4 — Inteligencia
+  [x] role_classifier.py (clasificación de ofertas y relevance_flag)
   [ ] role_discovery.py
   [ ] market_signals.py
   [ ] strategic_advisor.py con todos los triggers

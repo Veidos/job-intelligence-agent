@@ -193,10 +193,23 @@ def upsert_offer(item: dict, conn) -> bool:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                source_id, title, city, company_name, url, contract_type,
-                work_mode, published_at, description_raw, description_clean,
-                skills_required, experience_min, education_level,
-                salary_min, salary_max, fetched_at, True,
+                source_id,
+                title,
+                city,
+                company_name,
+                url,
+                contract_type,
+                work_mode,
+                published_at,
+                description_raw,
+                description_clean,
+                skills_required,
+                experience_min,
+                education_level,
+                salary_min,
+                salary_max,
+                fetched_at,
+                True,
             ),
         )
         conn.commit()
@@ -225,10 +238,21 @@ def upsert_offer(item: dict, conn) -> bool:
             WHERE source_id=?
             """,
             (
-                title, city, company_name, url, contract_type,
-                work_mode, published_at, description_raw, description_clean,
-                skills_required, experience_min, education_level,
-                salary_min, salary_max, source_id,
+                title,
+                city,
+                company_name,
+                url,
+                contract_type,
+                work_mode,
+                published_at,
+                description_raw,
+                description_clean,
+                skills_required,
+                experience_min,
+                education_level,
+                salary_min,
+                salary_max,
+                source_id,
             ),
         )
         conn.commit()
@@ -236,7 +260,12 @@ def upsert_offer(item: dict, conn) -> bool:
         return False
 
 
-def run_fetch(search_config: dict, profile: dict, since_date: str | None = None, max_items: int = 30) -> int:
+def run_fetch(
+    search_config: dict,
+    profile: dict,
+    since_date: str | None = None,
+    max_items: int = 30,
+) -> int:
     """Ejecuta el fetch completo desde Apify y guarda en DB."""
     if not APIFY_TOKEN:
         log.error("APIFY_TOKEN no configurado")
@@ -282,7 +311,11 @@ def run_fetch(search_config: dict, profile: dict, since_date: str | None = None,
             log.warning("Error procesando oferta: %s", e)
 
     conn.close()
-    log.info("Fetch completado: %d ofertas nuevas guardadas (de %d total)", new_count, len(items))
+    log.info(
+        "Fetch completado: %d ofertas nuevas guardadas (de %d total)",
+        new_count,
+        len(items),
+    )
     return new_count
 
 
