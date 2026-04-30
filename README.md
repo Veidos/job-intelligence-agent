@@ -1,5 +1,10 @@
 # Job Intelligence Agent
 
+![Python](https://img.shields.io/badge/Python-3.14+-blue?logo=python&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-local%20LLMs-black?logo=ollama)
+![SQLite](https://img.shields.io/badge/SQLite-WAL%20mode-003B57?logo=sqlite)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 > Personal career intelligence system. Extracts job offers from InfoJobs, evaluates CV match using local LLMs (Ollama), and delivers daily recommendations via Telegram.
 
 Built for the Spanish job market. Fully offline-first — no data leaves your machine except the Telegram notification.
@@ -7,26 +12,26 @@ Built for the Spanish job market. Fully offline-first — no data leaves your ma
 ---
 
 ## How It Works
-InfoJobs (Apify)
-│
-▼
-fetch.py ──────────────────────────────── SQLite (offers)
-│ │
-▼ ▼
-fetch_company.py ── SQLite (companies) evaluate.py
-│
-┌──────────┴──────────┐
-│ │
-qwen2.5-coder gemma4:e4b
-(technical match) (HR + context)
-│ │
-└──────────┬───────────┘
-│
-match_score
-│
-send.py ──► Telegram
 
-text
+The system runs a daily pipeline: it scrapes fresh job offers from InfoJobs via Apify, classifies each offer by actual role (based on requirements, not job title), scores them against your CV using two specialized local models, and sends the top matches to your Telegram. Over time, it learns from your feedback and builds a psychological profile of your preferences.
+
+```mermaid
+flowchart TD
+    A[InfoJobs via Apify] --> B[fetch.py]
+    B --> C[(SQLite\noffers)]
+    C --> D[role_classifier.py]
+    D --> E[evaluate.py]
+    E --> F[qwen2.5-coder:7b\nTechnical Match]
+    E --> G[gemma4:e4b\nHR + Context]
+    F --> H[match_score]
+    G --> H
+    H --> I[send.py]
+    I --> J[📱 Telegram]
+    K[fetch_company.py] --> L[(SQLite\ncompanies)]
+    L --> E
+    J --> M[💬 User Feedback\n/f1 /f2 /f3 /dia]
+    M --> N[(user_psychology\nevolutive memory)]
+```
 
 Two models, one pipeline:
 
@@ -53,65 +58,68 @@ Two models, one pipeline:
 ---
 
 ## Project Structure
+
+```
 job-intelligence-agent/
-├── AGENTS.md ← AI agent context (read by OpenCode)
-├── PERFIL.md ← Candidate source of truth (DO NOT auto-regenerate)
-├── PLANS.md ← Project ledger (phases + task status)
-├── MEMORIES.md ← Accumulated system learnings
+├── AGENTS.md               ← AI agent context (read by OpenCode)
+├── PERFIL.md               ← Candidate source of truth (gitignored)
+├── PLANS.md                ← Project ledger (phases + task status)
+├── MEMORIES.md             ← Accumulated system learnings
 ├── requirements.txt
-├── .env ← Credentials (never commit)
+├── .env                    ← Credentials (never commit)
 │
 ├── assets/
-│ └── cv.pdf
+│   └── cv.pdf
 │
 ├── src/
-│ ├── db/
-│ │ ├── init_db.py ← Schema initializer
-│ │ ├── schema.sql ← Single source of truth for DB structure
-│ │ └── models.py ← SQLAlchemy models
-│ │
-│ ├── onboarding/
-│ │ ├── run.py ← Orchestrates full onboarding
-│ │ ├── cv_extractor.py ← qwen2.5 extracts structured data from CV
-│ │ └── interviewer.py ← gemma4 conducts guided interview
-│ │
-│ ├── pipeline/
-│ │ ├── run.py ← Full pipeline (fetch → eval → send)
-│ │ ├── fetch.py ← InfoJobs via Apify → clean → upsert DB
-│ │ ├── fetch_company.py← Company data and reviews
-│ │ └── evaluate.py ← Dual-model scoring
-│ │
-│ ├── intelligence/
-│ │ ├── role_discovery.py ← Infers reachable roles from job dataset
-│ │ ├── market_signals.py ← Weekly market trend analysis
-│ │ └── strategic_advisor.py ← Auto-triggers strategic advice
-│ │
-│ ├── telegram/
-│ │ └── send.py ← Daily / weekly / alert messages
-│ │
-│ └── utils/
-│ ├── ollama_client.py ← Ollama wrapper with retries + JSON validation
-│ └── cleaner.py ← Text normalization
+│   ├── db/
+│   │   ├── init_db.py      ← Schema initializer
+│   │   ├── schema.sql      ← Single source of truth for DB structure
+│   │   └── models.py       ← SQLAlchemy models + helpers
+│   │
+│   ├── onboarding/
+│   │   ├── run.py          ← Orchestrates full onboarding
+│   │   ├── cv_extractor.py ← qwen2.5 extracts structured data from CV
+│   │   └── interviewer.py  ← gemma4 conducts guided interview
+│   │
+│   ├── pipeline/
+│   │   ├── run.py              ← Full pipeline orchestrator
+│   │   ├── fetch.py            ← InfoJobs via Apify → clean → upsert DB
+│   │   ├── role_classifier.py  ← Classifies offers by real role + relevance
+│   │   ├── fetch_company.py    ← Company data and reviews
+│   │   └── evaluate.py         ← Dual-model scoring
+│   │
+│   ├── intelligence/
+│   │   ├── role_discovery.py   ← Infers reachable roles from dataset
+│   │   ├── market_signals.py   ← Weekly market trend analysis
+│   │   └── strategic_advisor.py← Auto-triggers strategic advice
+│   │
+│   ├── telegram/
+│   │   └── send.py         ← Daily / weekly / alert messages + feedback
+│   │
+│   └── utils/
+│       ├── ollama_client.py← Ollama wrapper with retries + JSON validation
+│       └── cleaner.py      ← Text normalization
 │
 ├── data/
-│ └── jobs.db ← SQLite database (never commit)
+│   └── jobs.db             ← SQLite database (gitignored)
 ├── logs/
-│ └── pipeline.log
+│   └── pipeline.log
 └── tests/
-└── test_phase1.py
-
-text
+    └── test_phase1.py
+```
 
 ---
 
 ## Setup
 
-### 1. Prerequisites
+### Prerequisites
 
 - Python 3.14+
 - [Ollama](https://ollama.com/) running locally
+- Node.js v18+ (required by Apify client)
 - Apify account with API token
-- Telegram bot token
+- Telegram bot token (via [@BotFather](https://t.me/botfather))
 
 ```bash
 # Pull required models
@@ -119,7 +127,7 @@ ollama pull qwen2.5-coder:7b
 ollama pull gemma4:e4b
 ```
 
-### 2. Install
+### Install
 
 ```bash
 git clone https://github.com/Veidos/job-intelligence-agent.git
@@ -128,36 +136,37 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure
+### Configure
 
 ```bash
 cp .env.example .env
 # Fill in: APIFY_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 ```
 
-### 4. Initialize database
+### Initialize database
 
 ```bash
 python src/db/init_db.py
 ```
 
-### 5. Onboarding (first run only)
+### Onboarding (first run only)
 
 ```bash
-python src/onboarding/run.py --cv assets/cv.pdf
+PYTHONPATH=. python src/onboarding/run.py --cv assets/cv.pdf
 # Generates PERFIL.md — review and confirm before continuing
 ```
 
-### 6. Run the pipeline
+### Run the pipeline
 
 ```bash
 # Full pipeline
-python src/pipeline/run.py
+PYTHONPATH=. python src/pipeline/run.py
 
 # Individual steps
-python src/pipeline/fetch.py
-python src/pipeline/evaluate.py
-python src/telegram/send.py --mode daily
+PYTHONPATH=. python src/pipeline/fetch.py
+PYTHONPATH=. python src/pipeline/role_classifier.py
+PYTHONPATH=. python src/pipeline/evaluate.py
+PYTHONPATH=. python src/telegram/send.py --mode daily
 ```
 
 ---
@@ -193,7 +202,45 @@ Match score composed of two independent blocks:
 | 35–54 | 🟠 Con expectativas bajas |
 | 0–34 | 🔴 No aplicar |
 
-Daily Telegram sends the **top 3 offers with score ≥ 35**. If none qualify: `"Sin ofertas relevantes hoy."`.
+Daily Telegram sends the **top 3 offers with score ≥ 35**, prioritizing highest scores. If none qualify: `"Sin ofertas relevantes hoy."`.
+
+---
+
+## Role Classification
+
+Before scoring, each offer is classified by its **actual requirements** — not its job title. A "Data Scientist" posting that only requires SQL and Excel is classified as `bi_analyst`. A "Data Analyst" posting requiring PyTorch and MLOps is classified as `ml_engineer`.
+
+The classifier maintains a dynamic catalog of canonical role names (in `snake_case`). If an offer doesn't match any existing role, a new one is created and added to the catalog automatically.
+
+Each offer receives a `relevance_flag`:
+
+| Flag | Meaning |
+|---|---|
+| `core` | Requirements match >70% of candidate profile |
+| `adjacent` | 40–70% match, manageable gap |
+| `stretch` | 20–40% match, significant learning required |
+| `temporal` | Viable bridge job while searching |
+
+---
+
+## Feedback System
+
+After each daily Telegram message, you can optionally reply:
+
+```
+/f1 no me veo en una empresa de marketing
+/f2 interesante, pero parece una empresa muy grande
+/f3 buena oferta
+/dia hoy no tengo energía para aplicar a nada
+```
+
+The bot replies `"Anotado 📝"` or `"Entendido, lo tengo en cuenta 🧠"`.
+
+Feedback is **never used to filter offers**. Instead, gemma4 uses it to add personalized notes to future evaluations:
+
+> *"Sé que las empresas grandes no son lo tuyo, pero esta oferta encaja técnicamente muy bien con tu perfil."*
+
+A weekly process compresses accumulated feedback into a psychological summary (`user_psychology` table), which evolves over time without growing infinitely.
 
 ---
 
@@ -212,9 +259,9 @@ The system accumulates data over time to surface strategic signals:
 As the SQLite dataset grows, a dedicated analysis layer will provide:
 
 - **EDA notebooks** — exploratory analysis of accumulated offers (salary distributions, skill frequency, remote %, location heatmaps)
-- **Match score evolution** — personal trend over time (are scores improving as skills develop?)
+- **Match score evolution** — personal trend over time
 - **Market benchmarking** — compare personal profile gap vs. market demand over weeks
-- **Visualizations** — Plotly/Matplotlib dashboards generated from the live `jobs.db`
+- **Visualizations** — Plotly/Matplotlib dashboards from the live `jobs.db`
 
 > The database schema is designed with this phase in mind — all fields are stored raw alongside normalized versions to support flexible future analysis.
 
@@ -223,26 +270,33 @@ As the SQLite dataset grows, a dedicated analysis layer will provide:
 ## Automation (Phase 5)
 
 ```cron
-# Daily pipeline at 9:00 AM
+# Daily pipeline at 9:00 AM (configurable via Telegram)
 0 9 * * * /path/to/.venv/bin/python /path/to/src/pipeline/run.py
 ```
+
+Send time and number of daily offers are configurable via Telegram commands (Phase 5).
 
 ---
 
 ## Roadmap
-Phase 1 — Foundation ✅ Complete
-Phase 2 — Onboarding ✅ Complete
-Phase 3 — Base pipeline 🔄 In progress
-├── fetch.py ✅ Done
-├── fetch_company.py ⬜ Pending
-├── evaluate.py ⬜ Pending
-├── send.py ⬜ Pending
-└── run.py (pipeline) ⬜ Pending
-Phase 4 — Intelligence ⬜ Pending
-Phase 5 — Automation ⬜ Pending
-Phase 6 — Data Analysis/EDA ⬜ Planned
 
-text
+```
+Phase 1 — Foundation          ✅ Complete
+Phase 2 — Onboarding          ✅ Complete
+Phase 3 — Base pipeline       🔄 In progress
+  ├── fetch.py                ✅ Done
+  ├── role_classifier.py      ✅ Done
+  ├── fetch_company.py        ⬜ Pending
+  ├── evaluate.py             ⬜ Pending
+  ├── send.py                 ⬜ Pending
+  └── run.py (pipeline)       ⬜ Pending
+Phase 4 — Intelligence        ⬜ Pending
+Phase 5 — Automation          ⬜ Pending
+  ├── cron + dynamic schedule ⬜ Pending
+  ├── Telegram feedback /f1 /f2 /f3 /dia ⬜ Pending
+  └── user_psychology memory  ⬜ Pending
+Phase 6 — Data Analysis/EDA   ⬜ Planned
+```
 
 ---
 
@@ -257,7 +311,18 @@ This project uses the **Método Ledger** for AI-assisted development:
 | `MEMORIES.md` | Accumulated non-obvious learnings (prompts, field behavior, model quirks) |
 | `PERFIL.md` | Candidate profile — source of truth for all evaluations |
 
-> `PERFIL.md` is in `.gitignore`. Never auto-regenerate it without explicit user confirmation.
+> `PERFIL.md` is in `.gitignore`. Never auto-regenerate without explicit user confirmation.
+
+---
+
+## Privacy First
+
+All LLM inference runs **locally via Ollama**. No CV content, personal context, or job evaluation data is sent to any external service except:
+
+- **Apify** — job scraping only, no personal data involved
+- **Telegram** — notification delivery only
+
+The `personal_concerns` field (sensitive personal context) is never logged, printed to console, or included in error messages.
 
 ---
 
