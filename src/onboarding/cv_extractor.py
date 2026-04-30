@@ -163,11 +163,79 @@ def main() -> None:
         if perfil_path.exists():
             profile_text = perfil_path.read_text(encoding="utf-8")
             populate_candidate_skills(profile_text)
+
+            # Extraer y guardar skills con la nueva funcion
+            with sqlite3.connect(DB_PATH) as conn:
+                extract_and_save_candidate_skills(conn, profile_text)
         else:
             log.warning("PERFIL.md no encontrado, saltando populate_candidate_skills")
     except Exception:
         log.exception("Error extrayendo CV")
         sys.exit(1)
+
+
+def extract_and_save_candidate_skills(conn, profile_text: str) -> int:
+    """Lee PERFIL.md completo y usa gemma4 para poblar candidate_skills."""
+    prompt = f"""Lee este perfil profesional y extrae TODAS las skills tecnicas.
+Para cada skill infiere el nivel UNICAMENTE desde lo que aparece en el perfil
+(proyectos, experiencia, formacion). Sin inventar nada.
+
+Niveles validos: basico | intermedio | avanzado | experto
+
+Responde SOLO con JSON valido, sin texto adicional:
+{{
+  "skills": [
+    {{
+      "name": "nombre de la skill",
+      "level": "nivel inferido",
+      "evidence": "frase del perfil que justifica el nivel"
+    }}
+  ]
+}}
+
+PERFIL:
+{profile_text}"""
+
+    response = ollama_call(
+        model=MODEL_HR,
+        prompt=prompt,
+        expect_json=True,
+    )
+
+    skills = response.get("skills", [])
+
+    # Limpiar solo skills de PERFIL.md
+    conn.execute("DELETE FROM candidate_skills WHERE source = 'PERFIL.md'")
+
+    count = 0
+    for s in skills:
+        name = s.get("name", "").strip()
+        level = s.get("level", "basico")
+        evidence = s.get("evidence", "")
+        if not name:
+            continue
+        # Upsert en skills
+        conn.execute("INSERT OR IGNORE INTO skills(name) VALUES (?)", (name,))
+        skill_id = conn.execute(
+            "SELECT id FROM skills WHERE name = ?", (name,)
+        ).fetchone()[0]
+        # Upsert en candidate_skills
+        conn.execute(
+            """
+            INSERT INTO candidate_skills(skill_id, level_current, evidence, source)
+            VALUES (?, ?, ?, 'PERFIL.md')
+            ON CONFLICT(skill_id) DO UPDATE SET
+                level_current = excluded.level_current,
+                evidence = excluded.evidence,
+                updated_at = datetime('now')
+        """,
+            (skill_id, level, evidence),
+        )
+        count += 1
+
+    conn.commit()
+    print(f"✅ Skills extraidas: {count} → candidate_skills actualizado")
+    return count
 
 
 if __name__ == "__main__":
