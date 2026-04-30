@@ -125,7 +125,8 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     model_hr TEXT DEFAULT 'gemma4:e4b',
     processing_ms INTEGER,
     sent_via_telegram INTEGER DEFAULT 0,
-    sent_at DATETIME
+    sent_at DATETIME,
+    daily_position INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_evaluations_offer_id ON offer_evaluations(offer_id);
 CREATE INDEX IF NOT EXISTS idx_evaluations_match_score ON offer_evaluations(match_score);
@@ -173,6 +174,25 @@ CREATE TABLE IF NOT EXISTS strategic_insights (
     sent_telegram INTEGER DEFAULT 0,
     user_acted INTEGER DEFAULT 0,
     outcome_notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_feedback (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    offer_id        INTEGER REFERENCES offers(id),
+    feedback_type   TEXT NOT NULL,
+    raw_text        TEXT NOT NULL,
+    processed       INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS user_psychology (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    last_updated    DATETIME NOT NULL DEFAULT (datetime('now')),
+    raw_feedback    TEXT,
+    summary         TEXT,
+    key_insights    TEXT,
+    version         INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS search_config (

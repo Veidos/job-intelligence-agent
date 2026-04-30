@@ -44,3 +44,10 @@
   `fetch.py` y `send.py` leen siempre desde esta tabla, nunca hardcodean.
 - Apify MCP se implementa en Fase 5. `fetch.py` usa REST API ahora.
   El adaptador será intercambiable sin cambiar la lógica del pipeline.
+
+## Sistema de feedback (Telegram)
+- Comandos: /f1 /f2 /f3 para feedback sobre ofertas 1-3 del día, /dia para contexto emocional.
+- El feedback NO filtra ofertas futuras. Es contexto psicológico que gemma4 usa para añadir notas personalizadas en evaluaciones.
+- Loop semanal comprime y resume feedback para no crecer infinitamente (feedback_processor.py — Fase 5).
+- `daily_position` en `offer_evaluations` referencia la posición del mensaje diario para ligar feedback con oferta correcta.
+- Tablas: `user_feedback` almacena mensajes crudos, `user_psychology` almacena el summary evolutivo comprimido.

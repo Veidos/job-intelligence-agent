@@ -540,3 +540,28 @@ Al finalizar cualquier sesión de trabajo, hacer siempre:
   git commit -m "descripción breve de los cambios"
   git push
 Esto es obligatorio. No terminar una sesión sin haber pusheado.
+
+---
+
+## SISTEMA DE FEEDBACK (Telegram)
+
+Comandos que escucha el bot:
+  /f1 [texto] → feedback sobre oferta 1 del día
+  /f2 [texto] → feedback sobre oferta 2 del día  
+  /f3 [texto] → feedback sobre oferta 3 del día
+  /dia [texto] → estado emocional / contexto del día
+
+Respuestas del bot:
+  Para /f1 /f2 /f3 → "Anotado 📝"
+  Para /dia → "Entendido, lo tengo en cuenta 🧠"
+
+El feedback NO filtra ofertas futuras.
+Es contexto psicológico que gemma4 usa para añadir notas
+personalizadas en las evaluaciones. Ejemplo:
+"Sé que las empresas grandes no son lo tuyo, pero esta
+oferta encaja técnicamente muy bien."
+
+Loop semanal (feedback_processor.py — Fase 5):
+  gemma4 lee feedbacks de la semana + summary anterior
+  → genera nuevo summary comprimido + key_insights JSON
+  → actualiza user_psychology
