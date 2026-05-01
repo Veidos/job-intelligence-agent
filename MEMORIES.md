@@ -51,3 +51,9 @@
 - Loop semanal comprime y resume feedback para no crecer infinitamente (feedback_processor.py — Fase 5).
 - `daily_position` en `offer_evaluations` referencia la posición del mensaje diario para ligar feedback con oferta correcta.
 - Tablas: `user_feedback` almacena mensajes crudos, `user_psychology` almacena el summary evolutivo comprimido.
+
+## Modelos Ollama — Limitaciones observadas
+
+qwen2.5-coder:7b: NO usar para tareas abiertas o arquitectónicas.
+Solo tareas concretas: un archivo, instrucciones literales, output definido.
+Se queda colgado con contexto amplio o decisiones de diseño.
