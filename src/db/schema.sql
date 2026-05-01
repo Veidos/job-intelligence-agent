@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     strengths TEXT,
     red_flags TEXT,
     gemma_verdict TEXT,
+    interview_prep TEXT,
     apply_recommendation TEXT,
     model_technical TEXT DEFAULT 'qwen2.5-coder:7b',
     model_hr TEXT DEFAULT 'gemma4:e4b',
