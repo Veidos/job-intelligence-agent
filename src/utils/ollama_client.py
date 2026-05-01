@@ -38,7 +38,7 @@ class OllamaJSONError(OllamaError):
     """El modelo no devolvio JSON valido tras reintentos."""
 
 
-def _call_ollama_raw(model: str, prompt: str, temperature: float | None = None) -> str:
+def _call_ollama_raw(model: str, prompt: str, temperature: float | None = None, think: bool = False) -> str:
     """Llamada directa a la API de Ollama. Sin reintentos."""
     temp = (
         temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)
@@ -47,6 +47,7 @@ def _call_ollama_raw(model: str, prompt: str, temperature: float | None = None) 
         "model": model,
         "prompt": prompt,
         "stream": False,
+        "think": think,
         "options": {"temperature": temp, "num_ctx": 4096},
     }
     try:
@@ -98,6 +99,7 @@ def ollama_call(
     prompt: str,
     expect_json: bool = False,
     temperature: float | None = None,
+    think: bool = False,
     json_retry_instruction: str = "\n\nResponde UNICAMENTE con JSON valido, sin texto adicional.",
 ) -> str | Any:
     """
@@ -107,7 +109,7 @@ def ollama_call(
     """
     log.debug("Llamando a %s (expect_json=%s)", model, expect_json)
     start = time.time()
-    text = _call_ollama_raw(model, prompt, temperature)
+    text = _call_ollama_raw(model, prompt, temperature, think)
 
     if not expect_json:
         log.debug("Respuesta de %s en %dms", model, int((time.time() - start) * 1000))
