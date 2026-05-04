@@ -357,7 +357,7 @@ if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
 
-    search_config = {"geo_hierarchy": '["nacional"]', "role_hierarchy": ""}
+    search_config = None  # lee desde DB via ensure_search_config()
     profile = {}
     inserted = run_fetch(search_config, profile, since_date=None, max_items=30)
     print(f"Ofertas insertadas: {inserted}")
