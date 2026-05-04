@@ -74,7 +74,7 @@ def build_search_urls(
             "cientifico de datos junior",
         ]
 
-    for query in roles[:5]:
+    for query in roles[:10]:
         url = f"{base}?keyword={query}&sortBy=PUBLICATION_DATE"
         if since_date:
             url += f"&sinceDate={since_date}"
