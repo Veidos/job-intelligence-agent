@@ -12,6 +12,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from apify_client import ApifyClient
 
@@ -99,7 +100,7 @@ def build_search_urls(
         roles = []
 
     for query in roles:
-        url = f"{base}?keyword={query}&sortBy=PUBLICATION_DATE"
+        url = f"{base}?keyword={quote(query)}&sortBy=PUBLICATION_DATE"
         if since_date:
             url += f"&sinceDate={since_date}"
         if current_geo and current_geo != "nacional":
