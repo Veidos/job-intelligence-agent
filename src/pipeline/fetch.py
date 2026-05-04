@@ -98,7 +98,7 @@ def build_search_urls(
     else:
         roles = []
 
-    for query in roles[:10]:
+    for query in roles:
         url = f"{base}?keyword={query}&sortBy=PUBLICATION_DATE"
         if since_date:
             url += f"&sinceDate={since_date}"
