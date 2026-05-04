@@ -29,13 +29,42 @@ APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 MAX_RETRIES = 3
 
 
+def ensure_search_config(conn=None) -> dict:
+    """Lee la configuración de búsqueda desde la DB.
+
+    Devuelve el registro más reciente de search_config.
+    Si no existe ninguno, devuelve un dict vacío (el caller decide el fallback).
+    """
+    own_conn = conn is None
+    if own_conn:
+        conn = get_connection()
+    try:
+        cursor = conn.execute(
+            "SELECT id, geo_hierarchy, role_hierarchy, active_geo_level, active_role_level "
+            "FROM search_config ORDER BY id DESC LIMIT 1"
+        )
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "geo_hierarchy": row[1],
+                "role_hierarchy": row[2],
+                "active_geo_level": row[3],
+                "active_role_level": row[4],
+            }
+        return {}
+    finally:
+        if own_conn:
+            conn.close()
+
+
 def build_search_urls(
     search_config: dict, profile: dict, since_date: str | None = None
 ) -> list[str]:
     """Construye searchUrls válidas de InfoJobs.
 
     Args:
-        search_config: Configuración de búsqueda
+        search_config: Configuración de búsqueda (debe venir de ensure_search_config)
         profile: Perfil del candidato
         since_date: Filtro de fecha (ej: "LAST_WEEK"). None = sin filtro.
     """
@@ -59,7 +88,7 @@ def build_search_urls(
         else None
     )
 
-    # Parse role_hierarchy
+    # Parse role_hierarchy (viene de DB, no usar fallback hardcodeado)
     roles_raw = search_config.get("role_hierarchy")
     if roles_raw:
         try:
@@ -67,12 +96,7 @@ def build_search_urls(
         except (json.JSONDecodeError, TypeError):
             roles = []
     else:
-        roles = [
-            "data analyst",
-            "analista de datos",
-            "business intelligence",
-            "cientifico de datos junior",
-        ]
+        roles = []
 
     for query in roles[:10]:
         url = f"{base}?keyword={query}&sortBy=PUBLICATION_DATE"
@@ -261,8 +285,8 @@ def upsert_offer(item: dict, conn) -> bool:
 
 
 def run_fetch(
-    search_config: dict,
-    profile: dict,
+    search_config: dict | None = None,
+    profile: dict | None = None,
     since_date: str | None = None,
     max_items: int = 30,
 ) -> int:
@@ -270,6 +294,16 @@ def run_fetch(
     if not APIFY_TOKEN:
         log.error("APIFY_TOKEN no configurado")
         return 0
+
+    # Leer search_config desde DB si no se pasa explícitamente
+    if not search_config:
+        search_config = ensure_search_config()
+    if not search_config:
+        log.error("No hay search_config en DB y no se proporcionó uno")
+        return 0
+
+    if not profile:
+        profile = {}
 
     client = ApifyClient(APIFY_TOKEN)
     search_urls = build_search_urls(search_config, profile, since_date)
