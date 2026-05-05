@@ -188,20 +188,8 @@ Responde SOLO JSON:
         return None
 
 
-def main() -> None:
-    """Main function to classify unclassified offers."""
-    parser = argparse.ArgumentParser(
-        description="Classify unclassified job offers using gemma4."
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Max offers to process per run (default: all pending)",
-    )
-    args = parser.parse_args()
-    limit = args.limit
-
+def _run_logic(limit: int | None) -> None:
+    """Core logic for classifying offers."""
     logger.info(
         "Starting role classifier (limit=%s)", limit if limit is not None else "all"
     )
@@ -274,6 +262,21 @@ def main() -> None:
         conn.close()
 
 
+def main() -> None:
+    """Main function to classify unclassified offers."""
+    parser = argparse.ArgumentParser(
+        description="Classify unclassified job offers using gemma4."
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Max offers to process per run (default: all pending)",
+    )
+    args = parser.parse_args()
+    _run_logic(args.limit)
+
+
 if __name__ == "__main__":
     main()
 
@@ -283,13 +286,15 @@ def run_classifier(limit: int = 0) -> int:
     import os
     import sqlite3
     from pathlib import Path
+
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
-    db_path = PROJECT_ROOT / os.getenv('DB_PATH', 'data/jobs.db')
+    db_path = PROJECT_ROOT / os.getenv("DB_PATH", "data/jobs.db")
     conn = sqlite3.connect(db_path)
-    count = conn.execute('SELECT COUNT(*) FROM offers WHERE relevance_flag IS NULL').fetchone()[0]
+    count = conn.execute(
+        "SELECT COUNT(*) FROM offers WHERE relevance_flag IS NULL"
+    ).fetchone()[0]
     conn.close()
     if count == 0:
         return 0
-    main()
+    _run_logic(limit if limit > 0 else None)
     return count
-
