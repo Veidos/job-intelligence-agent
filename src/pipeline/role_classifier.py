@@ -276,3 +276,20 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+def run_classifier(limit: int = 0) -> int:
+    """Función exportable para el orquestador. Devuelve número de ofertas clasificadas."""
+    import os
+    import sqlite3
+    from pathlib import Path
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    db_path = PROJECT_ROOT / os.getenv('DB_PATH', 'data/jobs.db')
+    conn = sqlite3.connect(db_path)
+    count = conn.execute('SELECT COUNT(*) FROM offers WHERE relevance_flag IS NULL').fetchone()[0]
+    conn.close()
+    if count == 0:
+        return 0
+    main()
+    return count
+
