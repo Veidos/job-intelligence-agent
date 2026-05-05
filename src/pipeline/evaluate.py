@@ -124,6 +124,11 @@ EVALÚA:
 4. ¿Qué haría un recruiter real con este CV en el primer filtro?
 5. Dado el contexto personal, ¿vale la pena invertir energía aquí?
 
+6. Considerando la edad del candidato y que es un cambio de carrera:
+   ¿La empresa típicamente contrata perfiles de reconversión en esta franja de edad?
+   ¿Es la edad un factor descalificante, neutro o positivo para ESTE puesto concreto?
+   IMPORTANTE: la edad NO es un filtro absoluto, es contexto de probabilidad real.
+
 Devuelve SOLO este JSON:
 {{
   "trajectory_coherence": <int 0-15>,
