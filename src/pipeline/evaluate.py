@@ -36,7 +36,8 @@ def get_rating(score: int) -> str:
 
 
 def load_perfil() -> str:
-    return Path("PERFIL.md").read_text(encoding="utf-8")
+    perfil_path = Path(__file__).resolve().parent.parent.parent / "PERFIL.md"
+    return perfil_path.read_text(encoding="utf-8")
 
 
 def get_pending_offers(limit: int = 10) -> list[dict]:
