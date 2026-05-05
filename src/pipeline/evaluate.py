@@ -20,6 +20,11 @@ from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call  # no
 
 log = logging.getLogger(__name__)
 
+
+def _clamp(val, lo: int, hi: int) -> int:
+    return max(lo, min(hi, val))
+
+
 RATING = {
     (75, 101): "Prioritario",
     (55, 75): "Aplicar",
@@ -221,17 +226,17 @@ def run_evaluate(limit: int = 10) -> dict:
                 continue
 
             bloque_a = (
-                technical.get("skills_hard_match", 0)
-                + technical.get("experience_match", 0)
-                + technical.get("education_match", 0)
-                + technical.get("location_match", 0)
+                _clamp(technical.get("skills_hard_match", 0), 0, 25)
+                + _clamp(technical.get("experience_match", 0), 0, 15)
+                + _clamp(technical.get("education_match", 0), 0, 10)
+                + _clamp(technical.get("location_match", 0), 0, 10)
             )
             bloque_b = (
-                hr.get("trajectory_coherence", 0)
-                + hr.get("recency_relevance", 0)
-                + hr.get("market_competitiveness", 0)
+                _clamp(hr.get("trajectory_coherence", 0), 0, 15)
+                + _clamp(hr.get("recency_relevance", 0), 0, 15)
+                + _clamp(hr.get("market_competitiveness", 0), 0, 10)
             )
-            penalty = hr.get("penalty", 0)
+            penalty = _clamp(hr.get("penalty", 0), 0, 30)
             match_score = max(0, min(100, bloque_a + bloque_b - penalty))
             recommendation = get_rating(match_score)
 
