@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 def _clamp(val, lo: int, hi: int) -> int:
-    return max(lo, min(hi, val))
+    return max(lo, min(hi, int(val or 0)))
 
 
 RATING = {
@@ -71,7 +71,14 @@ def evaluate_technical(offer: dict, perfil: str) -> dict:
     """qwen2.5 evalúa bloque técnico (60 pts). Sin think, output JSON directo."""
     skills = offer.get("skills_required") or "[]"
     prompt = f"""Evalúa el match técnico entre este perfil y esta oferta.
-Sé PESIMISTA y HONESTO. Penaliza ausencias aunque sean parciales.
+
+REGLAS CRÍTICAS (obligatorias):
+- Evalúa SOLO lo que la oferta exige explícitamente
+- Si la oferta NO pide experiencia previa → experience_match = 18-20
+- Si el candidato TIENE las skills pedidas → puntuación alta para esas skills
+- NO penalices por skills que el candidato tiene pero la oferta no pide
+- Si la oferta no lista skills específicas → evalúa si el candidato puede hacer el trabajo descrito
+- location_match: remoto=5, híbrido=3, presencial-otra-ciudad=1, presencial-sin-posibilidad-remoto=0
 
 PERFIL:
 {perfil[:3000]}
@@ -84,10 +91,10 @@ Descripción: {(offer.get("description_clean") or "")[:1500]}
 
 Devuelve SOLO este JSON sin texto adicional:
 {{
-  "skills_hard_match": <int 0-25>,
-  "experience_match": <int 0-15>,
+  "skills_hard_match": <int 0-30>,
+  "experience_match": <int 0-20>,
   "education_match": <int 0-10>,
-  "location_match": <int 0-10>,
+  "location_match": <int 0-5>,
   "reasoning": "<una frase honesta>"
 }}"""
     result = ollama_call(
@@ -115,6 +122,11 @@ Descripción: {(offer.get("description_clean") or "")[:1500]}
 EVALUACIÓN TÉCNICA PREVIA:
 {json.dumps(technical, ensure_ascii=False)}
 
+IMPORTANTE: El salario mínimo viable del candidato NO es un factor de
+penalización. No lo incluyas en penalty_breakdown bajo ningún concepto.
+La penalty es SOLO para: gap laboral injustificado, incoherencia grave
+de trayectoria, requisitos obligatorios no cumplidos.
+
 EVALÚA:
 1. ¿El trayecto profesional tiene sentido para este puesto?
 2. ¿El gap laboral es descalificante para esta oferta concreta?
@@ -133,14 +145,15 @@ Devuelve SOLO este JSON:
 {{
   "trajectory_coherence": <int 0-15>,
   "recency_relevance": <int 0-15>,
-  "market_competitiveness": <int 0-10>,
-  "penalty": <int 0-30>,
+  "market_competitiveness": <int 0-5>,
+  "penalty": <int 0-25>,
   "penalty_breakdown": {{"motivo": <puntos>}},
   "environment_compatibility": "<alta|media|baja>",
   "hr_concerns": ["<string>"],
   "strengths": ["<string>"],
   "red_flags": ["<string>"],
   "interview_prep": ["<consejo concreto>"],
+  "apply_signal": "<yes|no|maybe>",
   "verdict": "<párrafo libre honesto>"
 }}"""
     result = ollama_call(
@@ -160,9 +173,13 @@ def save_evaluation(
     match_score: int,
     recommendation: str,
     processing_ms: int,
+    coherence_note: str | None = None,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
+    verdict_final = hr.get("verdict", "")
+    if coherence_note:
+        verdict_final += f"\n\n[COHERENCIA]: {coherence_note}"
     cur.execute(
         """
         INSERT INTO offer_evaluations (
@@ -176,7 +193,7 @@ def save_evaluation(
             apply_recommendation, processing_ms,
             model_technical, model_hr
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    """,
+        """,
         (
             offer_id,
             technical.get("skills_hard_match", 0),
@@ -194,7 +211,7 @@ def save_evaluation(
             json.dumps(hr.get("hr_concerns", []), ensure_ascii=False),
             json.dumps(hr.get("strengths", []), ensure_ascii=False),
             json.dumps(hr.get("red_flags", []), ensure_ascii=False),
-            hr.get("verdict"),
+            verdict_final,
             recommendation,
             processing_ms,
             MODEL_TECHNICAL,
@@ -204,6 +221,90 @@ def save_evaluation(
     cur.execute("UPDATE offers SET is_evaluated=1 WHERE id=?", (offer_id,))
     conn.commit()
     conn.close()
+
+
+def coherence_check(
+    offer: dict,
+    perfil: str,
+    technical: dict,
+    hr: dict,
+    raw_score: int,
+) -> tuple[int, str | None]:
+    """Si gemma4 recomienda aplicar pero score < 35, pide revisión a qwen2.5."""
+    apply_signal = hr.get("apply_signal", "no")
+
+    if apply_signal not in ("yes", "maybe") or raw_score >= 35:
+        return raw_score, None
+
+    prompt = f"""Gemma4 (recruiter senior) revisó esta oferta y recomienda considerarla.
+VERDICT: {hr.get("verdict", "")}
+
+La evaluación técnica inicial dio score bajo. ¿Realmente encaja el perfil?
+SÉ HONESTO — si gemma4 se equivoca, dilo claramente.
+
+PERFIL:
+{perfil[:2000]}
+
+OFERTA:
+Título: {offer["title"]}
+Skills requeridas: {offer.get("skills_required", "[]")}
+Descripción: {(offer.get("description_clean") or "")[:1000]}
+
+Evaluación técnica previa:
+{json.dumps(technical, ensure_ascii=False)}
+
+REGLA: Si la oferta no exige experiencia, experience_match debe ser 18-20.
+Si el candidato tiene las skills pedidas, skills_hard_match debe ser alto.
+
+Responde SOLO JSON:
+{{
+  "technical_confirms_apply": true|false,
+  "revised_skills_hard_match": <int 0-30>,
+  "revised_experience_match": <int 0-20>,
+  "reasoning": "<una frase honesta>"
+}}"""
+
+    result = ollama_call(
+        model=MODEL_TECHNICAL,
+        prompt=prompt,
+        expect_json=True,
+        temperature=0.1,
+    )
+
+    if not result or not isinstance(result, dict):
+        return raw_score, None
+
+    if not result.get("technical_confirms_apply", False):
+        note = f"HR optimista pero técnico no confirma: {result.get('reasoning', '')}"
+        return raw_score, note
+
+    revised_bloque_a = (
+        _clamp(
+            result.get(
+                "revised_skills_hard_match", technical.get("skills_hard_match", 0)
+            ),
+            0,
+            30,
+        )
+        + _clamp(
+            result.get(
+                "revised_experience_match", technical.get("experience_match", 0)
+            ),
+            0,
+            20,
+        )
+        + _clamp(technical.get("education_match", 0), 0, 10)
+        + _clamp(technical.get("location_match", 0), 0, 5)
+    )
+    bloque_b = (
+        _clamp(hr.get("trajectory_coherence", 0), 0, 15)
+        + _clamp(hr.get("recency_relevance", 0), 0, 15)
+        + _clamp(hr.get("market_competitiveness", 0), 0, 5)
+    )
+    penalty = _clamp(hr.get("penalty", 0), 0, 25)
+    revised_score = max(35, min(100, revised_bloque_a + bloque_b - penalty))
+    note = f"Score ajustado por coherencia HR/técnico: {result.get('reasoning', '')}"
+    return revised_score, note
 
 
 def run_evaluate(limit: int = 10) -> dict:
@@ -231,22 +332,37 @@ def run_evaluate(limit: int = 10) -> dict:
                 continue
 
             bloque_a = (
-                _clamp(technical.get("skills_hard_match", 0), 0, 25)
-                + _clamp(technical.get("experience_match", 0), 0, 15)
+                _clamp(technical.get("skills_hard_match", 0), 0, 30)
+                + _clamp(technical.get("experience_match", 0), 0, 20)
                 + _clamp(technical.get("education_match", 0), 0, 10)
-                + _clamp(technical.get("location_match", 0), 0, 10)
+                + _clamp(technical.get("location_match", 0), 0, 5)
             )
             bloque_b = (
                 _clamp(hr.get("trajectory_coherence", 0), 0, 15)
                 + _clamp(hr.get("recency_relevance", 0), 0, 15)
-                + _clamp(hr.get("market_competitiveness", 0), 0, 10)
+                + _clamp(hr.get("market_competitiveness", 0), 0, 5)
             )
-            penalty = _clamp(hr.get("penalty", 0), 0, 30)
+            penalty = _clamp(hr.get("penalty", 0), 0, 25)
             match_score = max(0, min(100, bloque_a + bloque_b - penalty))
             recommendation = get_rating(match_score)
 
+            match_score, coherence_note = coherence_check(
+                offer, perfil, technical, hr, match_score
+            )
+            recommendation = get_rating(match_score)
+            if coherence_note:
+                log.info("⚡ Coherencia: %s", coherence_note)
+
             ms = int((time.monotonic() - t0) * 1000)
-            save_evaluation(offer["id"], technical, hr, match_score, recommendation, ms)
+            save_evaluation(
+                offer["id"],
+                technical,
+                hr,
+                match_score,
+                recommendation,
+                ms,
+                coherence_note=coherence_note,
+            )
 
             log.info("✓ %s → %d/100 (%s)", offer["title"], match_score, recommendation)
             stats["evaluated"] += 1
