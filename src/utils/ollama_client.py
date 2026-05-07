@@ -38,7 +38,9 @@ class OllamaJSONError(OllamaError):
     """El modelo no devolvio JSON valido tras reintentos."""
 
 
-def _call_ollama_raw(model: str, prompt: str, temperature: float | None = None, think: bool = False) -> str:
+def _call_ollama_raw(
+    model: str, prompt: str, temperature: float | None = None, think: bool = False
+) -> str:
     """Llamada directa a la API de Ollama. Sin reintentos."""
     temp = (
         temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)

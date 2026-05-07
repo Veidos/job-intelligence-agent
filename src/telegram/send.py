@@ -3,6 +3,7 @@ Telegram: envío diario de top ofertas evaluadas.
 Lee user_settings para hora y número de ofertas.
 Escucha comandos /f1 /f2 /f3 /dia para feedback.
 """
+
 import json
 import logging
 import os
@@ -205,7 +206,7 @@ def process_feedback(text: str) -> str:
     for i in range(1, 6):
         prefix = f"/f{i} "
         if text.startswith(prefix):
-            content = text[len(prefix):].strip()
+            content = text[len(prefix) :].strip()
             save_feedback(i, content, feedback_type="offer")
             return "Anotado 📝"
     return ""
