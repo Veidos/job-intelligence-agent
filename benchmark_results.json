@@ -1,0 +1,590 @@
+{
+  "qwen2.5-coder:7b": [
+    {
+      "offer_id": 162,
+      "offer_title": "Data Analyst JR",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta busca un Data Analyst Junior, lo que coincide directamente con el rol de 'data_analyst' en el catálogo."
+      },
+      "technical": {
+        "skills_hard_match": 8,
+        "experience_match": 0,
+        "education_match": 7,
+        "location_match": 0,
+        "reasoning": "El perfil del candidato no tiene las habilidades técnicas específicas requeridas por la oferta (Grado Técnico en Data, Matemáticas o similar). Además, el candidato no está dispuesto a trabajar semipresencialmente ni en Bilbao."
+      },
+      "hr_apply_signal": "no",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato es muy prometedor. Sus habilidades (Python, ML, SQL) y su portafolio de pr",
+      "score": 30,
+      "rating": "No aplicar",
+      "t_classify": 7.9,
+      "t_technical": 4.9,
+      "t_hr": 83.4,
+      "t_total": 96.1
+    },
+    {
+      "offer_id": 198,
+      "offer_title": "Desarrollador/a Big Data Junior (100% Teletrabajo)",
+      "classification": {
+        "role_normalized": "data_engineer",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere conocimientos en Databricks, Apache Spark, SQL y Python, que son habilidades clave para un Data Engineer. Además, las responsabilidades incluyen el desarrollo y mantenimiento de flujos de datos, consultas SQL y despliegues, lo cual se alinea perfectamente con los roles de Data Engineer."
+      },
+      "technical": {
+        "skills_hard_match": 8,
+        "experience_match": 0,
+        "education_match": 3,
+        "location_match": 5,
+        "reasoning": "El candidato no tiene las habilidades técnicas específicas requeridas por la oferta, pero es remoto y está dispuesto a trabajar en cualquier ciudad."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato presenta un perfil de 'pivot' muy fuerte. Técnicamente, el candidato es sólido y ha demostrado la capacid",
+      "score": 25,
+      "rating": "No aplicar",
+      "t_classify": 9.9,
+      "t_technical": 4.8,
+      "t_hr": 89.8,
+      "t_total": 104.5
+    },
+    {
+      "offer_id": 5,
+      "offer_title": "Becario/a Data Analyst",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere habilidades en análisis de datos, modelado de datos e infraestructura, creación de dashboards y métricas, análisis del funnel y negocio, y segmentación de usuarios. Estas responsabilidades coinciden significativamente con las habilidades y experiencia del candidato."
+      },
+      "technical": {
+        "skills_hard_match": 18,
+        "experience_match": 4,
+        "education_match": 2,
+        "location_match": 0,
+        "reasoning": "El perfil del candidato tiene experiencia en Python y SQL, lo que es relevante para la oferta. No se menciona experiencia específica con Git o Dashboards, por lo que no se puede calificar esa parte de las habilidades técnicas. La ubicación actual del candidato no coincide con los requisitos de la oferta."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este es un perfil de alto potencial, pero de alto riesgo. El candidato ha realizado un pivote de carrera muy agresivo, p",
+      "score": 40,
+      "rating": "Con expectativas bajas",
+      "t_classify": 9.6,
+      "t_technical": 5.7,
+      "t_hr": 93.0,
+      "t_total": 108.3
+    },
+    {
+      "offer_id": 15,
+      "offer_title": "Data Analyst con certificado de discapacidad",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere habilidades técnicas en análisis de datos, lo que se alinea perfectamente con el rol de Data Analyst."
+      },
+      "technical": {
+        "skills_hard_match": 15,
+        "experience_match": 0,
+        "education_match": 5,
+        "location_match": 0,
+        "reasoning": "El perfil del candidato no tiene las habilidades técnicas específicas requeridas por la oferta (Big Data, Inteligencia Artificial). Además, no cuenta con experiencia previa en el sector farmacéutico o en Customer Engagement Analytics. La ubicación actual del candidato no coincide con los requisitos de la oferta."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde una perspectiva de filtro inicial, este candidato es un 'Maybe' de alto riesgo. Sus habilidades técnicas son super",
+      "score": 28,
+      "rating": "No aplicar",
+      "t_classify": 8.7,
+      "t_technical": 5.7,
+      "t_hr": 81.5,
+      "t_total": 95.9
+    }
+  ],
+  "llama3.1:8b": [
+    {
+      "offer_id": 162,
+      "offer_title": "Data Analyst JR",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "adjacent",
+        "reasoning": "El candidato tiene experiencia en analítica de datos y habilidades técnicas relevantes, pero no se ajusta perfectamente a los requisitos del puesto (grado técnico vs educación del candidato)."
+      },
+      "technical": {
+        "skills_hard_match": 20,
+        "experience_match": 18,
+        "education_match": 8,
+        "location_match": 3,
+        "reasoning": "El candidato tiene experiencia en análisis de datos, pero no cumple con los requisitos específicos de la oferta (grado técnico en Data o Matemáticas). Sin embargo, su perfil es adecuado para un puesto junior en analítica de datos y podría ser una buena opción si se le brinda oportunidades de desarrollo profesional."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato es un riesgo calculado. Su CV es un desastre narrativo; la trayectoria es errática y el salto de la mecán",
+      "score": 55,
+      "rating": "Aplicar",
+      "t_classify": 12.1,
+      "t_technical": 16.0,
+      "t_hr": 84.7,
+      "t_total": 112.8
+    },
+    {
+      "offer_id": 198,
+      "offer_title": "Desarrollador/a Big Data Junior (100% Teletrabajo)",
+      "classification": {
+        "role_normalized": "data_engineer",
+        "relevance_flag": "adjacent",
+        "reasoning": "El perfil del candidato tiene experiencia en SQL, Python y Machine Learning, pero no se menciona específicamente la experiencia con Databricks, Apache Spark o Cloud Azure/AWS. Sin embargo, el trabajo de capstone en el bootcamp y su experiencia como operador en Honeywell sugiere que podría adaptarse a un rol de data engineer."
+      },
+      "technical": {
+        "skills_hard_match": 24,
+        "experience_match": 18,
+        "education_match": 8,
+        "location_match": 5,
+        "reasoning": "El candidato tiene habilidades técnicas relevantes, pero no cumple con todos los requisitos de la oferta. La experiencia previa es limitada y no se ajusta a la ubicación preferida."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato tiene las bases (Python, SQL, ML) y la motivación (Bootcamp, proyectos) pa",
+      "score": 62,
+      "rating": "Aplicar",
+      "t_classify": 10.5,
+      "t_technical": 17.1,
+      "t_hr": 97.7,
+      "t_total": 125.3
+    },
+    {
+      "offer_id": 5,
+      "offer_title": "Becario/a Data Analyst",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "El candidato tiene experiencia en análisis de datos, modelado de datos e infraestructura y análisis de funnel y negocio, lo que coincide con los requisitos del rol de Data Analyst."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 8,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en análisis de datos y modelado, pero no se menciona experiencia específica en el sector financiero. La ubicación preferida del candidato es remoto, lo que coincide con la modalidad de trabajo de la empresa."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato es un 'career changer' con un perfil técnico muy prometedor, pero con una narrativa profesional débil. El",
+      "score": 78,
+      "rating": "Prioritario",
+      "t_classify": 9.4,
+      "t_technical": 15.1,
+      "t_hr": 90.6,
+      "t_total": 115.2
+    },
+    {
+      "offer_id": 15,
+      "offer_title": "Data Analyst con certificado de discapacidad",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "adjacent",
+        "reasoning": "El candidato tiene experiencia en análisis de datos y habilidades técnicas como Python, SQL y Machine Learning. Sin embargo, el requisito específico del certificado de discapacidad no se menciona en el perfil del candidato."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 8,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en Machine Learning, Data Science y Analytics, pero no hay una buena coincidencia en la ubicación. La oferta requiere certificado de discapacidad, que no se menciona en el perfil."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato tiene las herramientas (Python, ML, SQL) y la motivación (Bootcamp, proyec",
+      "score": 62,
+      "rating": "Aplicar",
+      "t_classify": 9.7,
+      "t_technical": 16.5,
+      "t_hr": 85.8,
+      "t_total": 112.0
+    }
+  ],
+  "qwen2.5:7b": [
+    {
+      "offer_id": 162,
+      "offer_title": "Data Analyst JR",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "adjacent",
+        "reasoning": "El candidato tiene habilidades técnicas relevantes como Python y SQL, pero la falta de experiencia previa en el sector financiero lo sitúa más cerca del perfil de un analista junior que de un científico de datos o ingeniero de ML."
+      },
+      "technical": {
+        "skills_hard_match": 14,
+        "experience_match": 18,
+        "education_match": 7,
+        "location_match": 0,
+        "reasoning": "El candidato no tiene el grado técnico requerido, pero posee habilidades técnicas relevantes y una experiencia junior en proyectos de análisis de datos. No hay posibilidad de remoto y la ubicación es inaceptable para él."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato es prometedor. Sus habilidades en Python, ML y sus proyectos de análisis d",
+      "score": 41,
+      "rating": "Con expectativas bajas",
+      "t_classify": 11.9,
+      "t_technical": 4.8,
+      "t_hr": 94.2,
+      "t_total": 110.8
+    },
+    {
+      "offer_id": 198,
+      "offer_title": "Desarrollador/a Big Data Junior (100% Teletrabajo)",
+      "classification": {
+        "role_normalized": "data_engineer",
+        "relevance_flag": "adjacent",
+        "reasoning": "El candidato tiene habilidades en Python, SQL y conocimientos básicos de Apache Spark y Databricks, lo que lo hace un ajuste cercano para el rol de data engineer. No posee experiencia suficiente en todos los aspectos requeridos, por lo que no se considera core."
+      },
+      "technical": {
+        "skills_hard_match": 14,
+        "experience_match": 18,
+        "education_match": 7,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en Python y SQL, pero la oferta requiere habilidades más avanzadas. No posee experiencia previa en Big Data, aunque muestra interés en el campo de los datos. Su formación en Ciencia de Datos es reciente y relevante."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "El candidato tiene un perfil de transición muy fuerte. Sus habilidades técnicas (Python, SQL, ML) y su formación recient",
+      "score": 56,
+      "rating": "Aplicar",
+      "t_classify": 9.9,
+      "t_technical": 5.5,
+      "t_hr": 96.9,
+      "t_total": 112.3
+    },
+    {
+      "offer_id": 5,
+      "offer_title": "Becario/a Data Analyst",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere habilidades en modelado de datos, análisis de funnel y segmentación de usuarios, que coinciden fuertemente con las skills técnicas del candidato."
+      },
+      "technical": {
+        "skills_hard_match": 14,
+        "experience_match": 8,
+        "education_match": 7,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia relevante en Python y SQL, pero la oferta requiere Git y Dashboards, que no se mencionan en su perfil. Tiene un bootcamp de Data Science reciente y una formación técnica, lo que mejora la educación_match. La experiencia en análisis de datos es parcialmente relevante, pero no coincide exactamente con el rol de becario. El candidato prefiere trabajar remotamente, lo cual se ajusta a la oferta."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato presenta un perfil de 'pivot' muy interesante. Su trayectoria laboral previa (Técnico, Operador, Supervis",
+      "score": 60,
+      "rating": "Aplicar",
+      "t_classify": 9.3,
+      "t_technical": 6.8,
+      "t_hr": 89.9,
+      "t_total": 106.0
+    },
+    {
+      "offer_id": 15,
+      "offer_title": "Data Analyst con certificado de discapacidad",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere habilidades analíticas y el manejo de datos, lo cual coincide fuertemente con las skills técnicas del candidato en Python, SQL, Pandas y Scikit-learn. Además, la experiencia del candidato en proyectos de análisis de datos también es relevante."
+      },
+      "technical": {
+        "skills_hard_match": 16,
+        "experience_match": 8,
+        "education_match": 7,
+        "location_match": 0,
+        "reasoning": "El candidato tiene experiencia en Machine Learning y Data Science, pero la oferta requiere habilidades más avanzadas como Big Data e Inteligencia Artificial. La educación del candidato es relevante, pero no se menciona experiencia directa en el sector farmacéutico o en Customer Engagement Analytics."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "El candidato posee un conjunto de habilidades técnicas (Python, ML, SQL) y la formación reciente (Bootcamp) que son alta",
+      "score": 33,
+      "rating": "No aplicar",
+      "t_classify": 10.0,
+      "t_technical": 5.5,
+      "t_hr": 82.2,
+      "t_total": 97.7
+    }
+  ],
+  "qwen3:8b": [
+    {
+      "offer_id": 162,
+      "offer_title": "Data Analyst JR",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "adjacent",
+        "reasoning": "La oferta requiere conocimientos en análisis de datos, aunque no especifica habilidades técnicas como Python o SQL. El candidato tiene formación en Data Science y experiencia en análisis, lo que lo hace compatible, pero no en un 70%."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 5,
+        "location_match": 1,
+        "reasoning": "El candidato tiene las habilidades técnicas requeridas (Python, SQL, Machine Learning, etc.), aunque no tiene experiencia previa en el sector. Su formación en Data Science coincide con el requisito de grado técnico. Sin embargo, la ubicación del candidato (Jerez de la Frontera) no coincide con la ubicación requerida (Bilbao) y no es remoto, lo que reduce el match."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato es sólido. Sus habilidades (Python, ML, SQL) y la evidencia de aplicación ",
+      "score": 66,
+      "rating": "Aplicar",
+      "t_classify": 11.8,
+      "t_technical": 6.6,
+      "t_hr": 77.6,
+      "t_total": 96.0
+    },
+    {
+      "offer_id": 198,
+      "offer_title": "Desarrollador/a Big Data Junior (100% Teletrabajo)",
+      "classification": {
+        "role_normalized": "data_engineer",
+        "relevance_flag": "adjacent",
+        "reasoning": "La oferta requiere conocimientos en herramientas como Databricks, Apache Spark, SQL, Python y Git, que coinciden con las habilidades técnicas del candidato. Sin embargo, no menciona experiencia en Big Data ni en plataformas como Hadoop o Kafka, lo que reduce la relevancia."
+      },
+      "technical": {
+        "skills_hard_match": 22,
+        "experience_match": 18,
+        "education_match": 7,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en Python, SQL y Machine Learning, que son requeridos en la oferta. Sin embargo, no posee conocimientos en Databricks, Apache Spark, Cloud Azure/AWS, Airflow/Control-M, Hive/Impala o Git/GitHub, que son habilidades clave solicitadas. La educación no se alinea directamente con la oferta, pero su preferencia por el teletrabajo y ubicación actual en España coinciden con la oferta."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Miguel tiene una base técnica sólida (Python, SQL, ML) y su interés por el sector Data es claro, lo cual es positivo. Si",
+      "score": 50,
+      "rating": "Con expectativas bajas",
+      "t_classify": 12.7,
+      "t_technical": 7.7,
+      "t_hr": 82.5,
+      "t_total": 102.8
+    },
+    {
+      "offer_id": 5,
+      "offer_title": "Becario/a Data Analyst",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere habilidades en análisis de datos, dashboards, métricas y modelado de datos, que coinciden directamente con el perfil del candidato, quien tiene experiencia en análisis de datos y herramientas como Python, SQL, Pandas, y experiencia en análisis de funnel y métricas."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 7,
+        "location_match": 5,
+        "reasoning": "El candidato tiene las habilidades técnicas requeridas (SQL, Python) y experiencia en análisis de datos, aunque no incluye Git ni dashboards. La ubicación es compatible con remoto, y su formación en Data Science es relevante."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato es un perfil de alto potencial para un puesto de nivel 'Becario' (Trainee/Junior). La incoherencia de su ",
+      "score": 78,
+      "rating": "Prioritario",
+      "t_classify": 12.8,
+      "t_technical": 5.9,
+      "t_hr": 79.8,
+      "t_total": 98.4
+    },
+    {
+      "offer_id": 15,
+      "offer_title": "Data Analyst con certificado de discapacidad",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "adjacent",
+        "reasoning": "La oferta requiere habilidades en análisis de datos, manejo de conjuntos de datos complejos y colaboración con equipos comerciales, lo cual coincide con el perfil del candidato. Sin embargo, no menciona explícitamente machine learning o ciencia de datos, lo que lo sitúa en el rango adjacent."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 7,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en machine learning y análisis de datos, aunque no todas las habilidades técnicas solicitadas (Big Data, Inteligencia Artificial) están presentes. La oferta no requiere experiencia previa, por lo que se otorga puntuación alta en experiencia. La educación no es un requisito explícito, pero el perfil es relevante para el puesto. La ubicación es compatible con remoto."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato tiene un perfil técnico muy prometedor y un interés claro en el área de Data, lo cual es su mayor activo.",
+      "score": 73,
+      "rating": "Aplicar",
+      "t_classify": 12.7,
+      "t_technical": 7.2,
+      "t_hr": 82.6,
+      "t_total": 102.5
+    }
+  ],
+  "deepseek-r1:7b": [
+    {
+      "offer_id": 162,
+      "offer_title": "Data Analyst JR",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "El role requerido es 'Data Analyst JR', y los requisitos mencionados incluyen un grado técnico en Data, Matemáticas o similar, lo cual coincide con la experiencia del candidato. Además, no se necesita experiencia previa, lo que también está alineado con el perfil del candidato."
+      },
+      "technical": {
+        "skills_hard_match": 8,
+        "experience_match": 18,
+        "education_match": 9,
+        "location_match": 3,
+        "reasoning": "El candidato tiene una formación técnica en Data Science y Matemáticas, lo que lo hace idóneo para el puesto. Su experiencia incluye trabajo en data analysis y machine learning, lo que lo acompaña en habilidades relevantes."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato es un perfil de 'alto potencial, historial irregular'. Para una posición Junior, la empresa está buscando",
+      "score": 60,
+      "rating": "Aplicar",
+      "t_classify": 12.3,
+      "t_technical": 4.8,
+      "t_hr": 94.9,
+      "t_total": 111.9
+    },
+    {
+      "offer_id": 198,
+      "offer_title": "Desarrollador/a Big Data Junior (100% Teletrabajo)",
+      "classification": {
+        "role_normalized": "data_engineer",
+        "relevance_flag": "adjacent",
+        "reasoning": "El puesto de Desarrollador/a Big Data Junior exige conocimientos en Databricks, Spark, Azure/AWS, SQL, Python y Git, que parcialmente coinciden con los requisitos del perfil del candidato. Sin embargo, el candidato no tiene experiencia suficiente en proyectos Big Data ni en herramientas específicas como Airflow, Hadoop o Kafka."
+      },
+      "technical": {
+        "skills_hard_match": 6,
+        "experience_match": 18,
+        "education_match": 7,
+        "location_match": 5,
+        "reasoning": "El candidato no tiene experiencia previa con Apache Spark, Databricks, Cloud Azure o AWS, por lo que se otorga una calificación media para esas habilidades. Sin embargo, tiene experiencia con Python, SQL y machine learning, lo que contribuye a una calificación más alta en esas áreas."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato es un perfil de alto potencial, pero con un historial de trayectoria muy fragmentado. El CV grita 'cambio",
+      "score": 56,
+      "rating": "Aplicar",
+      "t_classify": 10.6,
+      "t_technical": 5.9,
+      "t_hr": 89.6,
+      "t_total": 106.0
+    },
+    {
+      "offer_id": 5,
+      "offer_title": "Becario/a Data Analyst",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta de becario/a Data Analyst se alienta al role de Data Analyst ya que implica el análisis de datos y la creación de herramientas para el seguimiento de KPIs, funnel de marketing y operaciones. Los requisitos del role coinciden con los skills técnicos del candidato, incluyendo Python, SQL, Machine Learning, Pandas y Numpy, lo que lo hace un ajuste perfecto para esta oferta."
+      },
+      "technical": {
+        "skills_hard_match": 24,
+        "experience_match": 18,
+        "education_match": 9,
+        "location_match": 5,
+        "reasoning": "El candidato tiene una gran experiencia laboral, especialmente en la industria industrial y en roles relacionados con el manejo de datos. Su formación universitaria incluye un máster en data science y una licenciatura en ingeniería técnica industrial, lo que le da una base sólida para abordar tareas técnicas complejas. Además, su portfolio de proyectos demuestra su capacidad para aplicar técnicas de machine learning y análisis de datos en contextos reales. Por otro lado, su know-how en herramientas como Python, SQL y Pandas lo hace apto para desarrollar soluciones eficientes en el entorno del data analysis."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "El candidato es técnicamente sólido y su perfil de proyectos demuestra la capacidad de aplicar ML y análisis avanzado en",
+      "score": 78,
+      "rating": "Prioritario",
+      "t_classify": 11.0,
+      "t_technical": 8.1,
+      "t_hr": 86.6,
+      "t_total": 105.7
+    },
+    {
+      "offer_id": 15,
+      "offer_title": "Data Analyst con certificado de discapacidad",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "El puesto Data Analyst se alienta por el experiencia del candidato en data analysis y machine learning, así como su formación técnica y experiencia laboral relevantes."
+      },
+      "technical": {
+        "skills_hard_match": 30,
+        "experience_match": 20,
+        "education_match": 10,
+        "location_match": 0,
+        "reasoning": "El candidato tiene una formación académica sólida en ingeniería industrial y data science, y su experiencia incluye trabajo en equipos multidisciplinarios y roles técnicos relevantes. Sin embargo, el puesto exige certificados de discapacidad que el candidato no tiene, lo que reduce la calificación de la educación."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Miguel tiene un perfil técnico muy sólido y actual, respaldado por un bootcamp reciente y proyectos de ML aplicados. Sus",
+      "score": 66,
+      "rating": "Aplicar",
+      "t_classify": 8.8,
+      "t_technical": 6.0,
+      "t_hr": 86.2,
+      "t_total": 101.0
+    }
+  ],
+  "deepseek-r1:8b": [
+    {
+      "offer_id": 162,
+      "offer_title": "Data Analyst JR",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "stretch",
+        "reasoning": "La oferta requiere un título técnico en data o similar, pero el candidato tiene un título en Ingeniería Técnica Industrial y experiencia en roles técnicos. Aunque tiene habilidades en Python y SQL, la oferta no especifica experiencia previa, pero el perfil del candidato no coincide directamente con un perfil junior en analítica de datos."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 5,
+        "location_match": 1,
+        "reasoning": "El candidato tiene experiencia en Python, SQL, Machine Learning, Pandas, Numpy y Scikit-learn, que son habilidades técnicas relevantes para el puesto. Sin embargo, la oferta no especifica experiencia previa, por lo que el match se centra en las habilidades educativas y la modalidad semipresencial en Bilbao, que no coincide con la ubicación del candidato."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato presenta un perfil de 'alto potencial, pero con trayectoria discontinua'. Sus habilidades técnicas (Pytho",
+      "score": 68,
+      "rating": "Aplicar",
+      "t_classify": 12.6,
+      "t_technical": 6.5,
+      "t_hr": 77.5,
+      "t_total": 96.6
+    },
+    {
+      "offer_id": 198,
+      "offer_title": "Desarrollador/a Big Data Junior (100% Teletrabajo)",
+      "classification": {
+        "role_normalized": "data_engineer",
+        "relevance_flag": "stretch",
+        "reasoning": "La oferta requiere conocimientos en Databricks, Spark, SQL, Python y Git, que coinciden parcialmente con las habilidades del candidato (Python, SQL, Scikit-learn, Git). Sin embargo, el candidato carece de experiencia en Big Data y herramientas específicas como Spark o Databricks, lo que limita la relevancia a un 20-40%."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 5,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en Python y SQL, que son habilidades requeridas, pero no posee conocimientos en Databricks, Spark, Azure/AWS, Git/GitHub, Airflow/Control-M o Scrum, que son necesarios para el puesto. Por otro lado, tiene experiencia en proyectos de Big Data y Machine Learning, aunque no directamente relacionada con las herramientas específicas de la oferta."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato tiene una base sólida (Python, SQL, ML) y ha demostrado iniciativa al comp",
+      "score": 61,
+      "rating": "Aplicar",
+      "t_classify": 13.5,
+      "t_technical": 7.3,
+      "t_hr": 82.1,
+      "t_total": 102.9
+    },
+    {
+      "offer_id": 5,
+      "offer_title": "Becario/a Data Analyst",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta describe tareas típicas de un Data Analyst, como análisis de datos, construcción de dashboards, modelado de datos e infraestructura, y análisis de métricas. El candidato tiene experiencia en análisis de datos y habilidades técnicas como Python, SQL, que coinciden con los requisitos del puesto."
+      },
+      "technical": {
+        "skills_hard_match": 25,
+        "experience_match": 18,
+        "education_match": 5,
+        "location_match": 5,
+        "reasoning": "El candidato tiene experiencia en Python, SQL y Machine Learning, que son habilidades clave requeridas para el puesto. Sin embargo, no cuenta con experiencia en Git ni en la creación de dashboards, lo que podría requerir capacitación adicional. Por otro lado, su educación en Data Science es reciente y complementa sus habilidades técnicas, aunque no está directamente relacionada con la oferta. La experiencia en proyectos como el análisis de datos y el modelado de Machine Learning es relevante, pero no coincide directamente con la oferta de becario en análisis de datos. La modalidad remota es preferida por el candidato y coincide con la oferta."
+      },
+      "hr_apply_signal": "yes",
+      "hr_verdict_short": "Este candidato tiene un perfil de alto potencial, pero con una trayectoria profesional muy fragmentada. Desde la perspec",
+      "score": 74,
+      "rating": "Aplicar",
+      "t_classify": 12.9,
+      "t_technical": 8.9,
+      "t_hr": 90.4,
+      "t_total": 112.2
+    },
+    {
+      "offer_id": 15,
+      "offer_title": "Data Analyst con certificado de discapacidad",
+      "classification": {
+        "role_normalized": "data_analyst",
+        "relevance_flag": "core",
+        "reasoning": "La oferta requiere dominio de análisis avanzados, manejo de datos complejos y optimización de estrategias analíticas, que son habilidades clave del Data Analyst. El candidato tiene experiencia en análisis de datos y dominio de herramientas como Python y SQL, que coinciden directamente con los requisitos."
+      },
+      "technical": {
+        "skills_hard_match": 20,
+        "experience_match": 15,
+        "education_match": 5,
+        "location_match": 1,
+        "reasoning": "El candidato tiene experiencia en Machine Learning y conocimientos en Python, SQL, Pandas y Scikit-learn, que son algunas de las habilidades técnicas requeridas por la oferta. Sin embargo, la oferta también pide experiencia en Big Data, Inteligencia Artificial y Data Science, que el candidato no menciona en su perfil. Además, el candidato no tiene experiencia directa en el sector farmacéutico o en el trabajo con Foundry, lo que reduce el match. La educación del candidato no está directamente relacionada con las habilidades requeridas, y la ubicación del candidato no coincide con la oferta que se encuentra en Madrid."
+      },
+      "hr_apply_signal": "maybe",
+      "hr_verdict_short": "Desde un punto de vista técnico, el candidato tiene las herramientas (Python, ML, SQL) y la ambición para el puesto. Los",
+      "score": 56,
+      "rating": "Aplicar",
+      "t_classify": 12.8,
+      "t_technical": 8.9,
+      "t_hr": 82.3,
+      "t_total": 103.9
+    }
+  ]
+}
