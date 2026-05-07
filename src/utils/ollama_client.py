@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 OLLAMA_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT = 180
 
-MODEL_TECHNICAL = "qwen2.5-coder:7b"
+MODEL_TECHNICAL = "deepseek-r1:8b"
 MODEL_HR = "gemma4:e4b"
 
 MODEL_TEMPERATURES: dict[str, float] = {

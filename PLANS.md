@@ -16,15 +16,16 @@
 
 ## FASE 3 — Pipeline base
   [x] fetch.py (InfoJobs API → limpieza → upsert en DB)
-  [ ] fetch_company.py (datos empresa → DB)
-  [ ] evaluate.py (qwen2.5 técnico + gemma4 HR → offer_evaluations)
-  [ ] send.py (formato Telegram → envío)
-  [ ] run.py (orquestador del pipeline completo)
+  [x] evaluate.py (qwen2.5 técnico + gemma4 HR → offer_evaluations)
+  [x] send.py (formato Telegram → envío)
+  [x] run.py (orquestador del pipeline completo)
+  [x] role_classifier.py (clasificación de ofertas y relevance_flag)
   [x] Añadir campos search_layer, role_level, relevance_flag a offers
   [x] Crear tabla search_config para configuración geográfica y de rol
+  [x] Pre-filtro de requisitos impossibles (descartar 0/1)
+  [ ] fetch_company.py (datos empresa → DB)
 
 ## FASE 4 — Inteligencia
-  [x] role_classifier.py (clasificación de ofertas y relevance_flag)
   [ ] role_discovery.py
   [ ] market_signals.py
   [ ] strategic_advisor.py con todos los triggers

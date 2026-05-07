@@ -1,10 +1,12 @@
 """
-Pipeline: evaluación de ofertas con qwen2.5 (técnico) + gemma4 (HR).
+Pipeline: evaluación de ofertas con deepseek-r1:8b (técnico) + gemma4 (HR).
 Procesa ofertas clasificadas (relevance_flag NOT NULL, is_evaluated=0).
+Incluye pre-filtro de requisitos impossibles y evaluación de skills con nivel.
 """
 
 import json
 import logging
+import re
 import sys
 import time
 from pathlib import Path
@@ -23,6 +25,82 @@ log = logging.getLogger(__name__)
 
 def _clamp(val, lo: int, hi: int) -> int:
     return max(lo, min(hi, int(val or 0)))
+
+
+# Patrones de requisitos impossibles (requieren condición que NO se puede cambiar)
+IMPOSSIBLE_PATTERNS = [
+    (r"estudiante.*\búltimo año\b", "No es estudiante de último año"),
+    (
+        r"firma.*convenio.*prácticas",
+        "No puede firmar convenio de prácticas (no es estudiante)",
+    ),
+    (r"ser.*estudiante", "No es estudiante activo"),
+    (r"certificado.*discapacidad", "No posee certificado de discapacidad"),
+    (r"minusvalía", "No tiene minusvalía"),
+    (r"discapacitado", "No tiene discapacidad"),
+    (r"ser.*menor de \d+", "No cumple requisito de edad"),
+    (r"tener.*\d+ años", "No cumple requisito de edad"),
+]
+
+# Patrones de requisitos que requieren verificar el perfil
+PROFILE_CHECK_PATTERNS = [
+    (r"carné de conducir", "carnet"),
+    (r"coche propio", "coche"),
+    (r"vehículo propio", "coche"),
+]
+
+
+def pre_filtro_requisitos_imposibles(offer: dict, perfil: str) -> tuple[bool, str]:
+    """
+    Analiza la oferta antes de llamar a los modelos para detectar requisitos impossibles.
+
+    Un requisito es IMPOSIBLE si requiere volver a un estado anterior:
+    - Ser estudiante (no lo es)
+    - Tener certificado de discapacidad (no lo tiene)
+    - Ser menor de X años (no lo es)
+
+    Retorna: (es_descartable, razon)
+    - Si es_descartable=True: NO se evalúa con modelos, score=0
+    """
+    description = (offer.get("description_clean") or "").lower()
+    title = (offer.get("title") or "").lower()
+    full_text = f"{title} {description}"
+
+    # Buscar patrones impossibles
+    for pattern, razon in IMPOSSIBLE_PATTERNS:
+        if re.search(pattern, full_text, re.IGNORECASE):
+            log.info(f"Descarte por requisito imposible: {razon}")
+            return True, razon
+
+    # Verificar requisitos del perfil
+    perfil_lower = perfil.lower()
+    for pattern, _ in PROFILE_CHECK_PATTERNS:
+        if re.search(pattern, full_text, re.IGNORECASE):
+            if pattern == "carnet" and "carné de conducir" in full_text:
+                if "carné" not in perfil_lower and "carnet" not in perfil_lower:
+                    return True, "No tiene carné de conducir"
+            elif pattern == "coche" and (
+                "coche propio" in full_text or "vehículo propio" in full_text
+            ):
+                if "coche" not in perfil_lower and "vehículo" not in perfil_lower:
+                    return True, "No tiene vehículo propio"
+
+    return False, ""
+
+
+def load_candidate_skills() -> list[dict]:
+    """Carga las skills del candidato desde la DB con nivel."""
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT s.name, cs.level_current, cs.evidence
+            FROM candidate_skills cs
+            JOIN skills s ON cs.skill_id = s.id
+            WHERE cs.source = 'PERFIL.md'
+        """).fetchall()
+        return [{"name": r[0], "level": r[1], "evidence": r[2]} for r in rows]
+    finally:
+        conn.close()
 
 
 RATING = {
@@ -67,41 +145,77 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
     return [dict(zip(cols, row)) for row in rows]
 
 
-def evaluate_technical(offer: dict, perfil: str) -> dict:
-    """qwen2.5 evalúa bloque técnico (60 pts). Sin think, output JSON directo."""
+def evaluate_technical(offer: dict, perfil: str, candidate_skills: list[dict]) -> dict:
+    """deepseek-r1:8b evalúa bloque técnico (60 pts) con lógica de niveles."""
     skills = offer.get("skills_required") or "[]"
-    prompt = f"""Evalúa el match técnico entre este perfil y esta oferta.
+    description = (offer.get("description_clean") or "")[:1500]
+
+    # Formatear skills del candidato con nivel
+    skills_info = (
+        "\n".join(
+            [
+                f"- {s['name']}: {s['level']} ({s.get('evidence', 'sin evidencia')[:80]})"
+                for s in candidate_skills
+            ]
+        )
+        if candidate_skills
+        else "Sin skills registradas en el perfil"
+    )
+
+    prompt = f"""Eres un evaluador técnico de ofertas de trabajo. Analiza el match entre el perfil y la oferta.
 
 REGLAS CRÍTICAS (obligatorias):
-- Evalúa SOLO lo que la oferta exige explícitamente
-- Si la oferta NO pide experiencia previa → experience_match = 18-20
-- Si el candidato TIENE las skills pedidas → puntuación alta para esas skills
-- NO penalices por skills que el candidato tiene pero la oferta no pide
-- Si la oferta no lista skills específicas → evalúa si el candidato puede hacer el trabajo descrito
-- location_match: remoto=5, híbrido=3, presencial-otra-ciudad=1, presencial-sin-posibilidad-remoto=0
+
+1. EVALUACIÓN DE SKILLS CON NIVEL:
+   - Solo evalúa las skills que la OFERTA explícitamente pide
+   - Las skills del candidato que la oferta NO pide = IGNORAR (no cuentan, no restan)
+   - El nivel importa: si la oferta pide "avanzado" y el candidato tiene "básico" → reducir puntuación
+   - Si la oferta NO especifica nivel → cualquier nivel del candidato es válido (100%)
+
+2. INFERIR NIVEL DESDE LA OFERTA:
+   - "senior", "lead", "experto", "experienced" → nivel avanzado/experto requerido
+   - "junior", "entry", "sin experiencia" → nivel básico es suficiente
+   - Sin especificación → cualquier nivel es válido
+
+3. EXPERIENCIA:
+   - Si la oferta NO pide experiencia previa → experience_match = 18-20
+   - Si pide experiencia y el candidato tiene gap de +3 años → evaluar si es relevante
+
+4. LOCATION:
+   - remoto=5, híbrido=3, presencial-otra-ciudad=1, presencial-sin-posibilidad-remoto=0
+
+CANDIDATO SKILLS (con nivel):
+{skills_info}
 
 PERFIL:
-{perfil[:3000]}
+{perfil[:2500]}
 
 OFERTA:
 Título: {offer["title"]}
 Empresa: {offer["company_name"]}
 Skills requeridas: {skills}
-Descripción: {(offer.get("description_clean") or "")[:1500]}
+Descripción: {description}
 
-Devuelve SOLO este JSON sin texto adicional:
+NIVEL REQUERIDO DE LA OFERTA: (inferir desde el título y descripción)
+- Si dice "senior/experto/lead" → nivel requerido: avanzado
+- Si dice "junior/básico/sin experiencia" → nivel requerido: básico
+- Si no especifica → nivel requerido: cualquiera
+
+EVALÚA y responde SOLO este JSON:
 {{
   "skills_hard_match": <int 0-30>,
   "experience_match": <int 0-20>,
   "education_match": <int 0-10>,
   "location_match": <int 0-5>,
-  "reasoning": "<una frase honesta>"
+  "nivel_match_reasoning": "<explica cómo evaluaste el nivel de cada skill>",
+  "reasoning": "<frase honesta que justifique el score>"
 }}"""
     result = ollama_call(
         model=MODEL_TECHNICAL,
         prompt=prompt,
         expect_json=True,
         temperature=0.1,
+        think=True,
     )
     return result if isinstance(result, dict) else {}
 
@@ -174,12 +288,18 @@ def save_evaluation(
     recommendation: str,
     processing_ms: int,
     coherence_note: str | None = None,
+    descarte_tipo: str = "ninguno",
+    descarte_razon: str | None = None,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
-    verdict_final = hr.get("verdict", "")
+    verdict_final = hr.get("verdict", "") if hr else ""
     if coherence_note:
         verdict_final += f"\n\n[COHERENCIA]: {coherence_note}"
+
+    technical_data = technical if technical else {}
+    hr_data = hr if hr else {}
+
     cur.execute(
         """
         INSERT INTO offer_evaluations (
@@ -191,31 +311,34 @@ def save_evaluation(
             environment_compatibility, hr_concerns,
             strengths, red_flags, gemma_verdict,
             apply_recommendation, processing_ms,
-            model_technical, model_hr
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            model_technical, model_hr,
+            descarte_tipo, descarte_razon
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             offer_id,
-            technical.get("skills_hard_match", 0),
-            technical.get("experience_match", 0),
-            technical.get("education_match", 0),
-            technical.get("location_match", 0),
-            hr.get("trajectory_coherence", 0),
-            hr.get("recency_relevance", 0),
-            hr.get("market_competitiveness", 0),
-            hr.get("penalty", 0),
-            json.dumps(hr.get("penalty_breakdown", {}), ensure_ascii=False),
+            technical_data.get("skills_hard_match", 0),
+            technical_data.get("experience_match", 0),
+            technical_data.get("education_match", 0),
+            technical_data.get("location_match", 0),
+            hr_data.get("trajectory_coherence", 0),
+            hr_data.get("recency_relevance", 0),
+            hr_data.get("market_competitiveness", 0),
+            hr_data.get("penalty", 0),
+            json.dumps(hr_data.get("penalty_breakdown", {}), ensure_ascii=False),
             match_score,
             recommendation,
-            hr.get("environment_compatibility"),
-            json.dumps(hr.get("hr_concerns", []), ensure_ascii=False),
-            json.dumps(hr.get("strengths", []), ensure_ascii=False),
-            json.dumps(hr.get("red_flags", []), ensure_ascii=False),
+            hr_data.get("environment_compatibility"),
+            json.dumps(hr_data.get("hr_concerns", []), ensure_ascii=False),
+            json.dumps(hr_data.get("strengths", []), ensure_ascii=False),
+            json.dumps(hr_data.get("red_flags", []), ensure_ascii=False),
             verdict_final,
             recommendation,
             processing_ms,
             MODEL_TECHNICAL,
             MODEL_HR,
+            descarte_tipo,
+            descarte_razon,
         ),
     )
     cur.execute("UPDATE offers SET is_evaluated=1 WHERE id=?", (offer_id,))
@@ -310,18 +433,45 @@ Responde SOLO JSON:
 def run_evaluate(limit: int = 10) -> dict:
     perfil = load_perfil()
     offers = get_pending_offers(limit)
+    candidate_skills = load_candidate_skills()
     log.info("Ofertas pendientes de evaluar: %d", len(offers))
+    log.info("Skills del candidato cargadas: %d", len(candidate_skills))
 
-    stats = {"evaluated": 0, "errors": 0, "scores": []}
+    stats = {"evaluated": 0, "errors": 0, "scores": [], "descarte": 0}
 
     for offer in offers:
         t0 = time.monotonic()
         try:
             log.info("Evaluando: %s", offer["title"])
 
-            technical = evaluate_technical(offer, perfil)
+            # PRE-FILTRO: Verificar requisitos impossibles
+            es_descartable, razon_descarte = pre_filtro_requisitos_imposibles(
+                offer, perfil
+            )
+
+            if es_descartable:
+                log.warning(f"⚠️ DESCARTE: {offer['title']} - {razon_descarte}")
+                ms = int((time.monotonic() - t0) * 1000)
+                save_evaluation(
+                    offer_id=offer["id"],
+                    technical={},
+                    hr={},
+                    match_score=0,
+                    recommendation="Descartado",
+                    processing_ms=ms,
+                    descarte_tipo="requisito_imposible",
+                    descarte_razon=razon_descarte,
+                )
+                stats["descarte"] += 1
+                stats["evaluated"] += 1
+                log.info("✓ %s → DESCARTADO (%s)", offer["title"], razon_descarte)
+                continue
+
+            technical = evaluate_technical(offer, perfil, candidate_skills)
             if not technical:
-                log.warning("qwen2.5 no devolvió resultado para: %s", offer["title"])
+                log.warning(
+                    f"deepseek-r1:8b no devolvió resultado para: {offer['title']}"
+                )
                 stats["errors"] += 1
                 continue
 

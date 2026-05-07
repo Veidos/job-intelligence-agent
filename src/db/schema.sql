@@ -122,7 +122,9 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     gemma_verdict TEXT,
     interview_prep TEXT,
     apply_recommendation TEXT,
-    model_technical TEXT DEFAULT 'qwen2.5-coder:7b',
+    descarte_tipo TEXT DEFAULT 'ninguno',
+    descarte_razon TEXT,
+    model_technical TEXT DEFAULT 'deepseek-r1:8b',
     model_hr TEXT DEFAULT 'gemma4:e4b',
     processing_ms INTEGER,
     sent_via_telegram INTEGER DEFAULT 0,
@@ -218,4 +220,24 @@ CREATE TABLE IF NOT EXISTS user_settings (
     min_score_send INTEGER DEFAULT 35,
     weekly_summary INTEGER DEFAULT 1,
     strategic_alerts INTEGER DEFAULT 1
+);
+
+-- Tabla de skills disponibles
+CREATE TABLE IF NOT EXISTS skills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    category TEXT,
+    created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Skills del candidato con nivel
+CREATE TABLE IF NOT EXISTS candidate_skills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill_id INTEGER NOT NULL REFERENCES skills(id),
+    level_current TEXT DEFAULT 'basico',
+    evidence TEXT,
+    source TEXT DEFAULT 'PERFIL.md',
+    created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(skill_id, source)
 );
