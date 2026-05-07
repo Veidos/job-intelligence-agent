@@ -145,12 +145,12 @@ PERFIL:
         skill_id = conn.execute(
             "SELECT id FROM skills WHERE name = ?", (name,)
         ).fetchone()[0]
-        # Upsert en candidate_skills
+        # Upsert en candidate_skills (UNIQUE skill_id + source)
         conn.execute(
             """
             INSERT INTO candidate_skills(skill_id, level_current, evidence, source)
             VALUES (?, ?, ?, 'PERFIL.md')
-            ON CONFLICT(skill_id) DO UPDATE SET
+            ON CONFLICT(skill_id, source) DO UPDATE SET
                 level_current = excluded.level_current,
                 evidence = excluded.evidence,
                 updated_at = datetime('now')
