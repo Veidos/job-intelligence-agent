@@ -75,12 +75,12 @@ def pre_filtro_requisitos_imposibles(offer: dict, perfil: str) -> tuple[bool, st
 
     # Verificar requisitos del perfil
     perfil_lower = perfil.lower()
-    for pattern, _ in PROFILE_CHECK_PATTERNS:
+    for pattern, kw in PROFILE_CHECK_PATTERNS:
         if re.search(pattern, full_text, re.IGNORECASE):
-            if pattern == "carnet" and "carné de conducir" in full_text:
+            if kw == "carnet" and "carné de conducir" in full_text:
                 if "carné" not in perfil_lower and "carnet" not in perfil_lower:
                     return True, "No tiene carné de conducir"
-            elif pattern == "coche" and (
+            elif kw == "coche" and (
                 "coche propio" in full_text or "vehículo propio" in full_text
             ):
                 if "coche" not in perfil_lower and "vehículo" not in perfil_lower:
@@ -373,7 +373,8 @@ def save_evaluation(
     cur.execute(
         """
         INSERT INTO offer_evaluations (
-            offer_id, skills_hard_match, experience_match,
+            offer_id, cv_version_id,
+            skills_hard_match, experience_match,
             education_match, location_match,
             trajectory_coherence, recency_relevance,
             market_competitiveness, penalty, penalty_breakdown,
@@ -382,11 +383,14 @@ def save_evaluation(
             strengths, red_flags, gemma_verdict,
             apply_recommendation, processing_ms,
             model_technical, model_hr,
+            company_fit_score, company_green_flags, company_red_flags,
+            interview_prep,
             descarte_tipo, descarte_razon
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             offer_id,
+            None,
             technical_data.get("skills_hard_match", 0),
             technical_data.get("experience_match", 0),
             technical_data.get("education_match", 0),
@@ -407,6 +411,10 @@ def save_evaluation(
             processing_ms,
             MODEL_TECHNICAL,
             MODEL_HR,
+            hr_data.get("company_fit_score"),
+            json.dumps(hr_data.get("company_green_flags", []), ensure_ascii=False),
+            json.dumps(hr_data.get("company_red_flags", []), ensure_ascii=False),
+            json.dumps(hr_data.get("interview_prep", []), ensure_ascii=False),
             descarte_tipo,
             descarte_razon,
         ),

@@ -105,9 +105,22 @@ def parse_experience_dates(
 
     # Mapeo de meses en inglés a número
     month_map = {
-        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-        "ene": 1, "abr": 4, "ago": 8, "dic": 12
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
+        "ene": 1,
+        "abr": 4,
+        "ago": 8,
+        "dic": 12,
     }
 
     for exp in experience:
@@ -123,23 +136,29 @@ def parse_experience_dates(
 
         # Buscar fecha fin (año y mes) en el duration string
         # Patrones: "Dec 2021 - Sep 2022", "2021 - 2022", "Nov 2019 - Apr 2021"
-        
+
         # Buscar año (el último)
         years = re.findall(r"\b(20\d{2})\b", duration)
         if not years:
             continue
-        
+
         year = int(years[-1])  # Tomar el último año (fecha fin)
-        
+
         # Buscar mes (cerca del último año)
-        month_match = re.search(r"(\w{3})\s+" + str(year) + r"$", duration, re.IGNORECASE)
+        month_match = re.search(
+            r"(\w{3})\s+" + str(year) + r"$", duration, re.IGNORECASE
+        )
         month = 9  # default: si no se parsea, asumir septiembre
         if month_match:
             month_str = month_match.group(1).lower()[:3]
             month = month_map.get(month_str, 9)
 
         # Tomar el trabajo más reciente (fecha fin más reciente)
-        if last_job_year is None or year > last_job_year or (year == last_job_year and month > last_job_month):
+        if (
+            last_job_year is None
+            or year > last_job_year
+            or (year == last_job_year and month > last_job_month)
+        ):
             last_job_year = year
             last_job_month = month
             last_job_role = role

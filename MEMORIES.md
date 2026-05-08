@@ -57,3 +57,26 @@
 qwen2.5-coder:7b: NO usar para tareas abiertas o arquitectónicas.
 Solo tareas concretas: un archivo, instrucciones literales, output definido.
 Se queda colgado con contexto amplio o decisiones de diseño.
+TODO: reconsiderar para extracción de campos en fetch.py (tarea determinista)
+
+## Bugfix: save_evaluation — columnas faltantes (INSERT vs schema)
+
+- `save_evaluation` en evaluate.py usaba 23 placeholders en INSERT
+  pero la tabla `offer_evaluations` tiene 28 columnas (incluye cv_version_id,
+  company_fit_score, company_green_flags, company_red_flags, interview_prep)
+- El fix añade las 7 columnas faltantes al INSERT
+- Error resultante: `sqlite3.OperationalError: 24 values for 23 columns`
+
+## Bugfix: pre_filtro_requisitos_imposibles — comparison bug en PROFILE_CHECK_PATTERNS
+
+- El patrón `PROFILE_CHECK_PATTERNS` usa tuples `(pattern, kw)` pero
+  el código original comparaba `pattern == "carnet"` (string vs regex pattern object)
+- Nunca matcheaba, el carné de conducir nunca se detectaba
+- Fix: cambiar tupla a `(pattern, kw)` y comparar con `kw`
+- affected: evaluate.py líneas 78-87
+
+## Bugfix: test_phase1.py — expects tabla candidate_profile (ya eliminada)
+
+- test_phase1.py verifica que la tabla `candidate_profile` exista
+- Pero el schema.sql no tiene esa tabla (eliminada en refactor 45fefd2)
+- El test falla en `test_database` porque espera `candidate_profile`

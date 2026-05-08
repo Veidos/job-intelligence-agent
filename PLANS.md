@@ -33,4 +33,12 @@
 ## FASE 5 — Automatización
   [ ] Configuración cron
   [ ] Logging y monitorización
-  [ ] Tests de integración end-to-end
+
+## TESTS — Infrastructure
+  [x] tests/conftest.py con fixtures DB (temp file + rollback)
+  [x] Fixtures: sample_perfil_text, sample_offer (+ variants)
+  [x] Unit tests: test_evaluate.py, test_send.py, test_cleaner.py, test_fetch.py, test_models.py
+  [x] Integration tests: test_db_operations.py, test_db_evaluations.py
+  [ ] Ollama cassettes (grabados) + tests con patches
+  [ ] Pipeline tests (flujo completo con cassettes)
+  [ ] Depreciar/reemplazar test_phase1.py (tabla candidate_profile eliminada)
