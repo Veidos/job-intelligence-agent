@@ -1,5 +1,5 @@
 """
-Extrae datos estructurados del CV usando gemma4:e4b.
+Extrae datos estructurados del CV.
 Incluye skills con nivel y employment_gap_years.
 """
 
@@ -38,14 +38,15 @@ CAMPOS A EXTRAER:
 1. full_name: string (nombre completo)
 2. location_current: string (ciudad/provincia actual)
 3. skills_technical: lista de objetos {{"name": "skill", "level": "basico|intermedio|avanzado", "evidence": "frase justificativa"}}
-   REGLAS DE NIVEL (OBLIGATORIAS):
-   - **avanzado**: La skill se usó en EXPERIENCIA LABORAL REAL (contrato, payroll, freelance pagado)
-   - **intermedio**: La skill se usó en PROYECTOS REALES (freelance, consultoría pagada)
-   - **básico**: La skill solo viene de FORMACIÓN/bootcamp/proyectos académicos/CURSOS
-   - EJEMPLOS:
-     - "Python (básico)": Bootcamp IE University 2023, proyectos académicos del bootcamp
-     - "Python (intermedio)": Proyecto freelance para cliente real, consultedoría pagada
-     - "Python (avanzado)": Desarrollador Python en empresa, uso profesional diario
+   REGLAS DE NIVEL (MUY IMPORTANTE - seguir estrictamente):
+   - **básico**: La skill viene de BOOTCAMP, CURSOS, PROYECTOS ACADÉMICOS, PROYECTOS DE APRENDIZAJE
+     Si la evidencia menciona "Bootcamp", "proyecto", "Capstone", "curso", "formación" → básico
+   - **intermedio**: La skill se usó en PROYECTOS REALES PARA CLIENTES PAGADOS (freelance, consultoría)
+     Si la evidencia menciona "cliente", "freelance", "consultoría pagada" → intermedio  
+   - **avanzado**: La skill se usó en TRABAJO LABORAL FORMAL (contrato, payroll, empresa)
+     Si la evidencia menciona "empresa", "trabajo", "contrato", "empleo" → avanzado
+   - Si tienes dudas entre básico e intermedio → PON básico
+   - Si tienes dudas entre intermedio y avanzado → PON intermedio
 
 4. employment_gap_years: null (NO calcular, déjalo vacío)
 
@@ -98,8 +99,16 @@ def parse_experience_dates(
     import re
 
     now = datetime.now()
-    last_job_date = None
+    last_job_year = None
+    last_job_month = None
     last_job_role = None
+
+    # Mapeo de meses en inglés a número
+    month_map = {
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+        "ene": 1, "abr": 4, "ago": 8, "dic": 12
+    }
 
     for exp in experience:
         role = exp.get("role", "")
@@ -112,31 +121,42 @@ def parse_experience_dates(
         if not duration:
             continue
 
-        # Buscar patrones como "2020 - 2022", "Ene 2020 - Sep 2022", "2022"
+        # Buscar fecha fin (año y mes) en el duration string
+        # Patrones: "Dec 2021 - Sep 2022", "2021 - 2022", "Nov 2019 - Apr 2021"
+        
+        # Buscar año (el último)
         years = re.findall(r"\b(20\d{2})\b", duration)
-        if years:
-            try:
-                year = int(max(years))
-                if last_job_date is None or year > last_job_date:
-                    last_job_date = year
-                    last_job_role = role
-            except ValueError:
-                continue
+        if not years:
+            continue
+        
+        year = int(years[-1])  # Tomar el último año (fecha fin)
+        
+        # Buscar mes (cerca del último año)
+        month_match = re.search(r"(\w{3})\s+" + str(year) + r"$", duration, re.IGNORECASE)
+        month = 9  # default: si no se parsea, asumir septiembre
+        if month_match:
+            month_str = month_match.group(1).lower()[:3]
+            month = month_map.get(month_str, 9)
 
-    if last_job_date:
-        # Calcular gap en años y meses
-        years_diff = now.year - last_job_date
-        months_diff = now.month  # mes actual (asumimos mes actual como fin)
-        total_months = years_diff * 12 + months_diff
-        gap_years = round(total_months / 12, 1)
-        return f"{last_job_date}", gap_years, last_job_role
+        # Tomar el trabajo más reciente (fecha fin más reciente)
+        if last_job_year is None or year > last_job_year or (year == last_job_year and month > last_job_month):
+            last_job_year = year
+            last_job_month = month
+            last_job_role = role
+
+    if last_job_year:
+        # Calcular gap exacto: desde fecha fin hasta ahora
+        # Mes actual - mes fin del trabajo
+        months_gap = (now.year - last_job_year) * 12 + (now.month - last_job_month)
+        gap_years = round(months_gap / 12, 1)
+        return f"{last_job_year}", gap_years, last_job_role
 
     return None, None, None
 
 
 def extract_cv_data(cv_path: str | Path) -> dict[str, Any]:
     """
-    Extrae datos estructurados del CV via gemma4:e4b.
+    Extrae datos estructurados del CV.
 
     Returns:
         Diccionario con full_name, location_current, skills_technical,
@@ -147,7 +167,7 @@ def extract_cv_data(cv_path: str | Path) -> dict[str, Any]:
     if not cv_text.strip():
         raise ValueError("No se pudo extraer texto del PDF")
 
-    log.info("Llamando a %s para extracción", MODEL_HR)
+    log.info("Extrayendo datos del perfil...")
     prompt = build_extraction_prompt(cv_text)
     result = ollama_call(
         model=MODEL_HR,
