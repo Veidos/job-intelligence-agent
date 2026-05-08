@@ -36,12 +36,9 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
     # 3. Personal concerns (nuevo formato constructivo)
     print("\n3. Contexto personal para encontrar el trabajo adecuado")
     print(
-        "   [INFO] Esta información se usa para calcular penalizaciones (max -25 puntos)"
+        "   [INFO] Esta información ayuda al sistema a encontrar ofertas\n"
+        "          que se ajusten mejor a tu situación."
     )
-    print(
-        "          No es un filtro negativo, guía al sistema hacia ofertas compatibles."
-    )
-    print("          Tu privacidad está garantizada - solo se usa internamente.\n")
 
     # Subpregunta 3a: Condiciones que afectan al trabajo
     print("   3a. ¿Tienes alguna condición (TDAH, autism, limitaciones físicas, etc.)")
@@ -78,8 +75,8 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
     print("   (menciona ambos libremente)")
     env_raw = input("   > ").strip()
 
-    # Procesar respuestas con gemma4
-    print("\n[Procesando respuestas con gemma4...]")
+    # Procesar respuestas
+    print("\n[Procesando tus respuestas...]")
 
     reloc_prompt = f"""El candidato respondió: "{relocation_raw}"
 Su ubicación actual según CV: {cv_data.get("location_current", "desconocida")}

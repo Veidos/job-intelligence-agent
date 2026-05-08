@@ -49,22 +49,27 @@ def generate_perfil_md(profile: dict) -> str:
         lines += ["## Gap de empleo", ""]
         lines += [f"- **Años:** {gap_years}"]
 
-        # Intentar encontrar último trabajo para contexto
-        experience = profile.get("experience", [])
-        if experience and isinstance(experience[0], dict):
-            last_job = experience[0].get("role", "desconocido")
-            last_company = experience[0].get("company", "desconocida")
-            duration = experience[0].get("duration", "")
-            lines += [f"- **Último trabajo:** {last_job} @ {last_company} ({duration})"]
+        # Usar el último trabajo real calculado (no el primero de la lista que puede ser académico)
+        last_role = profile.get("_last_job_role")
+        if last_role:
+            # Buscar la compañía y duración de ese trabajo específico
+            experience = profile.get("experience", [])
+            for exp in experience:
+                if exp.get("role") == last_role:
+                    last_company = exp.get("company", "desconocida")
+                    duration = exp.get("duration", "")
+                    lines += [
+                        f"- **Último trabajo:** {last_role} @ {last_company} ({duration})"
+                    ]
+                    break
+            if not any("Último trabajo" in line for line in lines):
+                lines += [f"- **Último trabajo:** {last_role}"]
 
         # Motivo del gap (si se sabe)
         personal_concerns = profile.get("personal_concerns", "")
         if personal_concerns and "gap" in personal_concerns.lower():
             lines += [f"- **Nota:** {personal_concerns}"]
         lines += [""]
-    else:
-        # Si no hay gap, sección vacía o no incluir
-        pass
 
     # Educación
     lines += ["## Educación", ""]

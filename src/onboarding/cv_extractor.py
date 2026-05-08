@@ -38,19 +38,20 @@ CAMPOS A EXTRAER:
 1. full_name: string (nombre completo)
 2. location_current: string (ciudad/provincia actual)
 3. skills_technical: lista de objetos {{"name": "skill", "level": "basico|intermedio|avanzado", "evidence": "frase justificativa"}}
-   REGLAS DE NIVEL:
-   - Si la skill se usó en EXPERIENCIA LABORAL REAL → nivel: avanzado
-   - Si la skill se usó en PROYECTOS REALES/freelance → nivel: intermedio
-   - Si la skill solo viene de FORMACIÓN/bootcamp/proyectos académicos → nivel: básico
-   - NUNCA inferir nivel mayor al evidence disponible
+   REGLAS DE NIVEL (OBLIGATORIAS):
+   - **avanzado**: La skill se usó en EXPERIENCIA LABORAL REAL (contrato, payroll, freelance pagado)
+   - **intermedio**: La skill se usó en PROYECTOS REALES (freelance, consultoría pagada)
+   - **básico**: La skill solo viene de FORMACIÓN/bootcamp/proyectos académicos/CURSOS
+   - EJEMPLOS:
+     - "Python (básico)": Bootcamp IE University 2023, proyectos académicos del bootcamp
+     - "Python (intermedio)": Proyecto freelance para cliente real, consultedoría pagada
+     - "Python (avanzado)": Desarrollador Python en empresa, uso profesional diario
 
-4. employment_gap_years: número (años de gap laboral)
-   CÁLCULO: Buscar última fecha de experiencia laboral real → calcular hasta fecha actual
-   - Si hay experiencia continua → 0
-   - Si hay gap desde último trabajo → restar años (ej: 2022 a 2026 = 3.5)
+4. employment_gap_years: null (NO calcular, déjalo vacío)
 
 5. education: lista de objetos {{"degree": string, "institution": string, "year": int|null}}
 6. experience: lista de objetos {{"role": string, "company": string, "duration": string, "description": string}}
+   IMPORTANTE: Solo incluir EXPERIENCIA LABORAL REAL (no proyectos académicos, bootcamps, prácticas no remuneradas)
 7. languages: lista de strings
 8. projects: lista de objetos {{"name": string, "description": string}}
 
@@ -60,35 +61,77 @@ TEXTO DEL CV:
 {cv_text[:12000]}"""
 
 
-def parse_experience_dates(experience: list[dict]) -> tuple[str | None, float | None]:
+def is_academic_or_training(role: str) -> bool:
+    """Detecta si un rol es académico/formación (no laboral real)."""
+    if not role:
+        return False
+    role_lower = role.lower()
+    academic_keywords = [
+        "project",
+        "capstone",
+        "bootcamp",
+        "thesis",
+        "tfg",
+        "tfm",
+        "internship",
+        "intern",
+        "practica",
+        "prácticas",
+        "course",
+        "training",
+        "volunteer",
+        "voluntario",
+        "student",
+        "estudiante",
+    ]
+    return any(kw in role_lower for kw in academic_keywords)
+
+
+def parse_experience_dates(
+    experience: list[dict],
+) -> tuple[str | None, float | None, str | None]:
     """
-    Infiere el gap de empleo desde las experiencias.
-    Returns: (ultimo_trabajo_fecha, gap_years)
+    Infiere el gap de empleo desde las experiencias laborales reales.
+    Excluye proyectos académicos, bootcamps, prácticas, etc.
+    Returns: (ultimo_trabajo_fecha, gap_years, ultimo_trabajo_rol)
     """
+    import re
+
     now = datetime.now()
     last_job_date = None
+    last_job_role = None
 
     for exp in experience:
+        role = exp.get("role", "")
         duration = exp.get("duration", "")
+
+        # Skip academic/training experiences
+        if is_academic_or_training(role):
+            continue
+
         if not duration:
             continue
-        # Buscar patrones como "2020 - 2022", "Ene 2020 - Sep 2022", "2022"
-        import re
 
+        # Buscar patrones como "2020 - 2022", "Ene 2020 - Sep 2022", "2022"
         years = re.findall(r"\b(20\d{2})\b", duration)
         if years:
             try:
                 year = int(max(years))
                 if last_job_date is None or year > last_job_date:
                     last_job_date = year
+                    last_job_role = role
             except ValueError:
                 continue
 
     if last_job_date:
-        gap = (now.year - last_job_date) + (now.month / 12)
-        return f"{last_job_date}", round(gap, 1)
+        # Calcular gap en años y meses
+        years_diff = now.year - last_job_date
+        months_diff = now.month  # mes actual (asumimos mes actual como fin)
+        total_months = years_diff * 12 + months_diff
+        gap_years = round(total_months / 12, 1)
+        return f"{last_job_date}", gap_years, last_job_role
 
-    return None, None
+    return None, None, None
 
 
 def extract_cv_data(cv_path: str | Path) -> dict[str, Any]:
@@ -116,13 +159,14 @@ def extract_cv_data(cv_path: str | Path) -> dict[str, Any]:
         log.warning("gemma4 no devolvió dict, creando estructura vacía")
         result = {}
 
-    # Calcular employment_gap_years si no lo devolvió el modelo
-    if result.get("employment_gap_years") is None:
-        experience = result.get("experience", [])
-        if experience:
-            _, gap = parse_experience_dates(experience)
-            if gap:
-                result["employment_gap_years"] = gap
+    # Calcular employment_gap_years matemáticamente (excluyendo proyectos académicos)
+    experience = result.get("experience", [])
+    if experience:
+        last_date, gap, last_role = parse_experience_dates(experience)
+        if gap:
+            result["employment_gap_years"] = gap
+            result["_last_job_year"] = last_date
+            result["_last_job_role"] = last_role
 
     return result
 

@@ -542,9 +542,7 @@ def run_evaluate(limit: int = 10) -> dict:
 
             technical = evaluate_technical(offer, perfil)
             if not technical:
-                log.warning(
-                    f"gemma4 no devolvió resultado para: {offer['title']}"
-                )
+                log.warning(f"gemma4 no devolvió resultado para: {offer['title']}")
                 stats["errors"] += 1
                 continue
 
