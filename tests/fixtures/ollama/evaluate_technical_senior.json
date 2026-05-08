@@ -1,0 +1,8 @@
+{
+  "skills_hard_match": 8,
+  "experience_match": 5,
+  "education_match": 4,
+  "location_match": 2,
+  "nivel_match_reasoning": "La oferta pide ML avanzado, PyTorch y MLOps. Candidato solo tiene nivel básico en Python/ML vía bootcamp. Gap significativo de nivel. PhD valorable no disponible.",
+  "reasoning": "Mismatch claro de nivel. La oferta pide 4+ años de experiencia y skills de nivel senior. El candidato tiene gap de 3.7 años y skills de nivel básico. No encaja para este puesto."
+}

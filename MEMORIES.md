@@ -11,7 +11,14 @@
 - Fixture principal: `test_db` — temp file con schema.sql, rollback por test
 - Fixture `test_conn` — wrapper sqlite3 compatible con save_evaluation
 - Fixtures de datos: `sample_perfil_text`, `sample_offer`, `sample_offer_senior`, `sample_offer_no_exp`, `sample_offer_temporal`, `sample_offer_with_impossible_requirements`
-- 127 tests: 107 unit, 20 integration — todos passing
+- 167 tests: 107 unit, 30 cassette-based integration, 10 pipeline — todos passing
+- Ollama cassettes: 13 JSON fixtures en tests/fixtures/ollama/ (no vcrpy)
+- test_classifier_cassettes.py: usa test_engine (Connection) no test_db (Cursor) — role_classifier usa conn.cursor()
+- test_evaluate_cassettes.py: cassettes directos (no wrapped), mock_ollama_call con side_effect para secuencias
+- test_fetch_cassettes.py: call_args.kwargs para extraer prompt (no call_args[0][1])
+- test_pipeline.py: flujo completo con stateful mocks (call_count++) para secuencias de llamadas
+- ruff fix eliminó 6 imports sin usar de test_pipeline.py
+- PLANS.md actualizado con 167 tests passing
 
 ## Extracción de CV (cv_extractor.py)
 - Usa gemma4:e4b para extracción estructurada de CV
@@ -85,3 +92,8 @@
   el código original comparaba `pattern == "carnet"` (string vs regex pattern object)
 - Nunca matcheaba, el carné de conducir nunca se detectaba
 - Fix: cambiar tupla a `(pattern, kw)` y comparar con `kw` (evaluate.py:78-87)
+
+### Ollama cassettes — estructura de JSON directa
+- Los cassettes deben ser JSON plano (no envuelto en `{"response": "..."}`)
+- `ollama_call` internamente extrae JSON, los cassettes ya deben contener el dict parsed
+- CASSETTES[name] es directamente el dict con keys del JSON de respuesta

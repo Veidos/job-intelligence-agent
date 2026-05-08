@@ -1,0 +1,25 @@
+{
+  "trajectory_coherence": 2,
+  "recency_relevance": 1,
+  "market_competitiveness": 1,
+  "penalty": 20,
+  "penalty_breakdown": {
+    "perfil_muy_lejos_del_requerido": -15,
+    "experiencia_avanzada_no_disponible": -5
+  },
+  "environment_compatibility": "baja",
+  "hr_concerns": [
+    "PhD requerido — no disponible",
+    "MLOps y Kubernetes necesarios — no en el perfil",
+    "4+ años de experiencia en ML avanzados — gap de experiencia relevante"
+  ],
+  "strengths": [],
+  "red_flags": [
+    "Mismatch total de nivel y experiencia",
+    "Perfil junior con gap de 3.7 años postulando a senior de 4+ años",
+    "Empresa de alta competitividad"
+  ],
+  "interview_prep": [],
+  "apply_signal": "no",
+  "verdict": "Esta oferta está completamente fuera del alcance del candidato actual. Senior Data Scientist con 4+ años de experiencia, PhD valorable, MLOps y Kubernetes. El candidato tiene un bootcamp y 3.7 años de gap. No aplicar."
+}

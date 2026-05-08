@@ -1,0 +1,8 @@
+{
+  "description_clean": "Data Scientist senior con experiencia en modelos de ML a producción. Requisitos: PhD o experiencia equivalente, 4+ años en ML, PyTorch, TensorFlow, Kubernetes, MLOps. Responsibilities include designing end-to-end ML pipelines, model deployment, and team leadership. Salario competitivo según experiencia.",
+  "skills_required": ["Python", "PyTorch", "TensorFlow", "Kubernetes", "MLOps", "SQL", "GCP/AWS"],
+  "experience_min": 4,
+  "education_level": "PhD valorable, Grado en Informatique o similar",
+  "salary_min": 50000,
+  "salary_max": 70000
+}

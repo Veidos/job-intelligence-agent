@@ -34,12 +34,14 @@
   [ ] Logging y monitorización
 
 ## TESTS
-  [x] tests/conftest.py con fixtures DB (temp file + rollback)
-  [x] Fixtures: sample_perfil_text, sample_offer (6 variants)
-  [x] Unit tests: test_evaluate.py, test_send.py, test_cleaner.py, test_fetch.py, test_models.py (107 tests)
-  [x] Integration tests: test_db_operations.py, test_db_evaluations.py (20 tests)
-  [ ] Ollama cassettes (grabados) + tests con patches
-  [ ] Pipeline tests (flujo completo con cassettes)
+[x] tests/conftest.py con fixtures DB (temp file + rollback)
+[x] Fixtures: sample_perfil_text, sample_offer (6 variants)
+[x] Unit tests: test_evaluate.py, test_send.py, test_cleaner.py, test_fetch.py, test_models.py (107 tests)
+[x] Integration tests: test_db_operations.py, test_db_evaluations.py (20 tests)
+[x] Ollama cassettes (13 JSON en tests/fixtures/ollama/ + patch-based tests)
+[x] Integration cassettes: test_evaluate_cassettes.py, test_classifier_cassettes.py, test_fetch_cassettes.py (30 tests cassette-based)
+[x] Pipeline tests: test_pipeline.py (10 tests, flujo completo con cassettes)
+[x] 167 tests passing total
 
 ## BUGS DETECTADOS POR TESTS
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)

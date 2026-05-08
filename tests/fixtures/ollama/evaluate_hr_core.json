@@ -1,0 +1,31 @@
+{
+  "trajectory_coherence": 9,
+  "recency_relevance": 4,
+  "market_competitiveness": 3,
+  "penalty": 12,
+  "penalty_breakdown": {
+    "gap_laboral_3_7_anios": -8,
+    "cambio_carrera_sin_exp_relevante": -4
+  },
+  "environment_compatibility": "media",
+  "hr_concerns": [
+    "Gap laboral de 3.7 años puede ser factor de descarte automático en primer filtro",
+    "Perfil reconversión requiere más esfuerzo de justificación"
+  ],
+  "strengths": [
+    "Bootcamp de Data Science reciente (2023)",
+    "Skills técnicas alineadas con el puesto",
+    "Inglés Advanced"
+  ],
+  "red_flags": [
+    "Último trabajo formal fue hace más de 3 años",
+    "Cambio de carrera sin experiencia previa en datos"
+  ],
+  "interview_prep": [
+    "Preparar narrativa clara sobre qué motivó el cambio a Data Science",
+    "Tener ejemplos concretos de proyectos del bootcamp",
+    "Explicar cómo el gap fue para formación y no por rechazo de mercado"
+  ],
+  "apply_signal": "maybe",
+  "verdict": "Oferta viable para alguien en transición de carrera, pero el gap de 3.7 años y la falta de experiencia previa en datos juegan en su contra. La empresa parece seria pero competitiva. Merece la pena aplicar si no hay opciones mejores."
+}
