@@ -76,51 +76,6 @@ def apply_migrations(conn):
         log.info("Migración aplicada: %s", filename)
 
 
-def populate_candidate_skills(conn):
-    """Pobla candidate_skills desde PERFIL.md si está vacía."""
-    cursor = conn.execute("SELECT COUNT(*) FROM candidate_skills")
-    if cursor.fetchone()[0] > 0:
-        log.info("candidate_skills ya tiene datos, saltando poblado.")
-        return
-
-    # Asegurar que existan las skills en el catálogo
-    skills_data = [
-        ("SQL", "database"),
-        ("Python", "language"),
-        ("Power BI", "visualization"),
-        ("pandas", "library"),
-        ("matplotlib", "library"),
-        ("Git", "tool"),
-    ]
-    for name, category in skills_data:
-        conn.execute(
-            "INSERT OR IGNORE INTO skills (name, category) VALUES (?, ?)",
-            (name, category),
-        )
-
-    # Mapeo de niveles desde PERFIL.md / instrucción usuario
-    candidate_skills_data = [
-        ("SQL", "intermedio", "PERFIL.md"),
-        ("Python", "intermedio", "PERFIL.md"),
-        ("Power BI", "intermedio", "PERFIL.md"),  # básico-intermedio → intermedio
-        ("pandas", "intermedio", "PERFIL.md"),
-        ("matplotlib", "básico", "PERFIL.md"),
-        ("Git", "básico", "PERFIL.md"),
-    ]
-
-    for skill_name, level, source in candidate_skills_data:
-        cursor = conn.execute("SELECT id FROM skills WHERE name = ?", (skill_name,))
-        row = cursor.fetchone()
-        if row:
-            conn.execute(
-                "INSERT OR REPLACE INTO candidate_skills (skill_id, level_current, source) VALUES (?, ?, ?)",
-                (row[0], level, source),
-            )
-
-    conn.commit()
-    log.info("candidate_skills poblada desde PERFIL.md")
-
-
 def init_db() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -130,9 +85,6 @@ def init_db() -> None:
 
         # Aplicar migraciones en orden
         apply_migrations(conn)
-
-        # Poblar skills del candidato
-        populate_candidate_skills(conn)
 
         # Verificar tablas
         cursor = conn.execute(

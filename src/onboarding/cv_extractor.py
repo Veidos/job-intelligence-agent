@@ -1,24 +1,22 @@
 """
-Extrae datos estructurados del CV usando qwen2.5-coder:7b.
-Popula candidate_skills desde el perfil usando gemma4.
+Extrae datos estructurados del CV usando gemma4:e4b.
+Incluye skills con nivel y employment_gap_years.
 """
 
 import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import sqlite3
-
 from pypdf import PdfReader
 
-from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call
+from src.utils.ollama_client import MODEL_HR, ollama_call
 
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DB_PATH = PROJECT_ROOT / "data" / "jobs.db"
 
 
 def extract_text_from_pdf(pdf_path: str | Path) -> str:
@@ -33,45 +31,100 @@ def extract_text_from_pdf(pdf_path: str | Path) -> str:
 
 
 def build_extraction_prompt(cv_text: str) -> str:
-    """Construye el prompt para qwen2.5-coder:7b."""
-    return f"""Eres un extractor de datos estructurados de CVs. Analiza el texto y responde UNICAMENTE con JSON valido.
+    """Construye el prompt para extraer datos completos del CV."""
+    return f"""Eres un extractor de datos estructurados de CVs. Analiza el texto y responde UNICAMENTE con JSON válido.
 
-Campos a extraer:
-- full_name: string
-- location_current: string (ciudad/provincia actual)
-- skills_technical: lista de strings (habilidades tecnicas con nivel si aparece)
-- education: lista de objetos {{"degree": string, "institution": string, "year": int|null}}
-- experience: lista de objetos {{"role": string, "company": string, "duration": string, "description": string}}
-- languages: lista de strings
-- projects: lista de objetos {{"name": string, "description": string}}
+CAMPOS A EXTRAER:
+1. full_name: string (nombre completo)
+2. location_current: string (ciudad/provincia actual)
+3. skills_technical: lista de objetos {{"name": "skill", "level": "basico|intermedio|avanzado", "evidence": "frase justificativa"}}
+   REGLAS DE NIVEL:
+   - Si la skill se usó en EXPERIENCIA LABORAL REAL → nivel: avanzado
+   - Si la skill se usó en PROYECTOS REALES/freelance → nivel: intermedio
+   - Si la skill solo viene de FORMACIÓN/bootcamp/proyectos académicos → nivel: básico
+   - NUNCA inferir nivel mayor al evidence disponible
+
+4. employment_gap_years: número (años de gap laboral)
+   CÁLCULO: Buscar última fecha de experiencia laboral real → calcular hasta fecha actual
+   - Si hay experiencia continua → 0
+   - Si hay gap desde último trabajo → restar años (ej: 2022 a 2026 = 3.5)
+
+5. education: lista de objetos {{"degree": string, "institution": string, "year": int|null}}
+6. experience: lista de objetos {{"role": string, "company": string, "duration": string, "description": string}}
+7. languages: lista de strings
+8. projects: lista de objetos {{"name": string, "description": string}}
 
 Si falta un campo usa null o []. No incluyas texto adicional.
 
 TEXTO DEL CV:
-{cv_text[:12000]}
-"""
+{cv_text[:12000]}"""
+
+
+def parse_experience_dates(experience: list[dict]) -> tuple[str | None, float | None]:
+    """
+    Infiere el gap de empleo desde las experiencias.
+    Returns: (ultimo_trabajo_fecha, gap_years)
+    """
+    now = datetime.now()
+    last_job_date = None
+
+    for exp in experience:
+        duration = exp.get("duration", "")
+        if not duration:
+            continue
+        # Buscar patrones como "2020 - 2022", "Ene 2020 - Sep 2022", "2022"
+        import re
+
+        years = re.findall(r"\b(20\d{2})\b", duration)
+        if years:
+            try:
+                year = int(max(years))
+                if last_job_date is None or year > last_job_date:
+                    last_job_date = year
+            except ValueError:
+                continue
+
+    if last_job_date:
+        gap = (now.year - last_job_date) + (now.month / 12)
+        return f"{last_job_date}", round(gap, 1)
+
+    return None, None
 
 
 def extract_cv_data(cv_path: str | Path) -> dict[str, Any]:
     """
-    Extrae datos estructurados del CV via qwen2.5-coder:7b.
+    Extrae datos estructurados del CV via gemma4:e4b.
 
     Returns:
         Diccionario con full_name, location_current, skills_technical,
-        education, experience, languages, projects.
+        education, experience, languages, projects, employment_gap_years.
     """
     log.info("Extrayendo texto de %s", cv_path)
     cv_text = extract_text_from_pdf(cv_path)
     if not cv_text.strip():
         raise ValueError("No se pudo extraer texto del PDF")
 
-    log.info("Llamando a %s para extraccion", MODEL_TECHNICAL)
+    log.info("Llamando a %s para extracción", MODEL_HR)
     prompt = build_extraction_prompt(cv_text)
-    return ollama_call(
-        model=MODEL_TECHNICAL,
+    result = ollama_call(
+        model=MODEL_HR,
         prompt=prompt,
         expect_json=True,
     )
+
+    if not isinstance(result, dict):
+        log.warning("gemma4 no devolvió dict, creando estructura vacía")
+        result = {}
+
+    # Calcular employment_gap_years si no lo devolvió el modelo
+    if result.get("employment_gap_years") is None:
+        experience = result.get("experience", [])
+        if experience:
+            _, gap = parse_experience_dates(experience)
+            if gap:
+                result["employment_gap_years"] = gap
+
+    return result
 
 
 def main() -> None:
@@ -84,84 +137,9 @@ def main() -> None:
     try:
         data = extract_cv_data(cv_path)
         print(json.dumps(data, indent=2, ensure_ascii=False))
-
-        # Poblar candidate_skills desde PERFIL.md si existe
-        perfil_path = PROJECT_ROOT / "PERFIL.md"
-        if perfil_path.exists():
-            profile_text = perfil_path.read_text(encoding="utf-8")
-            with sqlite3.connect(DB_PATH) as conn:
-                extract_and_save_candidate_skills(conn, profile_text)
-        else:
-            log.warning(
-                "PERFIL.md no encontrado, saltando extract_and_save_candidate_skills"
-            )
     except Exception:
         log.exception("Error extrayendo CV")
         sys.exit(1)
-
-
-def extract_and_save_candidate_skills(conn, profile_text: str) -> int:
-    """Lee PERFIL.md completo y usa gemma4 para poblar candidate_skills."""
-    prompt = f"""Lee este perfil profesional y extrae TODAS las skills tecnicas.
-Para cada skill infiere el nivel UNICAMENTE desde lo que aparece en el perfil
-(proyectos, experiencia, formacion). Sin inventar nada.
-
-Niveles validos: basico | intermedio | avanzado | experto
-
-Responde SOLO con JSON valido, sin texto adicional:
-{{
-  "skills": [
-    {{
-      "name": "nombre de la skill",
-      "level": "nivel inferido",
-      "evidence": "frase del perfil que justifica el nivel"
-    }}
-  ]
-}}
-
-PERFIL:
-{profile_text}"""
-
-    response = ollama_call(
-        model=MODEL_HR,
-        prompt=prompt,
-        expect_json=True,
-    )
-
-    skills = response.get("skills", [])
-
-    # Limpiar solo skills de PERFIL.md
-    conn.execute("DELETE FROM candidate_skills WHERE source = 'PERFIL.md'")
-
-    count = 0
-    for s in skills:
-        name = s.get("name", "").strip()
-        level = s.get("level", "basico")
-        evidence = s.get("evidence", "")
-        if not name:
-            continue
-        # Upsert en skills
-        conn.execute("INSERT OR IGNORE INTO skills(name) VALUES (?)", (name,))
-        skill_id = conn.execute(
-            "SELECT id FROM skills WHERE name = ?", (name,)
-        ).fetchone()[0]
-        # Upsert en candidate_skills (UNIQUE skill_id + source)
-        conn.execute(
-            """
-            INSERT INTO candidate_skills(skill_id, level_current, evidence, source)
-            VALUES (?, ?, ?, 'PERFIL.md')
-            ON CONFLICT(skill_id, source) DO UPDATE SET
-                level_current = excluded.level_current,
-                evidence = excluded.evidence,
-                updated_at = datetime('now')
-        """,
-            (skill_id, level, evidence),
-        )
-        count += 1
-
-    conn.commit()
-    print(f"✅ Skills extraidas: {count} → candidate_skills actualizado")
-    return count
 
 
 if __name__ == "__main__":

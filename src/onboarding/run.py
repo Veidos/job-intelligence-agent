@@ -1,13 +1,12 @@
 """
-Orquesta el onboarding completo: extracción de CV + entrevista guiada.
-Genera PERFIL.md y guarda el perfil en candidate_profile (DB).
+Orquestador del onboarding completo: extracción de CV + entrevista guiada.
+Genera PERFIL.md (única fuente de verdad del candidato).
 """
 
 import logging
 import sys
 from pathlib import Path
 
-from src.db.models import normalize_skills_for_db, save_candidate_profile
 from src.onboarding.cv_extractor import extract_cv_data
 from src.onboarding.interviewer import run_interview
 
@@ -30,12 +29,42 @@ def generate_perfil_md(profile: dict) -> str:
             lines += [f"  - Notas: {notes}"]
     lines += [""]
 
-    # Skills técnicas
+    # Skills técnicas con nivel
     lines += ["## Skills técnicas", ""]
     raw_skills = profile.get("skills_technical", [])
-    for skill in normalize_skills_for_db(raw_skills):
-        lines += [f"- {skill}"]
+    if raw_skills and isinstance(raw_skills[0], dict):
+        for skill in raw_skills:
+            name = skill.get("name", "unknown")
+            level = skill.get("level", "básico")
+            evidence = skill.get("evidence", "sin evidencia")
+            lines += [f"- **{name} ({level})**: {evidence}"]
+    else:
+        for skill in raw_skills:
+            lines += [f"- {skill}"]
     lines += [""]
+
+    # Gap de empleo
+    gap_years = profile.get("employment_gap_years")
+    if gap_years is not None:
+        lines += ["## Gap de empleo", ""]
+        lines += [f"- **Años:** {gap_years}"]
+
+        # Intentar encontrar último trabajo para contexto
+        experience = profile.get("experience", [])
+        if experience and isinstance(experience[0], dict):
+            last_job = experience[0].get("role", "desconocido")
+            last_company = experience[0].get("company", "desconocida")
+            duration = experience[0].get("duration", "")
+            lines += [f"- **Último trabajo:** {last_job} @ {last_company} ({duration})"]
+
+        # Motivo del gap (si se sabe)
+        personal_concerns = profile.get("personal_concerns", "")
+        if personal_concerns and "gap" in personal_concerns.lower():
+            lines += [f"- **Nota:** {personal_concerns}"]
+        lines += [""]
+    else:
+        # Si no hay gap, sección vacía o no incluir
+        pass
 
     # Educación
     lines += ["## Educación", ""]
@@ -127,10 +156,7 @@ def main() -> None:
     output_path.write_text(md_content, encoding="utf-8")
     log.info("PERFIL.md generado en %s", output_path.resolve())
 
-    log.info("Guardando perfil en base de datos...")
-    save_candidate_profile(profile, version="1.0")
-
-    print("\n=== PERFIL.md generado y guardado en DB ===\n")
+    print("\n=== PERFIL.md generado ===\n")
     print("Revisa el archivo y edítalo manualmente si es necesario.")
     print("El sistema lee PERFIL.md en cada sesión de evaluación.\n")
 

@@ -23,44 +23,58 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
 
     result: dict[str, Any] = {}
 
-    # 1. Salario mínimo viable
-    print("1. ¿Cuál es tu expectativa salarial mínima viable?")
-    print("   (No la ideal, sino la mínima para decir sí)")
-    salary_raw = input("   > ").strip()
-
-    salary_prompt = f"""Eres un asesor laboral. El candidato responde así a su salario mínimo viable (bruto/año, euros):
-"{salary_raw}"
-
-Tu tarea:
-1) Inferir un salario mínimo viable realista en euros como número (float).
-2) Añadir una nota breve sobre margen de negociación.
-
-Devuelve SOLO JSON válido con este esquema:
-{{
-  "salary_min_viable": float|null,
-  "salary_notes": string
-}}"""
-    salary_info = ollama_call(MODEL_HR, salary_prompt, expect_json=True)
-    result["salary_min_viable"] = salary_info.get("salary_min_viable")
-    result["salary_notes"] = salary_info.get("salary_notes", "")
+    # 1. Modalidad de trabajo
+    print("1. ¿Preferencia de modalidad de trabajo?")
+    print("   (remoto / híbrido / presencial / sin preferencia)")
+    result["work_mode_preference"] = input("   > ").strip().lower()
 
     # 2. Mudanza y condiciones
     print("\n2. ¿Disponibilidad real de mudanza y condiciones?")
     print("   (ej: dispuesto si pagan reubicación, solo remoto, etc.)")
     relocation_raw = input("   > ").strip()
 
-    # 3. Modalidad de trabajo
-    print("\n3. ¿Preferencia de modalidad de trabajo?")
-    print("   (remoto / híbrido / presencial / sin preferencia)")
-    result["work_mode_preference"] = input("   > ").strip().lower()
+    # 3. Personal concerns (nuevo formato constructivo)
+    print("\n3. Contexto personal para encontrar el trabajo adecuado")
+    print(
+        "   [INFO] Esta información se usa para calcular penalizaciones (max -25 puntos)"
+    )
+    print(
+        "          No es un filtro negativo, guía al sistema hacia ofertas compatibles."
+    )
+    print("          Tu privacidad está garantizada - solo se usa internamente.\n")
 
-    # 4. Personal concerns
-    print("\n4. ¿Hay algo sobre tu situación actual que quieras que el sistema")
-    print("   tenga en cuenta al evaluar las ofertas? (responde libremente)")
-    result["personal_concerns"] = input("   > ").strip()
+    # Subpregunta 3a: Condiciones que afectan al trabajo
+    print("   3a. ¿Tienes alguna condición (TDAH, autism, limitaciones físicas, etc.)")
+    print("       que afecte cómo trabajas? (opcional, responde libremente)")
+    condition_raw = input("      > ").strip()
 
-    # 5. Sectores/empresas preferidas/evitar
-    print("\n5. ¿Sectores o tipos de empresa que prefieras o quieras evitar?")
+    # Subpregunta 3b: Entorno de trabajo
+    print("\n   3b. ¿Qué tipo de entorno te hace funcionar mejor?")
+    print(
+        "       (ej: necesito silencio, soy introvertido, necesito movimiento, flexible)"
+    )
+    environment_raw = input("      > ").strip()
+
+    # Subpregunta 3c: Inseguridades
+    print("\n   3c. ¿Hay algo que te dé inseguridad sobre buscar trabajo?")
+    print("       (ej: 'tengo 3 años gap', 'estoy desactualizado', 'tengo edad')")
+    insecurity_raw = input("      > ").strip()
+
+    # Unir todo en personal_concerns
+    personal_parts = []
+    if condition_raw:
+        personal_parts.append(f"Condición: {condition_raw}")
+    if environment_raw:
+        personal_parts.append(f"Entorno: {environment_raw}")
+    if insecurity_raw:
+        personal_parts.append(f"Inseguridad: {insecurity_raw}")
+
+    result["personal_concerns"] = (
+        " | ".join(personal_parts) if personal_parts else "Sin información adicional"
+    )
+
+    # 4. Sectores/empresas preferidas/evitar
+    print("\n4. ¿Sectores o tipos de empresa que prefieras o quieras evitar?")
     print("   (menciona ambos libremente)")
     env_raw = input("   > ").strip()
 

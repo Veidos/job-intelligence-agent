@@ -1,7 +1,8 @@
 """
-Pipeline: evaluación de ofertas con deepseek-r1:8b (técnico) + gemma4 (HR).
+Pipeline: evaluación de ofertas con gemma4:e4b (técnico y HR).
 Procesa ofertas clasificadas (relevance_flag NOT NULL, is_evaluated=0).
 Incluye pre-filtro de requisitos impossibles y evaluación de skills con nivel.
+PERFIL.md es la única fuente de verdad del candidato.
 """
 
 import json
@@ -88,19 +89,81 @@ def pre_filtro_requisitos_imposibles(offer: dict, perfil: str) -> tuple[bool, st
     return False, ""
 
 
-def load_candidate_skills() -> list[dict]:
-    """Carga las skills del candidato desde la DB con nivel."""
-    conn = get_connection()
-    try:
-        rows = conn.execute("""
-            SELECT s.name, cs.level_current, cs.evidence
-            FROM candidate_skills cs
-            JOIN skills s ON cs.skill_id = s.id
-            WHERE cs.source = 'PERFIL.md'
-        """).fetchall()
-        return [{"name": r[0], "level": r[1], "evidence": r[2]} for r in rows]
-    finally:
-        conn.close()
+def load_skills_from_perfil(perfil: str) -> list[dict]:
+    """Parsea skills con nivel desde PERFIL.md.
+
+    Formato esperado:
+    ## Skills técnicas
+    - **Python (básico)**: Bootcamp IE University 2023
+    - **SQL (intermedio)**: Proyectos freelance
+    """
+    import re
+
+    skills = []
+
+    # Buscar sección de skills técnicas
+    match = re.search(r"## Skills técnicas\s*\n((?:- .*\n?)+)", perfil, re.IGNORECASE)
+    if not match:
+        return skills
+
+    skills_block = match.group(1)
+
+    # Parsear cada línea de skill
+    # Patrón: - **SkillName (nivel)**: evidencia
+    skill_pattern = re.compile(r"- \*\*([^(]+)\((\w+)\)\*\*:?\s*(.+)?", re.IGNORECASE)
+
+    for line in skills_block.strip().split("\n"):
+        line = line.strip()
+        if not line.startswith("-"):
+            continue
+
+        # Intentar parsear con formato estructurado
+        m = skill_pattern.match(line)
+        if m:
+            name = m.group(1).strip()
+            level = m.group(2).strip().lower()
+            evidence = m.group(3).strip() if m.group(3) else ""
+            skills.append({"name": name, "level": level, "evidence": evidence})
+        else:
+            # Fallback: solo nombre sin nivel
+            clean = line.lstrip("- ").strip()
+            if clean:
+                skills.append(
+                    {
+                        "name": clean,
+                        "level": "básico",
+                        "evidence": "sin información de nivel",
+                    }
+                )
+
+    return skills
+
+
+def load_gap_from_perfil(perfil: str) -> float | None:
+    """Extrae employment_gap_years desde PERFIL.md.
+
+    Formato esperado:
+    ## Gap de empleo
+    - **Años:** 3.5
+    """
+    import re
+
+    # Buscar sección de gap
+    gap_match = re.search(r"## Gap de empleo\s*\n((?:.+\n?)+)", perfil, re.IGNORECASE)
+    if not gap_match:
+        return None
+
+    gap_block = gap_match.group(1)
+
+    # Buscar patrón: - **Años:** 3.5
+    years_match = re.search(r"- \*\*Años:\*\*\s*([\d.]+)", gap_block)
+    if years_match:
+        try:
+            return float(years_match.group(1))
+        except ValueError:
+            pass
+
+    return None
 
 
 RATING = {
@@ -145,10 +208,13 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
     return [dict(zip(cols, row)) for row in rows]
 
 
-def evaluate_technical(offer: dict, perfil: str, candidate_skills: list[dict]) -> dict:
-    """deepseek-r1:8b evalúa bloque técnico (60 pts) con lógica de niveles."""
+def evaluate_technical(offer: dict, perfil: str) -> dict:
+    """Evalúa bloque técnico (60 pts) con lógica de niveles usando gemma4:e4b."""
     skills = offer.get("skills_required") or "[]"
     description = (offer.get("description_clean") or "")[:1500]
+
+    # Cargar skills desde PERFIL.md
+    candidate_skills = load_skills_from_perfil(perfil)
 
     # Formatear skills del candidato con nivel
     skills_info = (
@@ -220,13 +286,17 @@ EVALÚA y responde SOLO este JSON:
     return result if isinstance(result, dict) else {}
 
 
-def evaluate_hr(offer: dict, perfil: str, technical: dict) -> dict:
+def evaluate_hr(
+    offer: dict, perfil: str, technical: dict, employment_gap: float | None = None
+) -> dict:
     """gemma4 evalúa bloque HR (40 pts). Con think=True para razonamiento."""
+    gap_info = f"\n- **Gap de empleo:** {employment_gap} años" if employment_gap else ""
+
     prompt = f"""Eres un recruiter senior con criterio real. Evalúa honestamente.
 NO suavices la realidad. Evalúa como si tuvieras que defender tu decisión.
 
-PERFIL DEL CANDIDATO:
-{perfil[:3000]}
+PERFIL DEL CANDIDATO (resumen):{gap_info}
+{perfil[:2800]}
 
 OFERTA:
 Título: {offer["title"]} | Empresa: {offer["company_name"]}
@@ -433,9 +503,12 @@ Responde SOLO JSON:
 def run_evaluate(limit: int = 10) -> dict:
     perfil = load_perfil()
     offers = get_pending_offers(limit)
-    candidate_skills = load_candidate_skills()
+    candidate_skills = load_skills_from_perfil(perfil)
+    employment_gap = load_gap_from_perfil(perfil)
     log.info("Ofertas pendientes de evaluar: %d", len(offers))
     log.info("Skills del candidato cargadas: %d", len(candidate_skills))
+    if employment_gap:
+        log.info("Employment gap: %.1f años", employment_gap)
 
     stats = {"evaluated": 0, "errors": 0, "scores": [], "descarte": 0}
 
@@ -467,15 +540,15 @@ def run_evaluate(limit: int = 10) -> dict:
                 log.info("✓ %s → DESCARTADO (%s)", offer["title"], razon_descarte)
                 continue
 
-            technical = evaluate_technical(offer, perfil, candidate_skills)
+            technical = evaluate_technical(offer, perfil)
             if not technical:
                 log.warning(
-                    f"deepseek-r1:8b no devolvió resultado para: {offer['title']}"
+                    f"gemma4 no devolvió resultado para: {offer['title']}"
                 )
                 stats["errors"] += 1
                 continue
 
-            hr = evaluate_hr(offer, perfil, technical)
+            hr = evaluate_hr(offer, perfil, technical, employment_gap)
             if not hr:
                 log.warning("gemma4 no devolvió resultado para: %s", offer["title"])
                 stats["errors"] += 1

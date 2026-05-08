@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS companies (
 );
 CREATE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
 
--- cv_versions ANTES de candidate_profile (FK dependency)
+-- cv_versions para tracking de versiones de CV
 CREATE TABLE IF NOT EXISTS cv_versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     version TEXT NOT NULL,
@@ -70,31 +70,6 @@ CREATE TABLE IF NOT EXISTS offers (
 CREATE INDEX IF NOT EXISTS idx_offers_source_id ON offers(source_id);
 CREATE INDEX IF NOT EXISTS idx_offers_fetched_at ON offers(fetched_at);
 CREATE INDEX IF NOT EXISTS idx_offers_is_active ON offers(is_active);
-
-CREATE TABLE IF NOT EXISTS candidate_profile (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    version TEXT NOT NULL DEFAULT '1.0',
-    created_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    is_active INTEGER NOT NULL DEFAULT 1,
-    full_name TEXT,
-    location_current TEXT,
-    skills_technical TEXT,
-    education TEXT,
-    experience TEXT,
-    languages TEXT,
-    projects TEXT,
-    employment_gap_years REAL,
-    salary_min_viable REAL,
-    salary_notes TEXT,
-    location_preference TEXT,
-    relocation_conditions TEXT,
-    work_mode_preference TEXT,
-    personal_concerns TEXT,
-    environment_avoid_keywords TEXT,
-    environment_prefer_keywords TEXT,
-    min_score_to_recommend INTEGER DEFAULT 35,
-    cv_version_id INTEGER REFERENCES cv_versions(id)
-);
 
 CREATE TABLE IF NOT EXISTS offer_evaluations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -201,7 +176,7 @@ CREATE TABLE IF NOT EXISTS user_psychology (
 CREATE TABLE IF NOT EXISTS search_config (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     generated_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    profile_id INTEGER REFERENCES candidate_profile(id),
+    cv_version_id INTEGER REFERENCES cv_versions(id),
     geo_hierarchy TEXT,
     role_hierarchy TEXT,
     active_geo_level INTEGER,
@@ -220,24 +195,4 @@ CREATE TABLE IF NOT EXISTS user_settings (
     min_score_send INTEGER DEFAULT 35,
     weekly_summary INTEGER DEFAULT 1,
     strategic_alerts INTEGER DEFAULT 1
-);
-
--- Tabla de skills disponibles
-CREATE TABLE IF NOT EXISTS skills (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    category TEXT,
-    created_at DATETIME NOT NULL DEFAULT (datetime('now'))
-);
-
--- Skills del candidato con nivel
-CREATE TABLE IF NOT EXISTS candidate_skills (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    skill_id INTEGER NOT NULL REFERENCES skills(id),
-    level_current TEXT DEFAULT 'basico',
-    evidence TEXT,
-    source TEXT DEFAULT 'PERFIL.md',
-    created_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(skill_id, source)
 );
