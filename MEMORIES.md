@@ -2,28 +2,40 @@
 
 ## Configuración del proyecto
 - Python 3.14+ requerido
-- pypdf 6.10.2 instalado (usado para extracción de texto del CV)
+- pytest instalado para tests
 - Ollama ejecutándose localmente en http://localhost:11434
-- qwen2.5-coder:7b y gemma4:e4b confirmados disponibles
+- gemma4:e4b como único modelo (técnico + HR, qwen2.5 eliminado)
+
+## Suite de tests
+- Estructura: tests/unit/ (funciones puras), tests/integration/ (DB + lógica)
+- Fixture principal: `test_db` — temp file con schema.sql, rollback por test
+- Fixture `test_conn` — wrapper sqlite3 compatible con save_evaluation
+- Fixtures de datos: `sample_perfil_text`, `sample_offer`, `sample_offer_senior`, `sample_offer_no_exp`, `sample_offer_temporal`, `sample_offer_with_impossible_requirements`
+- 127 tests: 107 unit, 20 integration — todos passing
 
 ## Extracción de CV (cv_extractor.py)
-- Limite de texto enviado a qwen2.5: 12000 caracteres (primeras páginas)
-- qwen2.5 responde en JSON estructurado validado por ollama_client.py
-- Campos extraídos: full_name, location_current, skills_technical, education, experience, languages, projects
+- Usa gemma4:e4b para extracción estructurada de CV
+- Límite de texto: 12000 caracteres (primeras páginas del PDF)
+- Campos extraídos: full_name, location_current, skills_technical (con nivel), education, experience, languages, projects
+- Skills tienen nivel: básico (bootcamp), intermedio (freelance), avanzado (trabajo formal)
+- employment_gap_years se calcula matemáticamente (excluye proyectos académicos)
 - Si el modelo falla en devolver JSON, ollama_client reintenta con instrucción adicional
+- is_academic_or_training() detecta y excluye bootcamps, prácticas, proyectos académicos
 
 ## Prompts efectivos
-- qwen2.5-coder:7b: instrucción explícita "responde UNICAMENTE con JSON valido" + esquema de campos
-- Temperatura baja (0.1) para extracción determinista
+- gemma4:e4b: instrucción explícita "responde UNICAMENTE con JSON valido" + esquema de campos
+- Temperatura 0.1 para extracción determinista
+- Pensamiento paso a paso para razonamiento complejo
 
 ## Fetch y extracción de campos
-- `fetch.py` usa Apify (actor XkZvxV7rJbKjXh8NA) para scrapear InfoJobs.
+- `fetch.py` usa Apify (actor lRxJmbuhggr0LU3uj) para scrapear InfoJobs.
 - Estructura del actor: `item["offer"]["code"]`, `item["offer"]["teleworking"]`, etc.
+- `extract_fields_with_qwen` usa gemma4:e4b para enriquecer campos (description_clean, skills_required, etc.)
 - `upsert_offer` debe usar nombres exactos del schema.sql: `description_raw` (no `description`), `experience_min` (no `experience_years`), `fetched_at` (no `scraped_at`).
-- Salarios: el schema tiene `salary_min` (REAL) y `salary_max` (REAL). Parsear desde texto con regex o desde qwen2.5.
+- Salarios: el schema tiene `salary_min` (REAL) y `salary_max` (REAL). Parsear desde texto con regex o desde gemma4.
 - `search_url` NO existe en la tabla `offers`; no incluir en INSERT.
 - `source_id` puede ser None si el actor falla; validar siempre antes de upsert.
-- qwen2.5 enriquece campos pasando el item completo (no solo `offer_data`) para contexto.
+- gemma4:e4b enriquece campos pasando el item completo (no solo `offer_data`) para contexto.
 - `cleaner.py` limpia descripciones eliminando exceso de saltos de línea y espacios.
 
 ## URLs de InfoJobs
@@ -52,31 +64,24 @@
 - `daily_position` en `offer_evaluations` referencia la posición del mensaje diario para ligar feedback con oferta correcta.
 - Tablas: `user_feedback` almacena mensajes crudos, `user_psychology` almacena el summary evolutivo comprimido.
 
-## Modelos Ollama — Limitaciones observadas
+## Modelos Ollama — Decisión de diseño
 
-qwen2.5-coder:7b: NO usar para tareas abiertas o arquitectónicas.
-Solo tareas concretas: un archivo, instrucciones literales, output definido.
-Se queda colgado con contexto amplio o decisiones de diseño.
-TODO: reconsiderar para extracción de campos en fetch.py (tarea determinista)
+- gemma4:e4b como único modelo para TODO el pipeline (técnico + HR)
+- qwen2.5-coder:7b eliminado tras testeo: no razonaba bien en contexto amplio
+- gemma4:e4b usa think=True para razonamiento complejo (evaluación, clasificación)
+- Para extracción de campos planos en fetch.py: gemma4:e4b funciona bien (no requiere qwen2.5)
 
-## Bugfix: save_evaluation — columnas faltantes (INSERT vs schema)
+## Bugs detectados por tests
 
+### save_evaluation — columnas faltantes (INSERT vs schema)
 - `save_evaluation` en evaluate.py usaba 23 placeholders en INSERT
   pero la tabla `offer_evaluations` tiene 28 columnas (incluye cv_version_id,
   company_fit_score, company_green_flags, company_red_flags, interview_prep)
 - El fix añade las 7 columnas faltantes al INSERT
 - Error resultante: `sqlite3.OperationalError: 24 values for 23 columns`
 
-## Bugfix: pre_filtro_requisitos_imposibles — comparison bug en PROFILE_CHECK_PATTERNS
-
+### pre_filtro_requisitos_imposibles — comparison bug en PROFILE_CHECK_PATTERNS
 - El patrón `PROFILE_CHECK_PATTERNS` usa tuples `(pattern, kw)` pero
   el código original comparaba `pattern == "carnet"` (string vs regex pattern object)
 - Nunca matcheaba, el carné de conducir nunca se detectaba
-- Fix: cambiar tupla a `(pattern, kw)` y comparar con `kw`
-- affected: evaluate.py líneas 78-87
-
-## Bugfix: test_phase1.py — expects tabla candidate_profile (ya eliminada)
-
-- test_phase1.py verifica que la tabla `candidate_profile` exista
-- Pero el schema.sql no tiene esa tabla (eliminada en refactor 45fefd2)
-- El test falla en `test_database` porque espera `candidate_profile`
+- Fix: cambiar tupla a `(pattern, kw)` y comparar con `kw` (evaluate.py:78-87)
