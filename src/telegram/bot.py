@@ -7,6 +7,7 @@ Uso:
 from __future__ import annotations
 
 import logging
+import logging.handlers
 import os
 import sys
 from pathlib import Path
@@ -27,10 +28,32 @@ from src.telegram.handlers import get_latest_daily_offers, save_feedback  # noqa
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+
+def setup_logging() -> None:
+    """Configura logging con rotación de archivos."""
+    project_root = Path(__file__).resolve().parents[2]
+    log_dir = project_root / "logs"
+    log_dir.mkdir(exist_ok=True)
+
+    log_file = log_dir / "bot.log"
+
+    handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+    )
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(handler)
+
+
 log = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -133,6 +156,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def run_polling() -> None:
     """Ejecuta el bot en modo polling."""
+    setup_logging()
+
     if not TELEGRAM_TOKEN:
         log.error("TELEGRAM_BOT_TOKEN no configurado")
         return

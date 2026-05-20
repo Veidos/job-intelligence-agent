@@ -10,6 +10,7 @@ Uso:
 
 import argparse
 import logging
+import logging.handlers
 import sys
 from pathlib import Path
 
@@ -22,10 +23,42 @@ load_dotenv()
 log = logging.getLogger(__name__)
 
 
-def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+def setup_logging() -> None:
+    """Configura logging con rotación de archivos."""
+    project_root = Path(__file__).resolve().parents[2]
+    log_dir = project_root / "logs"
+    log_dir.mkdir(exist_ok=True)
+
+    log_file = log_dir / "pipeline.log"
+
+    handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
     )
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(handler)
+
+
+def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
+    setup_logging()
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console_format = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    console.setFormatter(console_format)
+    logging.getLogger().addHandler(console)
 
     log.info("═══════════════════════════════════")
     log.info("  Job Intelligence Agent — Pipeline")

@@ -34,9 +34,11 @@
 
 ## FASE 5 — Automatización
   [x] Listener de comandos Telegram (/f1, /f2, /f3, /dia) — handlers.py + bot.py
-  [ ] Persistencia de feedback con enlace a ofertas del día (integrado)
-  [ ] Configuración cron
-  [ ] Logging y monitorización
+  [x] Persistencia de feedback con enlace a ofertas del día (get_latest_daily_offers corregido)
+  [x] feedback_processor.py — procesa feedback acumulado a user_psychology
+  [x] Scripts cron (setup_cron.sh, start_bot.sh, stop_bot.sh)
+  [x] Logging persistente (RotatingFileHandler en run.py y bot.py)
+  [x] Tests para feedback (test_feedback.py)
 
 ## TESTS
 [x] tests/conftest.py con fixtures DB (temp file + rollback)
