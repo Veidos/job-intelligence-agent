@@ -51,6 +51,10 @@ def setup_logging() -> None:
 def run_pipeline(skip_fetch: bool = False, dry_run: bool = False, limit: int = 30) -> None:
     setup_logging()
 
+    log.info("[Migrate] Verificando schema...")
+    from src.db.migrate import run_migration
+    run_migration()
+
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     console_format = logging.Formatter(
