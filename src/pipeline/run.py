@@ -48,7 +48,7 @@ def setup_logging() -> None:
     root_logger.addHandler(handler)
 
 
-def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
+def run_pipeline(skip_fetch: bool = False, dry_run: bool = False, limit: int = 30) -> None:
     setup_logging()
 
     console = logging.StreamHandler()
@@ -86,7 +86,7 @@ def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
     from src.pipeline.fetch_company import run as run_fetch_company
 
     try:
-        enrich_result = run_fetch_company(limit=50)
+        enrich_result = run_fetch_company(limit=limit)
         log.info(
             "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d enlazadas",
             enrich_result["new"],
@@ -100,7 +100,7 @@ def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
     log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
     from src.pipeline.evaluate import run_evaluate
 
-    stats = run_evaluate(limit=20)
+    stats = run_evaluate(limit=limit)
     log.info("[3/4] Evaluate — %s", stats)
 
     # PASO 4: Send
@@ -122,5 +122,11 @@ if __name__ == "__main__":
         "--skip-fetch", action="store_true", help="Saltar fetch de Apify"
     )
     parser.add_argument("--dry-run", action="store_true", help="No enviar a Telegram")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=30,
+        help="Máximo de ofertas a procesar (default: 30)",
+    )
     args = parser.parse_args()
-    run_pipeline(skip_fetch=args.skip_fetch, dry_run=args.dry_run)
+    run_pipeline(skip_fetch=args.skip_fetch, dry_run=args.dry_run, limit=args.limit)
