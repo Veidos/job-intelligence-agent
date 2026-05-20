@@ -20,12 +20,12 @@ USER=$(whoami)
 crontab -l 2>/dev/null | grep -v "job-intelligence-agent" > /tmp/current_cron.tmp
 
 # Añadir nuevas entradas
-cat >> /tmp/current_cron.tmp << 'EOF'
+cat >> /tmp/current_cron.tmp << EOF
 # Job Intelligence Agent - Pipeline diario (L-V 08:00)
-0 8 * * 1-5 cd /home/veidos/proyectos/job-intelligence-agent && PYTHONPATH=/home/veidos/proyectos/job-intelligence-agent python -m src.pipeline.run >> logs/pipeline.log 2>&1
+0 8 * * 1-5 cd $PROJECT_DIR && PYTHONPATH=$PROJECT_DIR python -m src.pipeline.run >> logs/pipeline.log 2>&1
 
 # Job Intelligence Agent - Feedback processor (diario 21:00)
-0 21 * * * cd /home/veidos/proyectos/job-intelligence-agent && PYTHONPATH=/home/veidos/proyectos/job-intelligence-agent python -m src.pipeline.feedback_processor >> logs/feedback.log 2>&1
+0 21 * * * cd $PROJECT_DIR && PYTHONPATH=$PROJECT_DIR python -m src.pipeline.feedback_processor >> logs/feedback.log 2>&1
 EOF
 
 # Instalar nuevo crontab

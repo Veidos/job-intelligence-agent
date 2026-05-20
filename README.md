@@ -281,18 +281,18 @@ Send time and number of daily offers are configurable via Telegram commands (Pha
 ```
 Phase 1 — Foundation          ✅ Complete
 Phase 2 — Onboarding          ✅ Complete
-Phase 3 — Base pipeline       🔄 In progress
+Phase 3 — Base pipeline       ✅ Complete
   ├── fetch.py                ✅ Done
   ├── role_classifier.py      ✅ Done
-  ├── fetch_company.py        ⬜ Pending
-  ├── evaluate.py             ⬜ Pending
-  ├── send.py                 ⬜ Pending
-  └── run.py (pipeline)       ⬜ Pending
+  ├── fetch_company.py        ✅ Done
+  ├── evaluate.py             ✅ Done
+  ├── send.py                 ✅ Done
+  └── run.py (pipeline)       ✅ Done
 Phase 4 — Intelligence        ⬜ Pending
-Phase 5 — Automation          ⬜ Pending
-  ├── cron + dynamic schedule ⬜ Pending
-  ├── Telegram feedback /f1 /f2 /f3 /dia ⬜ Pending
-  └── user_psychology memory  ⬜ Pending
+Phase 5 — Automation          ✅ Complete
+  ├── cron + schedule         ✅ Done
+  ├── Telegram feedback       ✅ Done
+  └── feedback_processor      ✅ Done
 Phase 6 — Data Analysis/EDA   ⬜ Planned
 ```
 

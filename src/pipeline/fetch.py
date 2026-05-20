@@ -146,13 +146,13 @@ Responde SOLO con el JSON, sin markdown.
 """
     try:
         result = ollama_call(
-            model="qwen2.5-coder:7b",
+            model="gemma4:e4b",
             prompt=prompt,
             expect_json=True,
         )
         return result if isinstance(result, dict) else {}
     except Exception as e:
-        log.warning("qwen2.5 falló extrayendo campos: %s", e)
+        log.warning("gemma4:e4b falló extrayendo campos: %s", e)
         return {}
 
 
@@ -183,7 +183,7 @@ def upsert_offer(item: dict, conn) -> bool:
     published_at = offer_data.get("publishedAt")
     description_raw = offer_data.get("description", "")
 
-    # Enriquecer con qwen2.5 usando el item completo
+    # Enriquecer con gemma4:e4b usando el item completo
     enriched = extract_fields_with_llm(item)
     description_clean = enriched.get(
         "description_clean", clean_description(description_raw)
