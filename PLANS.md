@@ -33,6 +33,8 @@
   [ ] strategic_advisor.py con todos los triggers
 
 ## FASE 5 — Automatización
+  [x] Listener de comandos Telegram (/f1, /f2, /f3, /dia) — handlers.py + bot.py
+  [ ] Persistencia de feedback con enlace a ofertas del día (integrado)
   [ ] Configuración cron
   [ ] Logging y monitorización
 

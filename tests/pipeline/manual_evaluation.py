@@ -31,7 +31,6 @@ from src.pipeline.evaluate import (  # noqa: E402
     pre_filtro_requisitos_imposibles,
     evaluate_technical,
     evaluate_hr,
-    coherence_check,
     load_perfil,
     load_skills_from_perfil,
     load_gap_from_perfil,
@@ -381,28 +380,6 @@ def run_evaluation_report(limit: int = 5) -> dict[str, Any]:
             result["score"] = score
             result["recommendation"] = recommendation
             result["apply_signal"] = hr.get("apply_signal") if hr else None
-
-            if hr and hr.get("apply_signal") in ("yes", "maybe") and score < 35:
-                lines.append("#### FASE 6 — Coherence Check\n")
-                t0 = time.monotonic()
-                score, coherence_note = coherence_check(
-                    offer, perfil, technical or {}, hr, score
-                )
-                t_coh = int((time.monotonic() - t0) * 1000)
-                result["coherence_ms"] = t_coh
-                if coherence_note:
-                    recommendation = get_rating(score)
-                    lines.append(
-                        dedent(f"""\
-                        > ⚡ {coherence_note}
-                        **Score revisado:** {score}/100 {format_score_bar(score)}
-                        **Recomendación:** {recommendation}
-                        ({t_coh}ms)
-
-                        """)
-                    )
-                    result["score"] = score
-                    result["recommendation"] = recommendation
 
         lines.append("---\n")
         report_lines.append("\n".join(lines))

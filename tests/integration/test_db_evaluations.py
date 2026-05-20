@@ -188,36 +188,6 @@ class TestSaveEvaluation:
         assert breakdown["gap_laboral"] == -10
 
 
-class TestCoherenceCheck:
-    """Tests para coherence_check()."""
-
-    def test_no_cambia_score_cuando_apply_signal_no(
-        self, sample_offer, sample_perfil_text
-    ):
-        from src.pipeline.evaluate import coherence_check
-
-        hr = {"apply_signal": "no", "verdict": "No recomienda aplicar"}
-        score, note = coherence_check(
-            sample_offer, sample_perfil_text, {}, hr, raw_score=30
-        )
-
-        assert score == 30
-        assert note is None
-
-    def test_no_cambia_score_cuando_score_ya_mayor_35(
-        self, sample_offer, sample_perfil_text
-    ):
-        from src.pipeline.evaluate import coherence_check
-
-        hr = {"apply_signal": "maybe", "verdict": "Podría considerarse"}
-        score, note = coherence_check(
-            sample_offer, sample_perfil_text, {}, hr, raw_score=50
-        )
-
-        assert score == 50
-        assert note is None
-
-
 class TestGetTopOffers:
     """Tests para la query de selección de ofertas en send.py."""
 
