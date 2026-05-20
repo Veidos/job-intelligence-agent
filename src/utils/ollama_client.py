@@ -26,7 +26,7 @@ MODEL_HR = "gemma4:e4b"
 
 MODEL_TEMPERATURES: dict[str, float] = {
     MODEL_TECHNICAL: 0.1,
-    MODEL_HR: 0.4,
+    MODEL_HR: 0.0,
 }
 
 

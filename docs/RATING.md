@@ -1,8 +1,10 @@
 # Sistema de Rating
 
-El rating final combina dos evaluaciones independientes: técnica (qwen2.5) y HR (gemma4).
+El rating final combina dos evaluaciones independientes con **gemma4:e4b**:
+- Técnico (bloque A): temperatura 0.1
+- HR (bloque B): temperatura 0.0 (veredicto determinista)
 
-## Evaluación Técnica (qwen2.5 - 60 pts)
+## Evaluación Técnica (gemma4:e4b - 60 pts)
 
 | Campo | Puntos | Descripción |
 |-------|--------|-------------|
@@ -79,6 +81,6 @@ def select_daily_top3(ofertas: list) -> list:
 
 ## Coherencia HR/Técnico
 
-Si gemma4 recomienda aplicar (`apply_signal: yes/maybe`) pero el score técnico es < 35, qwen2.5 hace una segunda evaluación para validar si realmente hay match.
-
-Esto evita que ofertas con buenos argumentos de gemma4 pero poor Technical pasen el filtro.
+Esta funcionalidad fue eliminada tras unificar a gemma4:e4b como único modelo.
+El score técnico (bloque A) y HR (bloque B) se calculan independientemente y se
+suman directamente para el match_score final.

@@ -37,7 +37,7 @@ Clasifica cada oferta según el catálogo de roles.
 
 Evalúa cada oferta contra el perfil del candidato con dos modelos.
 
-### Bloque A — qwen2.5 (60 puntos)
+### Bloque A — gemma4:e4b (60 puntos, temperatura 0.1)
 
 | Campo | Puntos | Descripción |
 |-------|--------|-------------|
@@ -55,7 +55,7 @@ Evalúa cada oferta contra el perfil del candidato con dos modelos.
 | market_competitiveness | 0-10 | Cómo compite este perfil en el mercado |
 | penalty | hasta -30 | Gap laboral, incoherencia, requisitos no cumplidos |
 
-**Coherencia HR/Técnico:** Si gemma4 recomienda aplicar pero score < 35, qwen2.5 hace una segunda evaluación para validar.
+**Coherencia HR/Técnico:** Funcionalidad eliminada tras unificar a gemma4:e4b.
 
 ## 4. Send (send.py)
 

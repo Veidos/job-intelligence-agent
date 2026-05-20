@@ -71,7 +71,7 @@ FASE 1 — Cimientos
   Test de conexión Telegram, Ollama, InfoJobs API
 
 FASE 2 — Onboarding
-  cv_extractor.py (qwen2.5 → datos estructurados)
+  cv_extractor.py (gemma4 → datos estructurados)
   interviewer.py (gemma4 → preguntas secuenciales)
   Generación de PERFIL.md
   Guardado en candidate_profile (DB)

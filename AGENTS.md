@@ -51,11 +51,15 @@ ruff check src/ && ruff format src/
 
 ## MODELOS OLLAMA
 
-| Modelo | Rol | Temperatura |
-|--------|-----|-------------|
-| `gemma4:e4b` | Motor técnico + HR | 0.1 |
+| Modelo | Rol | Temperatura | Notas |
+|--------|-----|-------------|-------|
+| `gemma4:e4b` | Técnico (bloque A, 60pts) | 0.1 | Scores deterministas, JSON estructurado |
+| `gemma4:e4b` | HR (bloque B, 40pts) | 0.0 | Veredicto + apply_signal deben ser consistentes |
 
 **Regla:** gemma4 nunca scores numéricos sin razonamiento.
+
+**Temperatura HR = 0.0:** El veredicto y apply_signal (yes/no/maybe) son decisiones críticas
+que deben ser deterministas. Mismo perfil + misma oferta = mismo veredicto.
 
 Ver `docs/CONVENTIONS.md` para detalles de uso.
 

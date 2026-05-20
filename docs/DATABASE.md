@@ -12,7 +12,7 @@
 |-------|-------------|
 | `offers` | Ofertas crudas de InfoJobs (source_id UNIQUE) |
 | `companies` | Datos e inteligencia de empresa |
-| `offer_evaluations` | Scoring técnico (qwen2.5) + HR (gemma4) |
+| `offer_evaluations` | Scoring técnico + HR (ambos gemma4:e4b, temperaturas 0.1 y 0.0) |
 | `candidate_profile` | Perfil estructurado (generado desde PERFIL.md) |
 | `cv_versions` | Historial de versiones del CV |
 | `search_runs` | Historial de ejecuciones del pipeline |
