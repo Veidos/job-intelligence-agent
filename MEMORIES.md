@@ -37,7 +37,7 @@
 ## Fetch y extracción de campos
 - `fetch.py` usa Apify (actor lRxJmbuhggr0LU3uj) para scrapear InfoJobs.
 - Estructura del actor: `item["offer"]["code"]`, `item["offer"]["teleworking"]`, etc.
-- `extract_fields_with_qwen` usa gemma4:e4b para enriquecer campos (description_clean, skills_required, etc.)
+- `extract_fields_with_llm` usa gemma4:e4b para enriquecer campos (description_clean, skills_required, etc.)
 - `upsert_offer` debe usar nombres exactos del schema.sql: `description_raw` (no `description`), `experience_min` (no `experience_years`), `fetched_at` (no `scraped_at`).
 - Salarios: el schema tiene `salary_min` (REAL) y `salary_max` (REAL). Parsear desde texto con regex o desde gemma4.
 - `search_url` NO existe en la tabla `offers`; no incluir en INSERT.
@@ -55,7 +55,7 @@
   Ahora solo InfoJobs (España). Diseñado para añadir Indeed, LinkedIn etc
   sin reescribir fetch.py.
 - La expansión geográfica y de rol es genérica: se infiere desde PERFIL.md
-  vía qwen2.5, nunca hardcodeada.
+  vía gemma4:e4b, nunca hardcodeada.
 
 ## Configuración del usuario (user_settings)
 - `user_settings` controla hora de envío, número de ofertas y modo

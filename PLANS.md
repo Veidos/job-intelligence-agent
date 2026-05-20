@@ -22,7 +22,7 @@
   [x] Añadir campos search_layer, role_level, relevance_flag a offers
   [x] Crear tabla search_config para configuración geográfica y de rol
   [x] Pre-filtro de requisitos impossibles (descartar 0/1)
-  [ ] fetch_company.py (datos empresa → DB)
+  [ ] fetch_company.py — archivo por crear desde cero (datos empresa → DB)
 
 ## FASE 4 — Inteligencia
   [ ] role_discovery.py

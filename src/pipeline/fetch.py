@@ -128,8 +128,8 @@ def parse_salary(text: str) -> tuple[float | None, float | None]:
     return None, None
 
 
-def extract_fields_with_qwen(item: dict) -> dict[str, Any]:
-    """Usa qwen2.5 para extraer campos estructurados de una oferta."""
+def extract_fields_with_llm(item: dict) -> dict[str, Any]:
+    """Usa gemma4:e4b para extraer campos estructurados de una oferta."""
     prompt = f"""
 Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
 - description_clean: descripción limpia (sin HTML)
@@ -182,7 +182,7 @@ def upsert_offer(item: dict, conn) -> bool:
     description_raw = offer_data.get("description", "")
 
     # Enriquecer con qwen2.5 usando el item completo
-    enriched = extract_fields_with_qwen(item)
+    enriched = extract_fields_with_llm(item)
     description_clean = enriched.get(
         "description_clean", clean_description(description_raw)
     )

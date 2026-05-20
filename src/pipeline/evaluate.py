@@ -431,81 +431,7 @@ def coherence_check(
     hr: dict,
     raw_score: int,
 ) -> tuple[int, str | None]:
-    """Si gemma4 recomienda aplicar pero score < 35, pide revisión a qwen2.5."""
-    apply_signal = hr.get("apply_signal", "no")
-
-    if apply_signal not in ("yes", "maybe") or raw_score >= 35:
-        return raw_score, None
-
-    prompt = f"""Gemma4 (recruiter senior) revisó esta oferta y recomienda considerarla.
-VERDICT: {hr.get("verdict", "")}
-
-La evaluación técnica inicial dio score bajo. ¿Realmente encaja el perfil?
-SÉ HONESTO — si gemma4 se equivoca, dilo claramente.
-
-PERFIL:
-{perfil[:2000]}
-
-OFERTA:
-Título: {offer["title"]}
-Skills requeridas: {offer.get("skills_required", "[]")}
-Descripción: {(offer.get("description_clean") or "")[:1000]}
-
-Evaluación técnica previa:
-{json.dumps(technical, ensure_ascii=False)}
-
-REGLA: Si la oferta no exige experiencia, experience_match debe ser 18-20.
-Si el candidato tiene las skills pedidas, skills_hard_match debe ser alto.
-
-Responde SOLO JSON:
-{{
-  "technical_confirms_apply": true|false,
-  "revised_skills_hard_match": <int 0-30>,
-  "revised_experience_match": <int 0-20>,
-  "reasoning": "<una frase honesta>"
-}}"""
-
-    result = ollama_call(
-        model=MODEL_TECHNICAL,
-        prompt=prompt,
-        expect_json=True,
-        temperature=0.1,
-    )
-
-    if not result or not isinstance(result, dict):
-        return raw_score, None
-
-    if not result.get("technical_confirms_apply", False):
-        note = f"HR optimista pero técnico no confirma: {result.get('reasoning', '')}"
-        return raw_score, note
-
-    revised_bloque_a = (
-        _clamp(
-            result.get(
-                "revised_skills_hard_match", technical.get("skills_hard_match", 0)
-            ),
-            0,
-            30,
-        )
-        + _clamp(
-            result.get(
-                "revised_experience_match", technical.get("experience_match", 0)
-            ),
-            0,
-            20,
-        )
-        + _clamp(technical.get("education_match", 0), 0, 10)
-        + _clamp(technical.get("location_match", 0), 0, 5)
-    )
-    bloque_b = (
-        _clamp(hr.get("trajectory_coherence", 0), 0, 15)
-        + _clamp(hr.get("recency_relevance", 0), 0, 15)
-        + _clamp(hr.get("market_competitiveness", 0), 0, 5)
-    )
-    penalty = _clamp(hr.get("penalty", 0), 0, 25)
-    revised_score = max(35, min(100, revised_bloque_a + bloque_b - penalty))
-    note = f"Score ajustado por coherencia HR/técnico: {result.get('reasoning', '')}"
-    return revised_score, note
+    pass
 
 
 def run_evaluate(limit: int = 10) -> dict:
@@ -575,13 +501,6 @@ def run_evaluate(limit: int = 10) -> dict:
             match_score = max(0, min(100, bloque_a + bloque_b - penalty))
             recommendation = get_rating(match_score)
 
-            match_score, coherence_note = coherence_check(
-                offer, perfil, technical, hr, match_score
-            )
-            recommendation = get_rating(match_score)
-            if coherence_note:
-                log.info("⚡ Coherencia: %s", coherence_note)
-
             ms = int((time.monotonic() - t0) * 1000)
             save_evaluation(
                 offer["id"],
@@ -590,7 +509,6 @@ def run_evaluate(limit: int = 10) -> dict:
                 match_score,
                 recommendation,
                 ms,
-                coherence_note=coherence_note,
             )
 
             log.info("✓ %s → %d/100 (%s)", offer["title"], match_score, recommendation)

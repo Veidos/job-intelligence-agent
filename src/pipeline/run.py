@@ -49,7 +49,7 @@ def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
     log.info("[2/4] Classify — %d ofertas clasificadas", classified)
 
     # PASO 3: Evaluate
-    log.info("[3/4] Evaluate — puntuando con qwen2.5 + gemma4...")
+    log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
     from src.pipeline.evaluate import run_evaluate
 
     stats = run_evaluate(limit=20)

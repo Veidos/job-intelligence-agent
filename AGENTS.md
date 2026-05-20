@@ -53,10 +53,9 @@ ruff check src/ && ruff format src/
 
 | Modelo | Rol | Temperatura |
 |--------|-----|-------------|
-| `qwen2.5-coder:7b` | Motor técnico (JSON) | 0.1 |
-| `gemma4:e4b` | Evaluador HR + contexto | 0.4 |
+| `gemma4:e4b` | Motor técnico + HR | 0.1 |
 
-**Regla:** qwen2.5 nunca texto libre. gemma4 nunca scores numéricos sin razonamiento.
+**Regla:** gemma4 nunca scores numéricos sin razonamiento.
 
 Ver `docs/CONVENTIONS.md` para detalles de uso.
 

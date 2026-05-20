@@ -21,7 +21,7 @@ flowchart TD
     B --> C[(SQLite\noffers)]
     C --> D[role_classifier.py]
     D --> E[evaluate.py]
-    E --> F[qwen2.5-coder:7b\nTechnical Match]
+    E --> F[gemma4:e4b\nTechnical Match]
     E --> G[gemma4:e4b\nHR + Context]
     F --> H[match_score]
     G --> H
@@ -37,8 +37,7 @@ Two models, one pipeline:
 
 | Model | Role | Temperature | Output |
 |---|---|---|---|
-| `qwen2.5-coder:7b` | Technical evaluator | `0.1` | Structured JSON scores |
-| `gemma4:e4b` | HR reasoning + strategy | `0.4` | Contextual analysis + advice |
+| `gemma4:e4b` | Technical + HR evaluator | `0.1` | Structured JSON scores + contextual analysis |
 
 ---
 
@@ -49,7 +48,7 @@ Two models, one pipeline:
 | Language | Python 3.14+ |
 | Database | SQLite (WAL mode) |
 | ORM | SQLAlchemy 2.0 |
-| Local LLMs | Ollama (`qwen2.5-coder:7b`, `gemma4:e4b`) |
+| Local LLMs | Ollama (`gemma4:e4b`) |
 | Job data source | Apify — InfoJobs Spain Jobs Scraper |
 | Notifications | Telegram Bot API |
 | Linting | Ruff |
@@ -79,7 +78,7 @@ job-intelligence-agent/
 │   │
 │   ├── onboarding/
 │   │   ├── run.py          ← Orchestrates full onboarding
-│   │   ├── cv_extractor.py ← qwen2.5 extracts structured data from CV
+│   │   ├── cv_extractor.py ← gemma4 extracts structured data from CV
 │   │   └── interviewer.py  ← gemma4 conducts guided interview
 │   │
 │   ├── pipeline/
@@ -122,8 +121,7 @@ job-intelligence-agent/
 - Telegram bot token (via [@BotFather](https://t.me/botfather))
 
 ```bash
-# Pull required models
-ollama pull qwen2.5-coder:7b
+# Pull required model
 ollama pull gemma4:e4b
 ```
 
@@ -175,7 +173,7 @@ PYTHONPATH=. python src/telegram/send.py --mode daily
 
 Match score composed of two independent blocks:
 
-### Block A — Technical (qwen2.5, 60 pts)
+### Block A — Technical (gemma4:e4b, 60 pts)
 
 | Criterion | Weight |
 |---|---|

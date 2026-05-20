@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     apply_recommendation TEXT,
     descarte_tipo TEXT DEFAULT 'ninguno',
     descarte_razon TEXT,
-    model_technical TEXT DEFAULT 'deepseek-r1:8b',
+    model_technical TEXT DEFAULT 'gemma4:e4b',
     model_hr TEXT DEFAULT 'gemma4:e4b',
     processing_ms INTEGER,
     sent_via_telegram INTEGER DEFAULT 0,
