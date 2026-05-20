@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS offers (
     title TEXT NOT NULL,
     company_id INTEGER REFERENCES companies(id),
     company_name TEXT,
+    employer_id TEXT,
     province TEXT,
     city TEXT,
     salary_min REAL,
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS offers (
 CREATE INDEX IF NOT EXISTS idx_offers_source_id ON offers(source_id);
 CREATE INDEX IF NOT EXISTS idx_offers_fetched_at ON offers(fetched_at);
 CREATE INDEX IF NOT EXISTS idx_offers_is_active ON offers(is_active);
+CREATE INDEX IF NOT EXISTS idx_offers_employer_id ON offers(employer_id);
 
 CREATE TABLE IF NOT EXISTS offer_evaluations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

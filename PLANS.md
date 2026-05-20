@@ -22,7 +22,10 @@
   [x] Añadir campos search_layer, role_level, relevance_flag a offers
   [x] Crear tabla search_config para configuración geográfica y de rol
   [x] Pre-filtro de requisitos impossibles (descartar 0/1)
-  [ ] fetch_company.py — archivo por crear desde cero (datos empresa → DB)
+  [x] fetch_company.py — enriquecimiento de companies desde ofertas (employer_id)
+[x] Integrar fetch_company en pipeline (entre classify y evaluate)
+[x] Añadir columna employer_id a offers en schema.sql
+[x] Capturar author.id de API InfoJobs en fetch.py
 
 ## FASE 4 — Inteligencia
   [ ] role_discovery.py

@@ -48,6 +48,18 @@ def run_pipeline(skip_fetch: bool = False, dry_run: bool = False) -> None:
     classified = run_classifier()
     log.info("[2/4] Classify — %d ofertas clasificadas", classified)
 
+    # PAS0 2.5: Enrich companies
+    log.info("[2.5/4] Enrich — poblando datos de empresas...")
+    from src.pipeline.fetch_company import run as run_fetch_company
+
+    enrich_result = run_fetch_company(limit=50)
+    log.info(
+        "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d enlazadas",
+        enrich_result["new"],
+        enrich_result["updated"],
+        enrich_result["linked"],
+    )
+
     # PASO 3: Evaluate
     log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
     from src.pipeline.evaluate import run_evaluate

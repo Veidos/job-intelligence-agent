@@ -175,6 +175,8 @@ def upsert_offer(item: dict, conn) -> bool:
     title = offer_data.get("title")
     city = offer_data.get("city")
     company_name = offer_data.get("companyName")
+    author_data = offer_data.get("author", {})
+    employer_id = author_data.get("id")
     url = offer_data.get("link")
     contract_type = offer_data.get("contractType")
     work_mode_raw = offer_data.get("teleworking")
@@ -211,17 +213,18 @@ def upsert_offer(item: dict, conn) -> bool:
         cursor.execute(
             """
             INSERT INTO offers (
-                source_id, title, city, company_name, url, contract_type,
+                source_id, title, city, company_name, employer_id, url, contract_type,
                 work_mode, published_at, description_raw, description_clean,
                 skills_required, experience_min, education_level,
                 salary_min, salary_max, fetched_at, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 source_id,
                 title,
                 city,
                 company_name,
+                employer_id,
                 url,
                 contract_type,
                 work_mode,
@@ -248,6 +251,7 @@ def upsert_offer(item: dict, conn) -> bool:
                 title=?,
                 city=?,
                 company_name=?,
+                employer_id=?,
                 url=?,
                 contract_type=?,
                 work_mode=?,
@@ -266,6 +270,7 @@ def upsert_offer(item: dict, conn) -> bool:
                 title,
                 city,
                 company_name,
+                employer_id,
                 url,
                 contract_type,
                 work_mode,
