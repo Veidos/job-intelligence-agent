@@ -8,3 +8,6 @@ __pycache__/
 *.pyo
 .ruff_cache/
 assets/
+jobs.db
+data/jobs.db
+*.db

@@ -107,6 +107,10 @@ job-intelligence-agent/
 │   └── jobs.db            ← SQLite database (gitignored)
 ├── logs/
 │   └── pipeline.log
+├── scripts/
+│   ├── setup_cron.sh      ← Installs cron job for pipeline
+│   ├── start_bot.sh       ← Starts Telegram bot
+│   └── stop_bot.sh        ← Stops Telegram bot
 └── tests/
     ├── unit/              ← Pure function tests (107)
     ├── integration/       ← DB + pipeline logic (60)
