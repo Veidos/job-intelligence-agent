@@ -54,3 +54,13 @@
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)
   [x] pre_filtro_requisitos_imposibles: PROFILE_CHECK_PATTERNS comparaba regex vs string
   [x] test_phase1.py: eliminada (tabla candidate_profile ya no existe)
+
+## Testing pendiente — Phase 3
+
+Ver checklist completo en docs/TESTING.md
+
+- [ ] Pipeline integration testing completo
+  - [ ] fetch.py — sinceDate=_24_HOURS validado en producción real
+  - [ ] evaluate.py — requisitos imposibles penalizados correctamente
+  - [ ] run.py — ciclo completo real sin errores
+  - [ ] pytest — 0 failed tras todos los cambios
