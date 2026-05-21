@@ -1,19 +1,18 @@
 # Job Intelligence Agent
 
 ![Python](https://img.shields.io/badge/Python-3.14+-blue?logo=python&logoColor=white)
-![Ollama](https://img.shields.io/badge/Ollama-local%20LLMs-black?logo=ollama)
+![Ollama](https://img.shields.io/badge/Ollama-gemma4:e4b-black?logo=ollama)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL%20mode-003B57?logo=sqlite)
+![Tests](https://img.shields.io/badge/Tests-167%20passing-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> Personal career intelligence system. Extracts job offers from InfoJobs, evaluates CV match using local LLMs (Ollama), and delivers daily recommendations via Telegram.
-
-Built for the Spanish job market. Fully offline-first — no data leaves your machine except the Telegram notification.
+> Personal career intelligence system. Extracts job offers from InfoJobs, evaluates CV match using a local LLM (Ollama + gemma4:e4b), and delivers daily recommendations via Telegram. Built for the Spanish job market. Fully offline-first — no personal data leaves your machine except the Telegram notification.
 
 ---
 
 ## How It Works
 
-The system runs a daily pipeline: it scrapes fresh job offers from InfoJobs via Apify, classifies each offer by actual role (based on requirements, not job title), scores them against your CV using a single local model, and sends the top matches to your Telegram. Over time, it learns from your feedback and builds a psychological profile of your preferences.
+The system runs a daily pipeline: scrapes fresh job offers from InfoJobs via Apify, classifies each offer by actual role (based on requirements, not job title), scores them against your CV using a single local model, and sends the top matches to your Telegram. Over time, it learns from your feedback and builds a psychological profile of your preferences.
 
 ```mermaid
 flowchart TD
@@ -21,21 +20,19 @@ flowchart TD
     B --> C[(SQLite\noffers)]
     C --> D[role_classifier.py]
     D --> E[evaluate.py]
-    E --> F[gemma4:e4b\nTechnical Match]
-    E --> G[gemma4:e4b\nHR + Context]
-    F --> H[match_score]
-    G --> H
-    H --> I[send.py]
-    I --> J[📱 Telegram]
+    E --> F[gemma4:e4b\nTechnical + HR]
+    F --> G[match_score]
+    G --> H[send.py]
+    H --> I[📱 Telegram]
     K[fetch_company.py] --> L[(SQLite\ncompanies)]
     L --> E
-    J --> M[💬 User Feedback\n/f1 /f2 /f3 /dia]
+    I --> M[💬 User Feedback\n/f1 /f2 /f3 /dia]
     M --> N[(user_psychology\nevolutive memory)]
 ```
 
 | Model | Role | Temperature | Output |
 |---|---|---|---|
-| `gemma4:e4b` | Technical + HR evaluator | `0.1` | Structured JSON scores + contextual analysis |
+| `gemma4:e4b` | Technical + HR evaluator (single model) | `0.1` | Structured JSON scores + contextual analysis |
 
 ---
 
@@ -46,7 +43,7 @@ flowchart TD
 | Language | Python 3.14+ |
 | Database | SQLite (WAL mode) |
 | ORM | SQLAlchemy 2.0 |
-| Local LLMs | Ollama (`gemma4:e4b`) |
+| Local LLM | Ollama (`gemma4:e4b`) |
 | Job data source | Apify — InfoJobs Spain Jobs Scraper |
 | Notifications | Telegram Bot API |
 | Linting | Ruff |
@@ -58,52 +55,63 @@ flowchart TD
 
 ```
 job-intelligence-agent/
-├── AGENTS.md               ← AI agent context (read by OpenCode)
-├── PERFIL.md               ← Candidate source of truth (gitignored)
-├── PLANS.md                ← Project ledger (phases + task status)
-├── MEMORIES.md             ← Accumulated system learnings
+├── AGENTS.md              ← AI agent context (read by OpenCode)
+├── PERFIL.md              ← Candidate source of truth (gitignored)
+├── PLANS.md               ← Project ledger (phases + task status)
+├── MEMORIES.md            ← Accumulated system learnings
 ├── requirements.txt
-├── .env                    ← Credentials (never commit)
+├── .env                   ← Credentials (never commit)
 │
 ├── assets/
 │   └── cv.pdf
 │
+├── docs/
+│   ├── adr/               ← Architecture Decision Records
+│   ├── CONVENTIONS.md
+│   ├── DATABASE.md
+│   ├── PIPELINE.md
+│   ├── RATING.md
+│   └── SETUP.md
+│
 ├── src/
 │   ├── db/
-│   │   ├── init_db.py      ← Schema initializer
-│   │   ├── schema.sql      ← Single source of truth for DB structure
-│   │   └── models.py       ← SQLAlchemy models + helpers
+│   │   ├── init_db.py     ← Schema initializer
+│   │   ├── schema.sql     ← Single source of truth for DB structure
+│   │   └── models.py      ← SQLAlchemy models + helpers
 │   │
 │   ├── onboarding/
-│   │   ├── run.py          ← Orchestrates full onboarding
-│   │   ├── cv_extractor.py ← gemma4 extracts structured data from CV
-│   │   └── interviewer.py  ← gemma4 conducts guided interview
+│   │   ├── run.py         ← Orchestrates full onboarding
+│   │   ├── cv_extractor.py← gemma4:e4b extracts structured data from CV
+│   │   └── interviewer.py ← gemma4:e4b conducts guided interview
 │   │
 │   ├── pipeline/
-│   │   ├── run.py              ← Full pipeline orchestrator
-│   │   ├── fetch.py            ← InfoJobs via Apify → clean → upsert DB
-│   │   ├── role_classifier.py  ← Classifies offers by real role + relevance
-│   │   ├── fetch_company.py    ← Company data and reviews
-│       │   └── evaluate.py         ← Single-model scoring (gemma4:e4b)
+│   │   ├── run.py         ← Full pipeline orchestrator
+│   │   ├── fetch.py       ← InfoJobs via Apify → clean → upsert DB
+│   │   ├── role_classifier.py ← Classifies offers by real role + relevance
+│   │   ├── fetch_company.py   ← Company data and reviews
+│   │   └── evaluate.py    ← Single-model scoring (gemma4:e4b)
 │   │
 │   ├── intelligence/
-│   │   ├── role_discovery.py   ← Infers reachable roles from dataset
-│   │   ├── market_signals.py   ← Weekly market trend analysis
-│   │   └── strategic_advisor.py← Auto-triggers strategic advice
+│   │   ├── role_discovery.py  ← Infers reachable roles from dataset
+│   │   ├── market_signals.py  ← Weekly market trend analysis
+│   │   └── strategic_advisor.py ← Auto-triggers strategic advice
 │   │
 │   ├── telegram/
-│   │   └── send.py         ← Daily / weekly / alert messages + feedback
+│   │   └── send.py        ← Daily / weekly / alert messages + feedback
 │   │
 │   └── utils/
-│       ├── ollama_client.py← Ollama wrapper with retries + JSON validation
-│       └── cleaner.py      ← Text normalization
+│       ├── ollama_client.py ← Ollama wrapper with retries + JSON validation
+│       └── cleaner.py     ← Text normalization
 │
 ├── data/
-│   └── jobs.db             ← SQLite database (gitignored)
+│   └── jobs.db            ← SQLite database (gitignored)
 ├── logs/
 │   └── pipeline.log
 └── tests/
-    └── test_phase1.py
+    ├── unit/              ← Pure function tests (107)
+    ├── integration/       ← DB + pipeline logic (60)
+    └── fixtures/
+        └── ollama/        ← JSON cassettes for Ollama calls (13)
 ```
 
 ---
@@ -114,8 +122,7 @@ job-intelligence-agent/
 
 - Python 3.14+
 - [Ollama](https://ollama.com/) running locally
-- Node.js v18+ (required by Apify client)
-- Apify account with API token
+- Apify account with API token (~$0.09 per pipeline run)
 - Telegram bot token (via [@BotFather](https://t.me/botfather))
 
 ```bash
@@ -163,13 +170,28 @@ PYTHONPATH=. python src/pipeline/fetch.py
 PYTHONPATH=. python src/pipeline/role_classifier.py
 PYTHONPATH=. python src/pipeline/evaluate.py
 PYTHONPATH=. python src/telegram/send.py --mode daily
+
+# Dry run (no Apify, no Telegram)
+PYTHONPATH=. python src/pipeline/run.py --dry-run
 ```
+
+---
+
+## Cost
+
+| Operation | Cost | Frequency |
+|---|---|---|
+| Apify actor start | ~$0.09 | Once per day |
+| Ollama inference | $0.00 | Local, unlimited |
+| Telegram | $0.00 | Free |
+
+**~$2.70/month** at one run per day. Never run the Apify actor manually in development — always use `--dry-run`.
 
 ---
 
 ## Scoring System
 
-Match score composed of two independent blocks:
+Match score composed of two independent blocks evaluated by a single model:
 
 ### Block A — Technical (gemma4:e4b, 60 pts)
 
@@ -230,9 +252,7 @@ After each daily Telegram message, you can optionally reply:
 /dia hoy no tengo energía para aplicar a nada
 ```
 
-The bot replies `"Anotado 📝"` or `"Entendido, lo tengo en cuenta 🧠"`.
-
-Feedback is **never used to filter offers**. Instead, gemma4 uses it to add personalized notes to future evaluations:
+The bot replies `"Anotado 📝"` or `"Entendido, lo tengo en cuenta 🧠"`. Feedback is **never used to filter offers**. Instead, gemma4:e4b uses it to add personalized notes to future evaluations:
 
 > *"Sé que las empresas grandes no son lo tuyo, pero esta oferta encaja técnicamente muy bien con tu perfil."*
 
@@ -277,21 +297,21 @@ Send time and number of daily offers are configurable via Telegram commands (Pha
 ## Roadmap
 
 ```
-Phase 1 — Foundation          ✅ Complete
-Phase 2 — Onboarding          ✅ Complete
-Phase 3 — Base pipeline       ✅ Complete
-  ├── fetch.py                ✅ Done
-  ├── role_classifier.py      ✅ Done
-  ├── fetch_company.py        ✅ Done
-  ├── evaluate.py             ✅ Done
-  ├── send.py                 ✅ Done
-  └── run.py (pipeline)       ✅ Done
-Phase 4 — Intelligence        ⬜ Pending
-Phase 5 — Automation          ✅ Complete
-  ├── cron + schedule         ✅ Done
-  ├── Telegram feedback       ✅ Done
-  └── feedback_processor      ✅ Done
-Phase 6 — Data Analysis/EDA   ⬜ Planned
+Phase 1 — Foundation        ✅ Complete
+Phase 2 — Onboarding        ✅ Complete
+Phase 3 — Base pipeline     ✅ Complete
+  ├── fetch.py              ✅ Done
+  ├── role_classifier.py    ✅ Done
+  ├── fetch_company.py      ✅ Done
+  ├── evaluate.py           ✅ Done
+  ├── send.py               ✅ Done
+  └── run.py (pipeline)     ✅ Done
+Phase 4 — Intelligence      ⬜ Pending
+Phase 5 — Automation        ✅ Complete
+  ├── cron + schedule       ✅ Done
+  ├── Telegram feedback     ✅ Done
+  └── feedback_processor    ✅ Done
+Phase 6 — Data Analysis/EDA ⬜ Planned
 ```
 
 ---
@@ -306,7 +326,7 @@ This project uses the **Método Ledger** for AI-assisted development:
 | `PLANS.md` | Live project state with task checklist |
 | `MEMORIES.md` | Accumulated non-obvious learnings (prompts, field behavior, model quirks) |
 | `PERFIL.md` | Candidate profile — source of truth for all evaluations |
-| `docs/adr/` | Architecture Decision Records — decisiones técnicas del proyecto |
+| `docs/adr/` | Architecture Decision Records — one file per decision |
 
 > `PERFIL.md` is in `.gitignore`. Never auto-regenerate without explicit user confirmation.
 
