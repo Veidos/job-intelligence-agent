@@ -71,6 +71,7 @@ job-intelligence-agent/
 │   ├── DATABASE.md
 │   ├── PIPELINE.md
 │   ├── RATING.md
+│   ├── TESTING.md          ← Pipeline integration checklist (🤖/👤)
 │   └── SETUP.md
 │
 ├── src/
@@ -318,6 +319,10 @@ Phase 5 — Automation        ✅ Complete
 Phase 6 — Data Analysis/EDA ⬜ Planned
 ```
 
+> **Validation:** The end-to-end checklist for each phase is in
+> [docs/TESTING.md](docs/TESTING.md). No phase is considered closed
+> until it passes all its 🤖 and 👤 items.
+
 ---
 
 ## Agent Context
@@ -331,6 +336,7 @@ This project uses the **Método Ledger** for AI-assisted development:
 | `MEMORIES.md` | Accumulated non-obvious learnings (prompts, field behavior, model quirks) |
 | `PERFIL.md` | Candidate profile — source of truth for all evaluations |
 | `docs/adr/` | Architecture Decision Records — one file per decision |
+| `docs/TESTING.md` | Pipeline integration checklist — human/auto distinction |
 
 > `PERFIL.md` is in `.gitignore`. Never auto-regenerate without explicit user confirmation.
 
