@@ -304,8 +304,8 @@ Send time and number of daily offers are configurable via Telegram commands (Pha
 > **Status legend:** ✅ complete (implemented + validated end-to-end) · 🟡 coded (implemented, validation pending via [TESTING.md](docs/TESTING.md)) · ⬜ not yet implemented
 
 ```
-Phase 1 — Foundation        ✅ Complete
-Phase 2 — Onboarding        ✅ Complete
+Phase 1 — Foundation        🟡 Coded (validation pending)
+Phase 2 — Onboarding        🟡 Coded (validation pending)
 Phase 3 — Base pipeline     🟡 Coded (validation pending)
   ├── fetch.py              🟡 Coded
   ├── role_classifier.py    🟡 Coded
@@ -314,10 +314,10 @@ Phase 3 — Base pipeline     🟡 Coded (validation pending)
   ├── send.py               🟡 Coded
   └── run.py (pipeline)     🟡 Coded
 Phase 4 — Intelligence      ⬜ Pending
-Phase 5 — Automation        ✅ Complete
-  ├── cron + schedule       ✅ Done
-  ├── Telegram feedback     ✅ Done
-  └── feedback_processor    ✅ Done
+Phase 5 — Automation        🟡 Coded (validation pending)
+  ├── cron + schedule       🟡 Coded
+  ├── Telegram feedback     🟡 Coded
+  └── feedback_processor    🟡 Coded
 Phase 6 — Data Analysis/EDA ⬜ Planned
 ```
 
