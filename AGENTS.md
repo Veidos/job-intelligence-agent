@@ -26,6 +26,7 @@ y envía un resumen diario por Telegram.
 | `docs/DATABASE.md` | Tablas, reglas, schema SQL |
 | `docs/RATING.md` | Sistema de puntuación técnico + HR |
 | `docs/CONVENTIONS.md` | Estilo de código, fases de implementación |
+| `docs/adr/` | Decisiones técnicas y de arquitectura (ADR clásico) — ver README interno |
 
 ---
 
