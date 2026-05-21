@@ -55,12 +55,17 @@
   [x] pre_filtro_requisitos_imposibles: PROFILE_CHECK_PATTERNS comparaba regex vs string
   [x] test_phase1.py: eliminada (tabla candidate_profile ya no existe)
 
-## Testing pendiente — Phase 3
+## Testing pendiente — Pipeline completo
 
 Ver checklist completo en docs/TESTING.md
 
-- [ ] Pipeline integration testing completo
-  - [ ] fetch.py — sinceDate=_24_HOURS validado en producción real
-  - [ ] evaluate.py — requisitos imposibles penalizados correctamente
-  - [ ] run.py — ciclo completo real sin errores
-  - [ ] pytest — 0 failed tras todos los cambios
+- [ ] Fase 0 — Prerequisitos verificados
+- [ ] Fase 1 — Onboarding validado manualmente
+- [ ] Fase 2 — fetch.py con sinceDate=_24_HOURS validado en producción
+- [ ] Fase 3 — fetch_company.py sin errores
+- [ ] Fase 4 — role_classifier.py coherente con las ofertas
+- [ ] Fase 5 — evaluate.py — requisitos imposibles penalizados
+- [ ] Fase 6 — send.py — mensaje Telegram correcto
+- [ ] Fase 7 — run.py ciclo completo real sin errores
+- [ ] Fase 8 — Feedback bot funcional y natural
+- [ ] Fase 9 — pytest 0 failed
