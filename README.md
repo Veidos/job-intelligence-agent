@@ -13,7 +13,7 @@ Built for the Spanish job market. Fully offline-first — no data leaves your ma
 
 ## How It Works
 
-The system runs a daily pipeline: it scrapes fresh job offers from InfoJobs via Apify, classifies each offer by actual role (based on requirements, not job title), scores them against your CV using two specialized local models, and sends the top matches to your Telegram. Over time, it learns from your feedback and builds a psychological profile of your preferences.
+The system runs a daily pipeline: it scrapes fresh job offers from InfoJobs via Apify, classifies each offer by actual role (based on requirements, not job title), scores them against your CV using a single local model, and sends the top matches to your Telegram. Over time, it learns from your feedback and builds a psychological profile of your preferences.
 
 ```mermaid
 flowchart TD
@@ -32,8 +32,6 @@ flowchart TD
     J --> M[💬 User Feedback\n/f1 /f2 /f3 /dia]
     M --> N[(user_psychology\nevolutive memory)]
 ```
-
-Two models, one pipeline:
 
 | Model | Role | Temperature | Output |
 |---|---|---|---|
@@ -86,7 +84,7 @@ job-intelligence-agent/
 │   │   ├── fetch.py            ← InfoJobs via Apify → clean → upsert DB
 │   │   ├── role_classifier.py  ← Classifies offers by real role + relevance
 │   │   ├── fetch_company.py    ← Company data and reviews
-│   │   └── evaluate.py         ← Dual-model scoring
+│       │   └── evaluate.py         ← Single-model scoring (gemma4:e4b)
 │   │
 │   ├── intelligence/
 │   │   ├── role_discovery.py   ← Infers reachable roles from dataset
@@ -182,7 +180,7 @@ Match score composed of two independent blocks:
 | Education level | 0–10 |
 | Location / work mode | 0–10 |
 
-### Block B — HR Context (gemma4, 40 pts base)
+### Block B — HR Context (gemma4:e4b, 40 pts base)
 
 | Criterion | Weight |
 |---|---|
@@ -308,6 +306,7 @@ This project uses the **Método Ledger** for AI-assisted development:
 | `PLANS.md` | Live project state with task checklist |
 | `MEMORIES.md` | Accumulated non-obvious learnings (prompts, field behavior, model quirks) |
 | `PERFIL.md` | Candidate profile — source of truth for all evaluations |
+| `docs/adr/` | Architecture Decision Records — decisiones técnicas del proyecto |
 
 > `PERFIL.md` is in `.gitignore`. Never auto-regenerate without explicit user confirmation.
 
