@@ -301,16 +301,18 @@ Send time and number of daily offers are configurable via Telegram commands (Pha
 
 ## Roadmap
 
+> **Status legend:** ✅ complete (implemented + validated end-to-end) · 🟡 coded (implemented, validation pending via [TESTING.md](docs/TESTING.md)) · ⬜ not yet implemented
+
 ```
 Phase 1 — Foundation        ✅ Complete
 Phase 2 — Onboarding        ✅ Complete
-Phase 3 — Base pipeline     ✅ Complete
-  ├── fetch.py              ✅ Done
-  ├── role_classifier.py    ✅ Done
-  ├── fetch_company.py      ✅ Done
-  ├── evaluate.py           ✅ Done
-  ├── send.py               ✅ Done
-  └── run.py (pipeline)     ✅ Done
+Phase 3 — Base pipeline     🟡 Coded (validation pending)
+  ├── fetch.py              🟡 Coded
+  ├── role_classifier.py    🟡 Coded
+  ├── fetch_company.py      🟡 Coded
+  ├── evaluate.py           🟡 Coded
+  ├── send.py               🟡 Coded
+  └── run.py (pipeline)     🟡 Coded
 Phase 4 — Intelligence      ⬜ Pending
 Phase 5 — Automation        ✅ Complete
   ├── cron + schedule       ✅ Done
@@ -318,10 +320,6 @@ Phase 5 — Automation        ✅ Complete
   └── feedback_processor    ✅ Done
 Phase 6 — Data Analysis/EDA ⬜ Planned
 ```
-
-> **Validation:** The end-to-end checklist for each phase is in
-> [docs/TESTING.md](docs/TESTING.md). No phase is considered closed
-> until it passes all its 🤖 and 👤 items.
 
 ---
 
