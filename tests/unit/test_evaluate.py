@@ -153,105 +153,90 @@ class TestLoadGapFromPerfil:
         assert gap == 3.7
 
 
-class TestPreFiltroRequisitosImposibles:
-    """Tests para pre_filtro_requisitos_imposibles(offer, perfil)."""
+class TestCheckImpossibleRequirements:
+    """Tests para check_impossible_requirements(offer, perfil) con ollama_call mockeado."""
 
-    def test_no_descarta_oferta_sin_requisitos_imposibles(
-        self, sample_offer, sample_perfil_text
-    ):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
-
-        es_descartable, razon = pre_filtro_requisitos_imposibles(
-            sample_offer, sample_perfil_text
+    def test_no_descarta_sin_requisitos_imposibles(self, mocker):
+        mocker.patch(
+            "src.pipeline.evaluate.ollama_call",
+            return_value={"descartable": False, "razon": ""},
         )
+        from src.pipeline.evaluate import check_impossible_requirements
 
-        assert es_descartable is False
-        assert razon == ""
-
-    def test_descarta_oferta_para_estudiante(
-        self, sample_offer_with_impossible_requirements
-    ):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
-
-        es_descartable, razon = pre_filtro_requisitos_imposibles(
-            sample_offer_with_impossible_requirements, ""
+        result = check_impossible_requirements(
+            {"title": "Data Analyst", "description_clean": "Python y SQL"},
+            "# PERFIL\n- Python",
         )
+        assert result["descartable"] is False
+        assert result["razon"] == ""
 
-        assert es_descartable is True
-        assert razon == "No es estudiante de último año"
-
-    def test_descarta_oferta_para_certificado_discapacidad(self):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
-
-        offer = {
-            "description_clean": "Se requiere certificado de discapacidad",
-            "title": "Analista",
-        }
-        es_descartable, razon = pre_filtro_requisitos_imposibles(offer, "")
-
-        assert es_descartable is True
-        assert razon == "No posee certificado de discapacidad"
-
-    def test_descarta_oferta_para_menor_de_edad(self):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
-
-        offer = {
-            "description_clean": "Se busca ser menor de 25 años",
-            "title": "Becario",
-        }
-        es_descartable, razon = pre_filtro_requisitos_imposibles(offer, "")
-
-        assert es_descartable is True
-        assert razon == "No cumple requisito de edad"
-
-    def test_no_descarta_oferta_sin_carnet_cuando_perfil_no_lo_tiene(self):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
-
-        offer = {
-            "description_clean": "Se requiere carné de conducir. Experiencia mínima 2 años.",
-            "title": "Técnico de datos",
-        }
-        perfil_sin_carnet = "# PERFIL\n\n## Datos base\n\n- **Nombre:** Test\n"
-        es_descartable, razon = pre_filtro_requisitos_imposibles(
-            offer, perfil_sin_carnet
+    def test_descarta_por_estudiante(self, mocker):
+        mocker.patch(
+            "src.pipeline.evaluate.ollama_call",
+            return_value={
+                "descartable": True,
+                "razon": "La oferta requiere ser estudiante activo y el candidato no lo es",
+            },
         )
+        from src.pipeline.evaluate import check_impossible_requirements
 
-        assert es_descartable is True
-        assert razon == "No tiene carné de conducir"
-
-    def test_no_descarta_oferta_sin_carnet_cuando_perfil_lo_tiene(self):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
-
-        offer = {
-            "description_clean": "Carné de conducir obligatorio",
-            "title": "Técnico",
-        }
-        perfil_con_carnet = "# PERFIL\n\n## Datos base\n\n- **Nombre:** Test\n## Skills\n\n- Carné de conducir"
-        es_descartable, razon = pre_filtro_requisitos_imposibles(
-            offer, perfil_con_carnet
+        result = check_impossible_requirements(
+            {
+                "title": "Becario",
+                "description_clean": "Se busca estudiante de último año",
+            },
+            "# PERFIL\n- **Nombre:** Test",
         )
+        assert result["descartable"] is True
+        assert "estudiante" in result["razon"]
 
-        assert es_descartable is False
+    def test_descarta_por_carnet_no_disponible(self, mocker):
+        mocker.patch(
+            "src.pipeline.evaluate.ollama_call",
+            return_value={
+                "descartable": True,
+                "razon": "El candidato no tiene carné de conducir",
+            },
+        )
+        from src.pipeline.evaluate import check_impossible_requirements
 
-    def test_case_insensitive(self, sample_offer_with_impossible_requirements):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
+        result = check_impossible_requirements(
+            {
+                "title": "Técnico",
+                "description_clean": "Carné de conducir obligatorio",
+            },
+            "# PERFIL\n- **Nombre:** Test",
+        )
+        assert result["descartable"] is True
 
-        offer_case = {
-            "description_clean": "Se busca SER estudiante",
-            "title": "Becario",
-        }
-        es_descartable, razon = pre_filtro_requisitos_imposibles(offer_case, "")
+    def test_maneja_error_ollama_devuelve_false(self, mocker):
+        mocker.patch(
+            "src.pipeline.evaluate.ollama_call",
+            return_value="respuesta inválida",
+        )
+        from src.pipeline.evaluate import check_impossible_requirements
 
-        assert es_descartable is True
+        result = check_impossible_requirements(
+            {"title": "Test", "description_clean": "test"},
+            "# PERFIL",
+        )
+        assert result["descartable"] is False
+        assert result["razon"] == ""
 
-    def test_requisito_imposible_solo_en_titulo(self):
-        from src.pipeline.evaluate import pre_filtro_requisitos_imposibles
+    def test_verifica_que_llama_ollama_con_temp_cero(self, mocker):
+        mock = mocker.patch("src.pipeline.evaluate.ollama_call")
+        from src.pipeline.evaluate import check_impossible_requirements
 
-        offer = {
-            "description_clean": "Análisis de datos con Python y SQL",
-            "title": "Se requiere ser estudiante para prácticas",
-        }
-        es_descartable, razon = pre_filtro_requisitos_imposibles(offer, "")
-
-        assert es_descartable is True
-        assert razon == "No es estudiante activo"
+        check_impossible_requirements(
+            {
+                "title": "Data Analyst",
+                "company_name": "Corp",
+                "description_clean": "SQL",
+            },
+            "# PERFIL\n- Python",
+        )
+        assert mock.called
+        kwargs = mock.call_args[1]
+        assert kwargs["temperature"] == 0.0
+        assert kwargs["expect_json"] is True
+        assert kwargs["model"] == "gemma4:e4b"

@@ -7,7 +7,6 @@ PERFIL.md es la única fuente de verdad del candidato.
 
 import json
 import logging
-import re
 import sys
 import time
 from pathlib import Path
@@ -26,67 +25,6 @@ log = logging.getLogger(__name__)
 
 def _clamp(val, lo: int, hi: int) -> int:
     return max(lo, min(hi, int(val or 0)))
-
-
-# Patrones de requisitos impossibles (requieren condición que NO se puede cambiar)
-IMPOSSIBLE_PATTERNS = [
-    (r"estudiante.*\búltimo año\b", "No es estudiante de último año"),
-    (
-        r"firma.*convenio.*prácticas",
-        "No puede firmar convenio de prácticas (no es estudiante)",
-    ),
-    (r"ser.*estudiante", "No es estudiante activo"),
-    (r"certificado.*discapacidad", "No posee certificado de discapacidad"),
-    (r"minusvalía", "No tiene minusvalía"),
-    (r"discapacitado", "No tiene discapacidad"),
-    (r"ser.*menor de \d+", "No cumple requisito de edad"),
-    (r"tener.*\d+ años", "No cumple requisito de edad"),
-]
-
-# Patrones de requisitos que requieren verificar el perfil
-PROFILE_CHECK_PATTERNS = [
-    (r"carné de conducir", "carnet"),
-    (r"coche propio", "coche"),
-    (r"vehículo propio", "coche"),
-]
-
-
-def pre_filtro_requisitos_imposibles(offer: dict, perfil: str) -> tuple[bool, str]:
-    """
-    Analiza la oferta antes de llamar a los modelos para detectar requisitos impossibles.
-
-    Un requisito es IMPOSIBLE si requiere volver a un estado anterior:
-    - Ser estudiante (no lo es)
-    - Tener certificado de discapacidad (no lo tiene)
-    - Ser menor de X años (no lo es)
-
-    Retorna: (es_descartable, razon)
-    - Si es_descartable=True: NO se evalúa con modelos, score=0
-    """
-    description = (offer.get("description_clean") or "").lower()
-    title = (offer.get("title") or "").lower()
-    full_text = f"{title} {description}"
-
-    # Buscar patrones impossibles
-    for pattern, razon in IMPOSSIBLE_PATTERNS:
-        if re.search(pattern, full_text, re.IGNORECASE):
-            log.info(f"Descarte por requisito imposible: {razon}")
-            return True, razon
-
-    # Verificar requisitos del perfil
-    perfil_lower = perfil.lower()
-    for pattern, kw in PROFILE_CHECK_PATTERNS:
-        if re.search(pattern, full_text, re.IGNORECASE):
-            if kw == "carnet" and "carné de conducir" in full_text:
-                if "carné" not in perfil_lower and "carnet" not in perfil_lower:
-                    return True, "No tiene carné de conducir"
-            elif kw == "coche" and (
-                "coche propio" in full_text or "vehículo propio" in full_text
-            ):
-                if "coche" not in perfil_lower and "vehículo" not in perfil_lower:
-                    return True, "No tiene vehículo propio"
-
-    return False, ""
 
 
 def load_skills_from_perfil(perfil: str) -> list[dict]:
@@ -164,6 +102,62 @@ def load_gap_from_perfil(perfil: str) -> float | None:
             pass
 
     return None
+
+
+def check_impossible_requirements(offer: dict, perfil: str) -> dict:
+    """Usa gemma4 para detectar requisitos estructuralmente imposibles.
+
+    Un requisito es estructuralmente imposible cuando requiere una condición
+    que el candidato NO puede cumplir por su naturaleza (no por falta de
+    formación): ser estudiante activo, tener discapacidad, tener carné de
+    conducir/vehículo (si no constan en el perfil), ser menor de X años, etc.
+
+    Retorna: {"descartable": bool, "razon": str}
+    """
+    prompt = f"""Eres un evaluador de requisitos laborales. Analiza si esta
+oferta contiene requisitos estructuralmente imposibles para el candidato
+específico.
+
+Un requisito es ESTRUCTURALMENTE IMPOSIBLE cuando:
+
+1. Requiere una condición que el candidato no puede cumplir por su
+   naturaleza (no es falta de formación):
+   - Ser estudiante activo / estar en último año / firmar convenio de
+     prácticas (el candidato NO es estudiante)
+   - Tener certificado de discapacidad / minusvalía (no lo tiene)
+   - Ser menor de X años (no lo es)
+
+2. Requiere algo que el perfil del candidato no menciona tener:
+   - Carné de conducir (si no aparece en el perfil)
+   - Vehículo propio / coche propio (si no aparece en el perfil)
+
+NO es requisito imposible:
+- Skills técnicas que el candidato no domina (se evalúa aparte)
+- Experiencia que no tiene (se evalúa aparte)
+- Educación formal que no tiene (se evalúa aparte)
+- Nivel de idioma (se evalúa aparte)
+- Preferencias de entorno / modalidad (son contexto, no filtro)
+
+PERFIL DEL CANDIDATO:
+{perfil[:2000]}
+
+OFERTA:
+Título: {offer.get("title", "")}
+Empresa: {offer.get("company_name", "")}
+Descripción: {(offer.get("description_clean") or "")[:1500]}
+
+Responde SOLO con este JSON exacto, sin texto adicional:
+{{"descartable": false, "razon": ""}}
+
+Si hay requisitos imposibles, pon "descartable": true y explica
+en "razon" QUÉ requisito y POR QUÉ es imposible para ESTE candidato."""
+    result = ollama_call(
+        model=MODEL_HR,
+        prompt=prompt,
+        expect_json=True,
+        temperature=0.0,
+    )
+    return result if isinstance(result, dict) else {"descartable": False, "razon": ""}
 
 
 RATING = {
@@ -451,13 +445,13 @@ def run_evaluate(limit: int = 10) -> dict:
         try:
             log.info("Evaluando: %s", offer["title"])
 
-            # PRE-FILTRO: Verificar requisitos impossibles
-            es_descartable, razon_descarte = pre_filtro_requisitos_imposibles(
-                offer, perfil
-            )
+            # PRE-FILTRO: gemma4 detecta requisitos estructuralmente imposibles
+            filtro = check_impossible_requirements(offer, perfil)
+            es_descartable = filtro.get("descartable", False)
+            razon_descarte = filtro.get("razon", "")
 
             if es_descartable:
-                log.warning(f"⚠️ DESCARTE: {offer['title']} - {razon_descarte}")
+                log.warning("DESCARTE: %s - %s", offer["title"], razon_descarte)
                 ms = int((time.monotonic() - t0) * 1000)
                 save_evaluation(
                     offer_id=offer["id"],

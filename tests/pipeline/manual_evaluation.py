@@ -28,7 +28,7 @@ load_dotenv()
 from src.db.init_db import get_connection  # noqa: E402
 from src.pipeline.role_classifier import classify_offer, get_role_catalog  # noqa: E402
 from src.pipeline.evaluate import (  # noqa: E402
-    pre_filtro_requisitos_imposibles,
+    check_impossible_requirements,
     evaluate_technical,
     evaluate_hr,
     load_perfil,
@@ -214,11 +214,13 @@ def run_evaluation_report(limit: int = 5) -> dict[str, Any]:
 
             ---
 
-            #### FASE 1 — Pre-filtro de requisitos impossibles
+            #### FASE 1 — Filtro de requisitos imposibles (gemma4)
             """)
         )
 
-        es_descartable, razon_descarte = pre_filtro_requisitos_imposibles(offer, perfil)
+        filtro = check_impossible_requirements(offer, perfil)
+        es_descartable = filtro.get("descartable", False)
+        razon_descarte = filtro.get("razon", "")
         if es_descartable:
             lines.append(f"> **DESCARTADO POR PRE-FILTRO:** {razon_descarte}\n")
             result["status"] = "descartado_prefiltro"
