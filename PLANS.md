@@ -1,6 +1,6 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Testing Fase 2 — fetch.py con sinceDate=_24_HOURS validado en producción real.
+> **Próximo paso:** Testing T-2 — fetch.py con sinceDate=_24_HOURS validado en producción real.
 > Ver docs/TESTING.md para el checklist completo.
 
 ## FASE 1 — Cimientos
@@ -63,13 +63,13 @@
 
 Ver checklist completo en docs/TESTING.md
 
-- [x] Fase 0 — Prerequisitos verificados (4/5 🤖 OK, pendiente revisión 👤 ítem 0.5)
-- [x] Fase 1 — Onboarding validado manualmente (extracción + entrevista + PERFIL.md)
-- [ ] Fase 2 — fetch.py con sinceDate=_24_HOURS validado en producción
-- [ ] Fase 3 — fetch_company.py sin errores
-- [ ] Fase 4 — role_classifier.py coherente con las ofertas
-- [ ] Fase 5 — evaluate.py — requisitos imposibles penalizados
-- [ ] Fase 6 — send.py — mensaje Telegram correcto
-- [ ] Fase 7 — run.py ciclo completo real sin errores
-- [ ] Fase 8 — Feedback bot funcional y natural
-- [ ] Fase 9 — pytest 0 failed
+- [x] T-0 — Prerequisitos verificados (4/5 🤖 OK, pendiente revisión 👤 ítem T-0.5)
+- [x] T-1 — Onboarding validado manualmente (extracción + entrevista + PERFIL.md)
+- [ ] T-2 — fetch.py con sinceDate=_24_HOURS validado en producción
+- [ ] T-3 — fetch_company.py sin errores
+- [ ] T-4 — role_classifier.py coherente con las ofertas
+- [ ] T-5 — evaluate.py — requisitos imposibles penalizados
+- [ ] T-6 — send.py — mensaje Telegram correcto
+- [ ] T-7 — run.py ciclo completo real sin errores
+- [ ] T-8 — Feedback bot funcional y natural
+- [ ] T-9 — pytest 0 failed
