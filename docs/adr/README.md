@@ -33,3 +33,4 @@ una decisión no trivial.
 |---|--------|-------|--------|
 | 001 | ADR como sistema de documentación de decisiones | 2026-05-21 | activo |
 | 002 | CV freshness check con regeneración interactiva | 2026-05-21 | activo |
+| 003 | Entrevista ligera con enfoque positivo | 2026-05-22 | activo |
