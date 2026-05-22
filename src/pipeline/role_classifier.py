@@ -183,7 +183,13 @@ PASO 2 — EVALUACIÓN DE FIT (con perfil)
 Perfil del candidato:
 {perfil_content}
 
-QE gaps detectados (array con todos los que apliquen): none|herramienta|dominio|seniority|estructural
+QE gaps detectados:
+- none: sin gaps
+- herramienta: la oferta pide una herramienta concreta que el candidato no tiene (ej. Power BI)
+- dominio: la oferta requiere experiencia en un sector que el candidato no tiene (ej. automoción)
+- seniority: la oferta exige explícitamente ≥2 años de experiencia, liderazgo de equipos o autonomía senior (no lo infieras del perfil)
+- estructural: la oferta exige algo imposible (carnet, titulación obligatoria, discapacidad)
+
 jerarquía: estructural > seniority > dominio > herramienta
 
 reasoning: justifica el fit considerando el perfil del candidato
