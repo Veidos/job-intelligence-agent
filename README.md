@@ -326,7 +326,7 @@ Phase 3 — Base pipeline     🟡 Coded (validation pending)
   ├── fetch.py              🟡 Coded (T-2 ⏳ ADR-004)
   ├── role_classifier.py    ✅ Validated (v6 estable, ADR-005)
   ├── fetch_company.py      🟡 Coded (T-3 ⏳ ADR-004)
-  ├── evaluate.py           🟡 Coded
+  ├── evaluate.py           🟡 Coded (T-5 ← testing actual)
   ├── send.py               🟡 Coded
   └── run.py (pipeline)     🟡 Coded
 Phase 4 — Intelligence      ⬜ Pending
