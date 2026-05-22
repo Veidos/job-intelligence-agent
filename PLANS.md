@@ -1,5 +1,8 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
+> **Próximo paso:** Testing Fase 2 — fetch.py con sinceDate=_24_HOURS validado en producción real.
+> Ver docs/TESTING.md para el checklist completo.
+
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo
   [x] ollama_client.py con reintentos y validación JSON
