@@ -44,32 +44,23 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
             result["salary_min_viable"] = int(numbers[0])
             result["salary_notes"] = salary_raw
 
-    # 3. Contexto personal (abierto con expectativas claras)
+    # 3. Contexto personal (todo en un solo input)
     print("\n3. Contexto personal relevante para tu búsqueda de trabajo")
-    print("   Puedes incluir (si aplica):")
+    print("   Puedes incluir (todo junto, si aplica):")
     print("   - Condiciones que afecten cómo trabajas (horarios, concentración, etc.)")
     print("   - Tipo de entorno donde rindes mejor (silencio, equipo, autonomía, etc.)")
-    print("   - Cualquier otra cosa que quieras que el sistema considere")
+    print("   - Cualquier otra cosa relevante")
     print("   (déjalo vacío si no aplica)")
-    condition_raw = input("   > ").strip()
-    environment_raw = input("   Entorno preferido (opcional): ").strip()
-
-    personal_parts = []
-    if condition_raw:
-        personal_parts.append(f"Condición: {condition_raw}")
-    if environment_raw:
-        personal_parts.append(f"Entorno: {environment_raw}")
+    personal_raw = input("   > ").strip()
 
     result["personal_concerns"] = (
-        " | ".join(personal_parts) if personal_parts else "Sin información adicional"
+        personal_raw if personal_raw else "Sin información adicional"
     )
 
-    # 4. Motivación profesional (sustituye inseguridades — enfoque positivo)
+    # 4. Motivación profesional
     print("\n4. ¿Qué buscas en tu próximo rol profesional?")
-    print(
-        "   (ej: 'aprender ML en producción', 'consolidar análisis de datos',"
-        " 'cambiar a un sector con impacto social')"
-    )
+    print("   (ej: 'crecer en un área técnica', 'consolidar habilidades de análisis',")
+    print("    'cambiar a un sector con impacto social')")
     motivation_raw = input("   > ").strip()
     if motivation_raw:
         if result["personal_concerns"] == "Sin información adicional":
@@ -92,8 +83,9 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
 Su ubicación actual según CV: {cv_data.get("location_current", "desconocida")}
 
 Devuelve UNICAMENTE JSON válido con este esquema:
-{{"location_preference": string, "relocation_conditions": string}}"""
+{{"work_mode_preference": string, "location_preference": string, "relocation_conditions": string}}"""
     reloc = ollama_call(MODEL_HR, reloc_prompt, expect_json=True)
+    result["work_mode_preference"] = reloc.get("work_mode_preference", "")
     result["location_preference"] = reloc.get("location_preference", "")
     result["relocation_conditions"] = reloc.get("relocation_conditions", relocation_raw)
 
