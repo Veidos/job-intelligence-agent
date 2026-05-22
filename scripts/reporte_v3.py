@@ -50,7 +50,7 @@ def build_report() -> None:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        """SELECT id, title, company_name, city, experience_min, description_clean,
+        """SELECT id, title, company_name, city, experience_min, description_clean, skills_required,
                   role_normalized, relevance_flag, gap_type, role_reasoning, classification_reasoning
            FROM offers WHERE id BETWEEN 226 AND 242 ORDER BY id"""
     ).fetchall()
@@ -72,6 +72,7 @@ def build_report() -> None:
         exp_min = row["experience_min"]
         exp_str = f"{exp_min}+ años" if exp_min else "Sin especificar" if exp_min is None else "0 (Junior)"
         desc = (row["description_clean"] or "")[:2000]
+        skills = row["skills_required"] or ""
 
         fc = FLAG_COLORS.get(flag, FLAG_COLORS["stretch"])
 
@@ -91,7 +92,9 @@ def build_report() -> None:
   </div>
   <div class="card-b" id="b-{oid}">
     <div class="sec">
-      <h4>Descripción de la oferta</h4>
+      <h4>Skills requeridas</h4>
+      <div class="skills">{esc(skills)}</div>
+      <h4 style="margin-top:8px;">Descripción de la oferta</h4>
       <div class="desc">{esc(desc)}</div>
       <h4 style="margin-top:8px;">gap_type: {esc(gap)} &middot; role_reasoning</h4>
       <div class="df">{esc(role_r)}</div>
@@ -139,6 +142,7 @@ h1{{font-size:1.4em;margin-bottom:.2em}}
 .rea{{background:#fff8e1;border-left:3px solid #ffb300;border-radius:4px;padding:10px 12px;font-size:.85em;line-height:1.5;max-height:200px;overflow-y:auto}}
 .df{{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:10px;font-size:.85em;line-height:1.45;max-height:240px;overflow-y:auto;white-space:pre-wrap}}
 .desc{{background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:10px;font-size:.83em;line-height:1.45;max-height:300px;overflow-y:auto;white-space:pre-wrap}}
+.skills{{background:#e8eaf6;border:1px solid #c5cae9;border-radius:4px;padding:8px 10px;font-size:.83em;line-height:1.4;max-height:120px;overflow-y:auto}}
 .note{{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:10px 14px;font-size:.85em;margin-bottom:1em}}
 </style>
 </head>
