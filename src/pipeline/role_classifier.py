@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-import time
 import argparse
 from pathlib import Path
 from typing import Any
@@ -49,10 +48,20 @@ GAP_TO_FLAG: dict[str, str] = {
 
 
 def resolve_gap_type(gaps: list[str]) -> str:
-    """Apply hierarchy: return the most restrictive gap from the list."""
-    if not gaps:
+    """Apply hierarchy with heuristic: seniority alone beats all except estructural,
+    but if seniority only coexists with herramienta (no dominio/estructural),
+    herramienta wins (seniority was inflated by the model seeing a junior profile)."""
+    if not gaps or not isinstance(gaps, list):
         return "none"
-    seen = set(gaps)
+    seen = set(g for g in gaps if isinstance(g, str))
+    if not seen:
+        return "none"
+    if "estructural" in seen:
+        return "estructural"
+
+    if "seniority" in seen and "dominio" not in seen and "estructural" not in seen:
+        return "herramienta" if "herramienta" in seen else "seniority"
+
     for level in GAP_HIERARCHY:
         if level in seen:
             return level
@@ -148,7 +157,59 @@ def update_role_catalog(conn: sqlite3.Connection, catalog: list[str]) -> None:
     logger.info(f"Updated role catalog with {len(catalog)} roles")
 
 
-FORBIDDEN_IN_ROLE_REASONING = ["candidato", "del candidato", "del perfil", "perfil del", "Miguel", "Bohórquez"]
+FORBIDDEN_IN_ROLE_REASONING = [
+    "candidato",
+    "del candidato",
+    "del perfil",
+    "perfil del",
+    "Miguel",
+    "Bohórquez",
+    "gap de empleo",
+    "bootcamp",
+    "años sin",
+    "recién graduado",
+    "sin experiencia",
+]
+
+
+def _build_prompt(
+    title: str,
+    description: str,
+    skills: str,
+    catalog: list[str],
+    perfil_content: str,
+) -> str:
+    catalog_str = ", ".join(catalog)
+    return f"""Eres un clasificador de ofertas. Responde en dos fases.
+
+FASE 1 — analiza el puesto. Ignora completamente al candidato.
+Catálogo disponible: {catalog_str}
+
+Oferta:
+- Título: {title}
+- Skills requeridas: {skills}
+- Descripción: {description}
+
+Determina:
+- función dominante: análisis_reporting | ingeniería_datos | modelado_ml | consultoría_procesos | gobierno_dato | soporte_técnico | compliance | otra
+- requisitos: separa obligatorios de valorables según la descripción
+- seniority del puesto: ejecutar_tareas | definir_procesos | liderar_equipos
+- coherencia título vs descripción: coincide | discrepa
+- role_normalized: elige del catálogo o propón nuevo en snake_case
+- role_reasoning: una sola frase describiendo el puesto. No menciones al candidato.
+
+FASE 2 — evalúa el fit con el perfil.
+Perfil:
+{perfil_content}
+
+Identifica todos los gaps (puede ser array vacío):
+- herramienta: tool específica que el candidato no acredita tener
+- dominio: sector o contexto que el candidato no ha trabajado
+- seniority: nivel de experiencia práctica o responsabilidad que el candidato no demuestra
+- estructural: requisito imposible de cumplir (titulación obligatoria, certificación, etc.)
+
+Responde SOLO este JSON:
+{{"role_normalized":"...","role_reasoning":"...","gap_types":[],"is_new_role":false,"reasoning":"..."}}"""
 
 
 def classify_offer(
@@ -161,41 +222,17 @@ def classify_offer(
     description = offer.get("description_clean") or offer.get("description_raw") or ""
     if description:
         description = description[:2000]
-    skills_raw = offer.get("skills_required")
-    skills_str = skills_raw[:1000] if skills_raw else ""
+    skills_raw = offer.get("skills_required") or ""
+    if skills_raw.startswith("["):
+        try:
+            skills_list = json.loads(skills_raw)
+            skills_str = ", ".join(skills_list)[:800]
+        except json.JSONDecodeError:
+            skills_str = skills_raw[:800]
+    else:
+        skills_str = skills_raw[:800]
 
-    prompt = f"""PASO 1 — CLASIFICACIÓN DEL PUESTO (ignora al candidato)
-Catálogo: {catalog}
-
-Título: {title}
-Descripción: {description}
-Skills requeridas: {skills_str}
-
-QA función: análisis_reporting|ingeniería_datos|modelado_ml|consultoría_procesos|gobierno_dato|soporte_técnico|compliance|otra
-QB requisitos: separa obligatorios vs valorables
-QC stack intercambiable: misma_abstracción + candidato_tiene_equivalente + sin_certificación → sí|no
-QD seniority: ejecutar_tareas|definir_procesos|liderar_equipos
-QG coherencia título↔descripción: coincide|discrepa
-
-role_reasoning: justifica el rol (solo con título, descripción y skills — no uses el perfil)
-
-PASO 2 — EVALUACIÓN DE FIT (con perfil)
-Perfil del candidato:
-{perfil_content}
-
-QE gaps detectados:
-- none: sin gaps
-- herramienta: la oferta pide una herramienta concreta que el candidato no tiene (ej. Power BI)
-- dominio: la oferta requiere experiencia en un sector que el candidato no tiene (ej. automoción)
-- seniority: la oferta exige explícitamente ≥2 años de experiencia, liderazgo de equipos o autonomía senior (no lo infieras del perfil)
-- estructural: la oferta exige algo imposible (carnet, titulación obligatoria, discapacidad)
-
-jerarquía: estructural > seniority > dominio > herramienta
-
-reasoning: justifica el fit considerando el perfil del candidato
-
-JSON:
-{{"role_normalized":"...","role_reasoning":"...","gap_types":["..."],"is_new_role":false,"reasoning":"..."}}"""
+    prompt = _build_prompt(title, description, skills_str, catalog, perfil_content)
     try:
         result = ollama_call(
             model="gemma4:e4b",
@@ -227,11 +264,16 @@ JSON:
                 )
                 return None
         role_reasoning = result.get("role_reasoning", "")
-        if any(p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
+        if any(
+            p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING
+        ):
             logger.warning(
                 f"role_reasoning contaminated with profile for offer {offer.get('id')} — retrying with stricter instruction"
             )
-            retry_prompt = prompt + "\n\nIMPORTANTE: role_reasoning NO debe mencionar al candidato ni su perfil. Describe solo el puesto."
+            retry_prompt = (
+                prompt
+                + "\n\nIMPORTANTE: role_reasoning NO debe mencionar al candidato ni su perfil. Describe solo el puesto."
+            )
             try:
                 retry = ollama_call(
                     model="gemma4:e4b",
@@ -240,19 +282,32 @@ JSON:
                 )
                 if isinstance(retry, dict) and all(f in retry for f in required_fields):
                     retry_reasoning = retry.get("role_reasoning", "")
-                    if not any(p.lower() in retry_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
+                    if not any(
+                        p.lower() in retry_reasoning.lower()
+                        for p in FORBIDDEN_IN_ROLE_REASONING
+                    ):
                         result = retry
                         logger.info(f"Retry succeeded for offer {offer.get('id')}")
             except Exception:
                 logger.warning(f"Retry also failed for offer {offer.get('id')}")
         role_reasoning = result.get("role_reasoning", "")
-        if any(p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
+        if any(
+            p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING
+        ):
             logger.warning(
                 f"Fallback: storing contaminated result for offer {offer.get('id')} without role_reasoning"
             )
             result["role_reasoning"] = ""
             result["_contaminated"] = True
-        result["gap_type"] = resolve_gap_type(result.get("gap_types", []))
+        raw_gaps = result.get("gap_types", [])
+        if not isinstance(raw_gaps, list):
+            logger.warning(
+                f"gap_types is not a list: {type(raw_gaps).__name__} = {raw_gaps!r}"
+            )
+            raw_gaps = []
+        # Ensure all elements are strings (gemma4 may return dicts)
+        clean_gaps = [str(g) if not isinstance(g, str) else g for g in raw_gaps]
+        result["gap_type"] = resolve_gap_type(clean_gaps)
         result["relevance_flag"] = GAP_TO_FLAG.get(result["gap_type"], "stretch")
         return result
     except Exception as e:
@@ -334,7 +389,6 @@ def _run_logic(limit: int | None) -> None:
             )
             if i % 10 == 0:
                 logger.info(f"Progress: {i}/{len(offers)} offers processed")
-            time.sleep(0.5)
         conn.commit()
         logger.info(
             f"Classification complete: {classified_count} classified, {len(new_roles_added)} new roles, distribution: {relevance_distribution}"
@@ -344,25 +398,6 @@ def _run_logic(limit: int | None) -> None:
         raise
     finally:
         conn.close()
-
-
-def main() -> None:
-    """Main function to classify unclassified offers."""
-    parser = argparse.ArgumentParser(
-        description="Classify unclassified job offers using gemma4."
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Max offers to process per run (default: all pending)",
-    )
-    args = parser.parse_args()
-    _run_logic(args.limit)
-
-
-if __name__ == "__main__":
-    main()
 
 
 def run_classifier(limit: int = 0) -> int:
@@ -382,3 +417,22 @@ def run_classifier(limit: int = 0) -> int:
         return 0
     _run_logic(limit if limit > 0 else None)
     return count
+
+
+def main() -> None:
+    """Main function to classify unclassified offers."""
+    parser = argparse.ArgumentParser(
+        description="Classify unclassified job offers using gemma4."
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Max offers to process per run (default: all pending)",
+    )
+    args = parser.parse_args()
+    _run_logic(args.limit)
+
+
+if __name__ == "__main__":
+    main()

@@ -31,7 +31,7 @@ class TestRoleClassifier:
         assert result["relevance_flag"] == "core"
         assert result["is_new_role"] is False
 
-    def test_clasifica_data_scientist_como_stretch(self, sample_offer_senior):
+    def test_clasifica_data_scientist_como_adjacent(self, sample_offer_senior):
         from src.pipeline.role_classifier import classify_offer
 
         catalog = ["data_analyst", "data_scientist", "ml_engineer", "bi_analyst"]
@@ -42,7 +42,7 @@ class TestRoleClassifier:
             result = classify_offer(sample_offer_senior, catalog, "")
 
         assert result["role_normalized"] == "data_scientist"
-        assert result["relevance_flag"] == "stretch"
+        assert result["relevance_flag"] == "adjacent"
 
     def test_clasifica_temporal(self, sample_offer_temporal):
         from src.pipeline.role_classifier import classify_offer

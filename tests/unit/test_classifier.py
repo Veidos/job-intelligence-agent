@@ -22,8 +22,8 @@ class TestResolveGapType:
         assert resolve_gap_type(["estructural"]) == "estructural"
         assert resolve_gap_type(["none"]) == "none"
 
-    def test_jerarquia_seniority_domina_herramienta(self):
-        assert resolve_gap_type(["herramienta", "seniority"]) == "seniority"
+    def test_jerarquia_seniority_con_herramienta_sin_dominio_gana_herramienta(self):
+        assert resolve_gap_type(["herramienta", "seniority"]) == "herramienta"
 
     def test_jerarquia_estructural_domina_todo(self):
         assert resolve_gap_type(["none", "dominio", "estructural"]) == "estructural"
