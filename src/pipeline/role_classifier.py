@@ -37,6 +37,27 @@ INITIAL_ROLES = [
     "temporal",
 ]
 
+GAP_HIERARCHY = ["estructural", "seniority", "dominio", "herramienta", "none"]
+
+GAP_TO_FLAG: dict[str, str] = {
+    "none": "core",
+    "herramienta": "adjacent",
+    "dominio": "adjacent",
+    "seniority": "stretch",
+    "estructural": "temporal",
+}
+
+
+def resolve_gap_type(gaps: list[str]) -> str:
+    """Apply hierarchy: return the most restrictive gap from the list."""
+    if not gaps:
+        return "none"
+    seen = set(gaps)
+    for level in GAP_HIERARCHY:
+        if level in seen:
+            return level
+    return "none"
+
 
 def ensure_columns_exist(conn: sqlite3.Connection) -> None:
     """Ensure role_catalog exists in search_config and role_normalized in offers."""
@@ -53,6 +74,16 @@ def ensure_columns_exist(conn: sqlite3.Connection) -> None:
     if "role_normalized" not in offers_columns:
         logger.info("Adding role_normalized column to offers")
         cursor.execute("ALTER TABLE offers ADD COLUMN role_normalized TEXT")
+        conn.commit()
+
+    if "gap_type" not in offers_columns:
+        logger.info("Adding gap_type column to offers")
+        cursor.execute("ALTER TABLE offers ADD COLUMN gap_type TEXT")
+        conn.commit()
+
+    if "role_reasoning" not in offers_columns:
+        logger.info("Adding role_reasoning column to offers")
+        cursor.execute("ALTER TABLE offers ADD COLUMN role_reasoning TEXT")
         conn.commit()
 
 
@@ -117,6 +148,9 @@ def update_role_catalog(conn: sqlite3.Connection, catalog: list[str]) -> None:
     logger.info(f"Updated role catalog with {len(catalog)} roles")
 
 
+FORBIDDEN_IN_ROLE_REASONING = ["candidato", "del candidato", "del perfil", "perfil del", "Miguel", "Bohórquez"]
+
+
 def classify_offer(
     offer: dict[str, Any],
     catalog: list[str],
@@ -127,32 +161,35 @@ def classify_offer(
     description = offer.get("description_clean") or offer.get("description_raw") or ""
     if description:
         description = description[:2000]
+    skills_raw = offer.get("skills_required")
+    skills_str = skills_raw[:1000] if skills_raw else ""
 
-    prompt = f"""Eres un clasificador de ofertas de empleo. 
-Dado este catálogo de roles: {catalog}
-Y este perfil de candidato: {perfil_content}
+    prompt = f"""PASO 1 — CLASIFICACIÓN DEL PUESTO (ignora al candidato)
+Catálogo: {catalog}
 
-Analiza esta oferta:
 Título: {title}
 Descripción: {description}
+Skills requeridas: {skills_str}
 
-Decide:
-1. ¿A qué role del catálogo corresponde realmente esta oferta
-   basándote en los REQUISITOS, no en el título?
-2. Si no encaja en ninguno, propón un nombre nuevo en snake_case.
-3. ¿Qué relevance_flag tiene para este candidato?
-   core: requisitos coinciden >70% con el perfil
-   adjacent: coinciden 40-70%
-   stretch: coinciden 20-40%
-   temporal: trabajo puente viable
+QA función: análisis_reporting|ingeniería_datos|modelado_ml|consultoría_procesos|gobierno_dato|soporte_técnico|compliance|otra
+QB requisitos: separa obligatorios vs valorables
+QC stack intercambiable: misma_abstracción + candidato_tiene_equivalente + sin_certificación → sí|no
+QD seniority: ejecutar_tareas|definir_procesos|liderar_equipos
+QG coherencia título↔descripción: coincide|discrepa
 
-Responde SOLO JSON:
-{{
-  "role_normalized": "nombre_del_catalogo_o_nuevo",
-  "relevance_flag": "core|adjacent|stretch|temporal",
-  "is_new_role": true|false,
-  "reasoning": "string breve"
-}}"""
+role_reasoning: justifica el rol (solo con título, descripción y skills — no uses el perfil)
+
+PASO 2 — EVALUACIÓN DE FIT (con perfil)
+Perfil del candidato:
+{perfil_content}
+
+QE gaps detectados (array con todos los que apliquen): none|herramienta|dominio|seniority|estructural
+jerarquía: estructural > seniority > dominio > herramienta
+
+reasoning: justifica el fit considerando el perfil del candidato
+
+JSON:
+{{"role_normalized":"...","role_reasoning":"...","gap_types":["..."],"is_new_role":false,"reasoning":"..."}}"""
     try:
         result = ollama_call(
             model="gemma4:e4b",
@@ -172,7 +209,8 @@ Responde SOLO JSON:
                 return None
         required_fields = [
             "role_normalized",
-            "relevance_flag",
+            "role_reasoning",
+            "gap_types",
             "is_new_role",
             "reasoning",
         ]
@@ -182,6 +220,34 @@ Responde SOLO JSON:
                     f"Missing field {field} in response for offer {offer.get('id')}"
                 )
                 return None
+        role_reasoning = result.get("role_reasoning", "")
+        if any(p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
+            logger.warning(
+                f"role_reasoning contaminated with profile for offer {offer.get('id')} — retrying with stricter instruction"
+            )
+            retry_prompt = prompt + "\n\nIMPORTANTE: role_reasoning NO debe mencionar al candidato ni su perfil. Describe solo el puesto."
+            try:
+                retry = ollama_call(
+                    model="gemma4:e4b",
+                    prompt=retry_prompt,
+                    expect_json=True,
+                )
+                if isinstance(retry, dict) and all(f in retry for f in required_fields):
+                    retry_reasoning = retry.get("role_reasoning", "")
+                    if not any(p.lower() in retry_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
+                        result = retry
+                        logger.info(f"Retry succeeded for offer {offer.get('id')}")
+            except Exception:
+                logger.warning(f"Retry also failed for offer {offer.get('id')}")
+        role_reasoning = result.get("role_reasoning", "")
+        if any(p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
+            logger.warning(
+                f"Fallback: storing contaminated result for offer {offer.get('id')} without role_reasoning"
+            )
+            result["role_reasoning"] = ""
+            result["_contaminated"] = True
+        result["gap_type"] = resolve_gap_type(result.get("gap_types", []))
+        result["relevance_flag"] = GAP_TO_FLAG.get(result["gap_type"], "stretch")
         return result
     except Exception as e:
         logger.error(f"Error calling gemma4 for offer {offer.get('id')}: {e}")
@@ -206,7 +272,7 @@ def _run_logic(limit: int | None) -> None:
         catalog = get_role_catalog(conn)
         cursor = conn.cursor()
         query = """
-            SELECT id, source_id, title, description_clean, description_raw
+            SELECT id, source_id, title, description_clean, description_raw, skills_required
             FROM offers
             WHERE relevance_flag IS NULL
         """
@@ -241,8 +307,20 @@ def _run_logic(limit: int | None) -> None:
                 new_roles_added.append(role_normalized)
                 update_role_catalog(conn, catalog)
             cursor.execute(
-                "UPDATE offers SET role_normalized = ?, relevance_flag = ?, classification_reasoning = ?, updated_at = datetime('now') WHERE id = ?",
-                (role_normalized, relevance_flag, result.get("reasoning", ""), offer_dict["id"]),
+                """UPDATE offers SET
+                    role_normalized = ?, relevance_flag = ?,
+                    gap_type = ?, role_reasoning = ?,
+                    classification_reasoning = ?,
+                    updated_at = datetime('now')
+                   WHERE id = ?""",
+                (
+                    result["role_normalized"],
+                    result["relevance_flag"],
+                    result.get("gap_type", ""),
+                    result.get("role_reasoning", ""),
+                    result.get("reasoning", ""),
+                    offer_dict["id"],
+                ),
             )
             classified_count += 1
             relevance_distribution[relevance_flag] = (

@@ -1,6 +1,7 @@
 {
   "role_normalized": "data_scientist",
-  "relevance_flag": "stretch",
+  "role_reasoning": "El título es 'Senior Data Scientist' y la descripción pide ML avanzado, Deep Learning, MLOps y 4+ años de experiencia. Función dominante: modelado ML. Seniority: definir procesos. Stack específico (MLOps, Kubernetes, PhD).",
+  "gap_types": ["seniority", "herramienta"],
   "is_new_role": false,
-  "reasoning": "Título de Data Scientist requiere experiencia más avanzada. Aunque el candidato tiene Bootcamp de Data Science, los requisitos de ML avanzado, experiencia de 4+ años y habilidades específicas lo ponen en zona de stretch."
+  "reasoning": "El candidato tiene Bootcamp de Data Science pero la oferta pide 4+ años de experiencia en ML avanzado, MLOps y despliegues en producción. Gap de seniority y herramientas específicas (Kubernetes, PhD). Stretch."
 }

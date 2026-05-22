@@ -1,6 +1,7 @@
 {
   "role_normalized": "temporal",
-  "relevance_flag": "temporal",
+  "role_reasoning": "Trabajo de entrada de datos sin requisitos técnicos específicos ni stack definido. Función: soporte técnico básico. No encaja en roles analíticos del catálogo.",
+  "gap_types": ["estructural"],
   "is_new_role": false,
-  "reasoning": "Trabajo temporal de录入 de datos sin requisitos específicos. Oportunidad de puente para reingresar al mercado laboral."
+  "reasoning": "Rol de naturaleza distinta al perfil del candidato (entrada manual de datos vs análisis técnico). Trabajo puente viable para reingreso al mercado."
 }

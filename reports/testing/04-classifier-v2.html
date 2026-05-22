@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>T-4 v2 &mdash; Comparativa Classifier</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',-apple-system,sans-serif;max-width:1200px;margin:2em auto;padding:0 1em;background:#f5f5f5;color:#222;font-size:15px}
+h1{font-size:1.4em;margin-bottom:.2em}
+.sub{color:#888;font-size:.85em;margin-bottom:1.2em}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1em}
+.st{background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);flex:1;min-width:80px;text-align:center}
+.st .n{font-size:1.6em;font-weight:700}
+.st .l{font-size:.75em;color:#888;margin-top:2px}
+.tag{display:inline-block;background:#e8eaf6;color:#283593;padding:2px 9px;border-radius:10px;font-size:.8em;margin:1px}
+.card{background:#fff;border-radius:8px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+.card-h{display:flex;align-items:center;padding:10px 14px;cursor:pointer;gap:10px;transition:background .12s}
+.card-h:hover{background:#fafafa}
+.num{background:#37474f;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75em;font-weight:700;flex-shrink:0}
+.info{flex:1;min-width:0}
+.ti{font-weight:600;font-size:.93em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me{font-size:.78em;color:#888}
+.bads{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rp{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:8px;font-size:.76em;font-weight:600}
+.fl{padding:2px 8px;border-radius:8px;font-size:.76em;font-weight:600;border:1px solid}
+.ar{font-size:.75em;color:#aaa;transition:transform .2s}
+.card-b{padding:0 14px 14px;border-top:1px solid #eee;display:none}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0}
+.sec{margin:10px 0}
+.sec h4{font-size:.8em;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:6px}
+.dt{width:100%;font-size:.85em}
+.dt td{padding:2px 0}
+.dt td:first-child{color:#888;width:85px}
+.rea{background:#fff8e1;border-left:3px solid #ffb300;border-radius:4px;padding:10px 12px;font-size:.85em;line-height:1.5;max-height:200px;overflow-y:auto}
+.df{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:10px;font-size:.85em;line-height:1.45;max-height:240px;overflow-y:auto;white-space:pre-wrap}
+@media(max-width:700px){.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>T-4 v2 &mdash; Clasificador reformado: comparativa v1 vs v2</h1>
+<p class="sub">2026-05-22 12:31 &middot; 17 ofertas &middot; gemma4:e4b &middot; <a href="04-classifier.html">Ver reporte v1</a></p>
+
+<div class="stats">
+  <div class="st"><div class="n">17</div><div class="l">Ofertas</div></div>
+  <div class="st"><div class="n">17</div><div class="l">Cambios v1&rarr;v2</div></div>
+  <div class="st"><div class="n" style="color:#e65100">100%</div><div class="l">Diferencias</div></div>
+</div>
+
+<p><strong>Leyenda:</strong> V2 aplica Paso 1 (rol sin perfil) + Paso 2 (gap_type jerárquico). 
+V1 usaba prompt único con bandas porcentuales.
+Cada oferta muestra V2 (izquierda) y V1 (derecha) lado a lado.</p>
+
+
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(226)">
+    <div class="num">1</div>
+    <div class="info">
+      <div class="ti">Analista de Datos (Looker)</div>
+      <div class="me">data_scientist (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_scientist</span>
+      <span class="ar" id="ar-226">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-226">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere &#x27;Desarrollo de soluciones basadas en análisis, modelos estadísticos y algoritmos&#x27; y &#x27;Desarrollo de estrategias a partir del análisis de datos&#x27;, lo cual se alinea directamente con las responsabilidades de un Data Scientist. Aunque el contexto es de ingeniería de materiales, las tareas centrales son analíticas y de modelado.</div>
+        <div class="rea">El candidato tiene una formación reciente en Data Science (Bootcamp) y ha desarrollado proyectos sólidos en Machine Learning y análisis predictivo (consumo de agua, precios de energía), lo cual es un gran punto a favor. Sin embargo, hay brechas significativas: 1) **Herramienta:** No se menciona el dominio avanzado de Looker, ni el manejo de bases de datos como Oracle (solo SQL básico). 2) **Dominio:** El puesto requiere experiencia en un sector muy específico (ingeniería de materiales/automoción) y el candidato carece de experiencia profesional directa en ese ámbito. Su experiencia laboral previa es más técnica/operativa y no directamente analítica. A pesar de esto, su perfil de aprendizaje y sus proyectos demuestran la capacidad de adquirir rápidamente las herramientas faltantes (Looker, Oracle) y aplicar el conocimiento estadístico requerido.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> bi_analyst <strong>flag:</strong> adjacent adjacent</div>
+        <div class="rea">La oferta se centra fuertemente en SQL avanzado, soporte a soluciones BI (Power BI, Tableau, etc.) y análisis de bases de datos. Aunque el candidato tiene bases en SQL y ha trabajado en análisis de datos (Pandas, ML), los requisitos de &#x27;SQL avanzado&#x27;, &#x27;experiencia mínima de 3 años&#x27; y el enfoque en herramientas BI específicas (que no menciona) lo sitúan más cerca de un BI Analyst que de un Data Analyst puro o un Data Engineer.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(227)">
+    <div class="num">2</div>
+    <div class="info">
+      <div class="ti">Analista de bases de datos</div>
+      <div class="me">data_scientist (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_scientist</span>
+      <span class="ar" id="ar-227">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-227">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil con fuerte capacidad de análisis de datos, soporte a soluciones BI, y experiencia en el diseño e integración de soluciones técnicas (incluyendo Java y servicios web). Aunque el título es &#x27;Analista de bases de datos&#x27;, las responsabilidades abarcan desde la consulta avanzada (SQL) hasta el soporte de soluciones BI y el desarrollo técnico (Java, servicios web), lo cual se alinea más con un perfil de Data Scientist o un rol híbrido de Data Engineer/Analyst avanzado. Dado el enfoque en modelos analíticos y la complejidad técnica, Data Scientist es la mejor aproximación dentro del catálogo.</div>
+        <div class="rea">El candidato tiene una formación reciente y básica en Data Science (bootcamp) y ha desarrollado proyectos de Machine Learning y análisis predictivo (consumo de agua, precios de energía), lo cual es un buen punto de partida. Sin embargo, el puesto requiere experiencia demostrable de 2 años en tecnologías muy específicas y complejas (SQL avanzado con múltiples herramientas, GIS, Java 1.7+, WSDL/SOAP), y el candidato solo reporta conocimientos básicos en SQL y ML. Además, el puesto es muy técnico y de nivel intermedio-senior, mientras que el candidato tiene un &#x27;gap&#x27; de empleo y experiencia laboral previa no relacionada con el sector tecnológico avanzado. El principal gap es la falta de experiencia profesional demostrable en las herramientas y el nivel de senioridad exigido para las tareas técnicas específicas (Java, servicios web, GIS).</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> it_consultant <strong>flag:</strong> adjacent adjacent</div>
+        <div class="rea">Aunque el título es de &#x27;Export Control/Trade Compliance&#x27;, las tareas implican mucho soporte documental, gestión de bases de datos y cumplimiento normativo en un entorno tecnológico/industrial (defensa). Esto se alinea mejor con un rol de consultoría IT o de procesos complejos, más que con un rol puramente de análisis de datos o ingeniería de procesos. El candidato tiene formación técnica (Mecánica) y experiencia en procesos, lo que lo acerca a un consultor de procesos/sistemas.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(228)">
+    <div class="num">3</div>
+    <div class="info">
+      <div class="ti">Analista de Datos y Automatización de Procesos</div>
+      <div class="me">data_analyst (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-228">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-228">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El rol requiere un perfil híbrido de Data, Business Intelligence y Analítica de Negocio, centrado en el análisis, estructuración y visualización de datos para la toma de decisiones operativas y financieras. Las tareas clave (análisis cuantitativo/cualitativo, creación de dashboards/KPIs, SQL, automatización con Python) se alinean directamente con las responsabilidades de un Analista de Datos, aunque también tocan aspectos de consultoría de procesos y BI.</div>
+        <div class="rea">El candidato posee una base técnica sólida y reciente (Data Science Bootcamp) en Python, SQL y ML, lo cual es altamente relevante. Sus proyectos demuestran capacidad de análisis predictivo y manejo de datos complejos (energía, consumo de agua). Sin embargo, el rol requiere &#x27;Diseño y mantenimiento de cuadros de mando operativos y de gestión&#x27; y &#x27;Automatización básica de procesos de análisis y reporting&#x27; en un contexto de &#x27;gestión de recuperación de deuda&#x27; (sector financiero/legal). Aunque el candidato tiene experiencia en roles técnicos y de supervisión, su experiencia laboral reciente no es directamente en el ámbito de BI/Finanzas/Legal, y su nivel de dominio en las herramientas requeridas (SQL, Python) se describe como &#x27;básico&#x27;, lo que podría ser un gap frente a la profundidad requerida para &#x27;modelado de datos&#x27; y &#x27;gobierno del dato&#x27; en un entorno regulado. Se recomienda enfocar la entrevista en su capacidad de aprendizaje rápido y su experiencia en la traducción de necesidades de negocio a soluciones analíticas, mitigando el gap de seniority/experiencia sectorial.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> bi_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra en la configuración, explotación y análisis de información operativa, la elaboración de cuadros de mando e indicadores (KPIs), y el modelado de datos, lo cual encaja perfectamente con las responsabilidades de un BI Analyst. Aunque pide Power BI, las funciones son analíticas y de reporting.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(229)">
+    <div class="num">4</div>
+    <div class="info">
+      <div class="ti">Analista Power BI Junior</div>
+      <div class="me">data_analyst (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-229">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-229">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil Junior enfocado en la configuración, explotación y análisis de información operativa, incluyendo la elaboración de cuadros de mando e indicadores (KPIs). Esto se alinea directamente con las funciones de un Analista de Datos, que se centra en transformar datos en información accionable para la toma de decisiones.</div>
+        <div class="rea">El candidato tiene una base técnica sólida adquirida en un Bootcamp de Data Science, mostrando conocimientos en Python, SQL y Machine Learning. Sus proyectos demuestran capacidad de análisis predictivo y manejo de datos complejos (ej. mercado energético, consumo de agua). Sin embargo, el puesto requiere experiencia específica en Power BI y modelado de datos (Skills requeridas: Power BI, Modelado de datos, Excel avanzado, SQL). Aunque el candidato tiene conocimientos de SQL y experiencia en análisis de datos, la falta de mención explícita de Power BI y la necesidad de validar su nivel de &#x27;Excel avanzado&#x27; y &#x27;Modelado de datos&#x27; en el contexto de BI son gaps detectados. Además, el puesto es de nivel Junior, lo cual es coherente con el perfil de transición del candidato, pero se debe validar la experiencia práctica en las herramientas específicas solicitadas.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La oferta se centra en el desarrollo de soluciones basadas en análisis, modelos estadísticos, algoritmos, y la creación de informes/dashboards interactivos (Looker). Esto se alinea perfectamente con las responsabilidades de un Data Analyst, aunque requiere un dominio avanzado de Looker y Excel que el candidato no posee, pero sus habilidades en SQL, Python, Pandas y sus proyectos de análisis de datos son muy relevantes.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(230)">
+    <div class="num">5</div>
+    <div class="info">
+      <div class="ti">Data &amp; Analitics Internship</div>
+      <div class="me">data_analyst (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-230">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-230">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere soporte en el análisis de datos financieros para identificar tendencias y patrones, asistencia en el diseño y mantenimiento de dashboards (Power BI, Tableau), y apoyo en la preparación y transformación de datos. Estas tareas se alinean directamente con las responsabilidades de un Analista de Datos, que utiliza habilidades analíticas y de reporting.</div>
+        <div class="rea">El candidato posee una base técnica sólida en Python, SQL, Pandas y Scikit-learn, adquirida recientemente en un bootcamp de Data Science, lo cual es un buen punto de partida. Sus proyectos demuestran capacidad para el análisis predictivo (ML) y el manejo de datos complejos. El puesto requiere experiencia específica en herramientas de BI (Power BI/Tableau) y dominio en el sector financiero, áreas donde el candidato tiene un conocimiento teórico pero no demostrado en la experiencia laboral formal. Su experiencia previa es más técnica/operativa, por lo que se recomienda un rol de nivel inicial (Intern/Junior) para capitalizar su formación reciente y mitigar la falta de experiencia directa en el dominio financiero y las herramientas de BI específicas.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La oferta se centra en el análisis de datos de ecommerce, comportamiento de usuario y generación de insights accionables, lo cual encaja perfectamente con el perfil de un Data Analyst. El candidato tiene bases sólidas en SQL, Pandas y ha realizado proyectos de análisis de datos.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(231)">
+    <div class="num">6</div>
+    <div class="info">
+      <div class="ti">Data Analyst (SQL, Python, PBI)</div>
+      <div class="me">data_analyst (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-231">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-231">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil de Data Analyst para trabajar en el sector Retail, enfocándose en usar datos, automatización y reporting para mejorar procesos corporativos. Las funciones clave incluyen definir requerimientos, crear planes de cambio, desarrollar dashboards en Power BI, y automatizar procesos. Esto se alinea directamente con el título y las responsabilidades típicas de un Data Analyst.</div>
+        <div class="rea">El candidato posee una formación reciente y práctica en Data Science (Bootcamp) y ha desarrollado proyectos que demuestran capacidad analítica (modelado predictivo, análisis de mercado). Sus habilidades en Python, SQL y ML son relevantes. Sin embargo, el puesto requiere experiencia en &#x27;Desarrollo de cuadros de mando y dashboards en Power BI&#x27; y &#x27;Automatización de procesos&#x27; en un entorno corporativo de Retail, áreas que no están explícitamente cubiertas o detalladas en su experiencia laboral pasada (que es más técnica/operativa). Además, su nivel de dominio en las herramientas requeridas (SQL, Python, Power BI) se describe como &#x27;básico&#x27; en el perfil, lo cual podría ser un gap frente a las expectativas de un rol que implica &#x27;Actuar como puente entre equipo de negocio y el equipo técnico&#x27; y &#x27;Crear planes de cambio&#x27;. Se detecta un gap de seniority en la aplicación práctica de estas habilidades en un contexto de negocio específico.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra en analizar datos de producción y operaciones (OEE, productividad, scrap), desarrollar dashboards con PowerBI y usar SQL para extraer datos, lo cual encaja perfectamente con las responsabilidades de un Data Analyst. El candidato tiene experiencia en análisis de datos y proyectos con modelos predictivos.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(232)">
+    <div class="num">7</div>
+    <div class="info">
+      <div class="ti">Analista de Datos RR.HH.</div>
+      <div class="me">data_analyst (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-232">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-232">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil híbrido que combina el análisis estadístico avanzado (diseñar dashboards, modelos analíticos, reporting estratégico) con fuertes componentes de ingeniería de datos (ETL/ELT, gobierno de datos, reconciliación de sistemas). Aunque hay componentes de &#x27;data_engineer&#x27; (ETL/ELT, estructuras de datos), el foco principal en &#x27;Reporting estratégico y regulatorio&#x27; y &#x27;Analítica&#x27; lo sitúa más cerca de un Data Analyst avanzado o un BI Analyst, dada la necesidad de &#x27;impulsar la toma de decisiones&#x27; y &#x27;liderar el reporting&#x27;.</div>
+        <div class="rea">El candidato MIGUEL BOHÓRQUEZ GRANADOS muestra una base técnica sólida y reciente en Data Science (Bootcamp, Pandas, Numpy, Scikit-learn, Python, SQL), lo cual es un buen punto de partida. Sus proyectos demuestran capacidad para el modelado predictivo y el análisis de datos complejos (mercado energético, consumo de agua), alineándose con la &#x27;Analítica y explotación del dato&#x27;. Sin embargo, el puesto exige experiencia específica en &#x27;Reporting estratégico y regulatorio&#x27; (Memoria de sostenibilidad, EINF/RSC), &#x27;Gobierno de datos&#x27; y &#x27;ETL/ELT&#x27; avanzado (menciona Workday, Snowflake, etc.), áreas donde el perfil es débil o inexistente. Además, su experiencia laboral previa es en roles técnicos/operativos (Técnico de Refurbishment, Operador), lo que indica una brecha de experiencia profesional directa en el ámbito corporativo de RR.HH. y gobierno de datos a nivel senior. Por lo tanto, el fit es moderado, requiriendo formación o mentoría en el dominio específico de RR.HH. y la profundidad de las herramientas de gobierno de datos mencionadas.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">Aunque el título es de RR.HH., las responsabilidades clave (Reporting estratégico, diseñar dashboards, ETL/ELT, automatizar con Python, calidad de datos) encajan perfectamente con un Data Analyst avanzado o un Data Engineer junior. Dado el catálogo, &#x27;data_analyst&#x27; es el más apropiado, ya que cubre el análisis y el reporting, y el candidato tiene bases sólidas en Python, SQL y ML.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(233)">
+    <div class="num">8</div>
+    <div class="info">
+      <div class="ti">Data Analyst - Sant Cugat del Vallès</div>
+      <div class="me">data_analyst (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-233">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-233">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto es de Data Analyst, enfocado en generar insights sobre el comportamiento de cliente y negocio, analizando KPIs y realizando análisis descriptivos, predictivos y prescriptivos. Los skills requeridos (Power BI, Microstrategy, Tableau, Looker Studio, Microsoft Excel, SQL, R, Python) son fundamentales para un rol de análisis de datos.</div>
+        <div class="rea">El candidato tiene una base técnica sólida adquirida en un bootcamp de Data Science, cubriendo Python, SQL, Pandas, Numpy y Scikit-learn, lo cual es altamente relevante para el rol de Data Analyst. Sus proyectos demuestran capacidad para análisis predictivo y toma de decisiones basada en datos. Sin embargo, hay brechas detectadas en herramientas de BI específicas (Power BI, Tableau, etc.) y en la experiencia profesional continua (gap de empleo de 3.7 años), lo que sugiere que el candidato está en una fase de transición y desarrollo de experiencia práctica en entornos corporativos continuos. Su perfil es un buen candidato para un rol de nivel inicial/junior que requiera formación en herramientas específicas, aunque su experiencia previa en roles técnicos y de supervisión muestra capacidad de aprendizaje y responsabilidad.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra fuertemente en el análisis de datos, la creación de dashboards (KPIs), la explotación de datos cuantitativos/cualitativos, y el uso de SQL y Python para reporting, lo cual encaja perfectamente con el perfil de Data Analyst. Aunque toca aspectos de BI y procesos, Data Analyst es el rol más abarcador y preciso.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(234)">
+    <div class="num">9</div>
+    <div class="info">
+      <div class="ti">Ingeniero/a Export Control/Trade Compliance</div>
+      <div class="me">compliance (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">compliance</span>
+      <span class="ar" id="ar-234">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-234">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere conocimientos especializados en regulaciones de defensa y doble uso, clasificación de productos y tecnologías, y soporte en trámites de licencias de importación/exportación. Aunque se menciona soporte operacional y se buscan habilidades de análisis (PowerBI, bases de datos), el núcleo de la función es el cumplimiento normativo (Compliance) en el ámbito de comercio exterior y defensa.</div>
+        <div class="rea">El candidato posee una formación técnica (Ingeniería Mecánica) y ha adquirido habilidades de Data Science (Python, ML, SQL) a través de un bootcamp, lo cual es un cambio de área significativo. Su experiencia laboral previa es en mantenimiento técnico y supervisión operativa, sin experiencia directa en Export Control o Trade Compliance. Aunque tiene conocimientos de análisis de datos (que se mencionan en el puesto como valorable, PowerBI), el dominio crítico requerido (regulaciones de defensa/doble uso, experiencia en el sector) es un vacío importante. El puesto es altamente especializado y requiere conocimientos normativos específicos que el perfil no demuestra.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra fuertemente en el análisis de datos financieros, la creación de dashboards (BI tools), la preparación y transformación de datos, y el soporte a la toma de decisiones, lo cual encaja perfectamente con el perfil de un Data Analyst. Aunque menciona Python, el enfoque es más analítico y de reporting que de ingeniería o ciencia avanzada.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(235)">
+    <div class="num">10</div>
+    <div class="info">
+      <div class="ti">Técnico/a analista de datos</div>
+      <div class="me">data_analyst (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-235">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-235">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil de análisis de datos enfocado en el reporting, auditoría y mejora de procesos de una red de profesionales. Las funciones clave (Análisis y reporting, Elaboración de informes, Desarrollo de cuadros de mando, Extracción y tratamiento de datos con SQL y Excel, Análisis de procesos) se alinean directamente con las responsabilidades de un Data Analyst. Aunque se mencionan habilidades de ingeniería de datos (SQL, tratamiento de datos), el enfoque principal es el análisis y la consultoría de negocio sobre la red, lo que lo sitúa más cerca de Data Analyst que de Data Engineer o Data Scientist puro.</div>
+        <div class="rea">El candidato posee una base técnica sólida adquirida en un Bootcamp de Data Science (Python, SQL, ML, Pandas), lo cual es un buen punto de partida. Sus proyectos demuestran capacidad de análisis predictivo y manejo de datos complejos. Sin embargo, el puesto requiere experiencia práctica en herramientas específicas como Power BI y Power Query, y experiencia laboral mínima de 1 año en análisis/reporting de negocio, áreas donde el perfil es más teórico o de bootcamp. Además, el puesto implica un rol de consultoría de procesos y gestión de red, lo que podría requerir más experiencia en el ciclo de vida de negocio que la que se desprende de su experiencia previa (técnica/operativa). Por lo tanto, hay gaps en herramientas específicas y en la experiencia laboral directa en el ámbito de reporting de negocio.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">El rol se centra en el análisis de datos, creación de dashboards (Power BI), automatización y actuar como puente entre negocio y técnico, lo cual coincide directamente con las habilidades y el enfoque del candidato en Data Analysis (SQL, Python, Pandas, proyectos de análisis).</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(236)">
+    <div class="num">11</div>
+    <div class="info">
+      <div class="ti">Data analyst</div>
+      <div class="me">data_scientist (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_scientist</span>
+      <span class="ar" id="ar-236">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-236">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil híbrido que combina el análisis de datos (EDA, reporting, SQL) con el desarrollo de modelos predictivos y automatización (Machine Learning, IA). El título &#x27;Data Analyst&#x27; y la descripción detallan funciones típicas de un Data Scientist que aplica sus habilidades en el ciclo completo de vida del dato, desde la ingesta (ETL) hasta la predicción (ML).</div>
+        <div class="rea">El candidato MIGUEL BOHÓRQUEZ GRANADOS tiene una formación reciente y enfocada en Data Science (Bootcamp IE University) y ha demostrado aplicar conocimientos teóricos en proyectos (modelos predictivos de consumo de agua, análisis de mercado energético). Sus habilidades en Python, Pandas, NumPy y Scikit-learn son fundamentales para el rol. Sin embargo, el puesto exige un nivel de dominio avanzado en herramientas específicas (ej. Microsoft SQL Server, Power BI, QlikView/Sense) y experiencia práctica en entornos de producción (ETL/ELT avanzado, Cloud/Big Data) que no están completamente reflejados en su perfil, el cual se describe como &#x27;básico&#x27; en estas áreas. Además, su experiencia laboral previa no es directamente técnica en el ámbito de datos, lo que sugiere un gap de experiencia profesional en el entorno de datos corporativo.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra en el análisis de datos, la creación de informes (Power BI, DAX) y el uso de Python para procesamiento, lo cual encaja perfectamente con el perfil de Data Analyst. Aunque el candidato tiene conocimientos básicos, la naturaleza de las tareas es directamente aplicable.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(237)">
+    <div class="num">12</div>
+    <div class="info">
+      <div class="ti">Data Analyst - Power BI / Reporting</div>
+      <div class="me">data_analyst (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-237">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-237">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil de Data Analyst con experiencia en análisis, visualización y reporting, haciendo énfasis en Power BI, Excel, Power Query y DAX, además de conocimientos en Python. El rol se centra en la transformación, modelado y presentación de datos para el negocio.</div>
+        <div class="rea">El candidato tiene una formación reciente y sólida en Data Science (Bootcamp) y ha desarrollado proyectos que demuestran capacidad en análisis predictivo (ML, Pandas, Numpy). Sin embargo, el puesto requiere experiencia específica y avanzada en herramientas de BI como Power BI, DAX y Power Query, las cuales no están mencionadas en sus skills. Aunque tiene conocimientos de Python, la experiencia requerida en el ciclo completo de reporting corporativo y modelado avanzado en Power BI es un gap significativo. Su experiencia laboral previa es más técnica/operativa y no se alinea directamente con el reporting de negocio avanzado que se solicita.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra en generar insights, analizar patrones de consumo, analizar KPIs, y realizar análisis descriptivos, predictivos y prescriptivos, lo cual coincide directamente con las responsabilidades de un Data Analyst. El candidato tiene experiencia y proyectos en análisis de datos y ML.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(238)">
+    <div class="num">13</div>
+    <div class="info">
+      <div class="ti">Técnico/a Analista de Datos - Sector</div>
+      <div class="me">data_scientist (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_scientist</span>
+      <span class="ar" id="ar-238">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-238">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil híbrido que combina el análisis de negocio avanzado (Power BI, modelado semántico) con la implementación de soluciones digitales y automatización (Power Platform, IA Agéntica). Aunque el título es &#x27;Técnico/a Analista de Datos&#x27;, las funciones avanzadas de IA, desarrollo de flujos y modelado sugieren un rol de Data Scientist o un Data Analyst muy avanzado con fuerte componente de Ingeniería de Datos/Consultoría de Procesos. Dado el enfoque en modelado, IA y analítica avanzada, &#x27;data_scientist&#x27; es la clasificación más adecuada.</div>
+        <div class="rea">El candidato MIGUEL BOHÓRQUEZ GRANADOS tiene una base sólida en Data Science (bootcamp, proyectos de ML/predicción) y experiencia práctica en análisis de datos (Pandas, Scikit-learn, proyectos de mercado energético y consumo de agua). Esto se alinea bien con el componente analítico y de modelado del puesto. Sin embargo, existen brechas significativas en las herramientas específicas requeridas: el puesto exige dominio de la suite Microsoft (Power Platform, Copilot Studio, Microsoft Fabric, Power BI avanzado), mientras que el candidato solo menciona herramientas de ML/estadística tradicionales. Además, el puesto es muy específico en su stack tecnológico (low-code/Power Platform), un área que el candidato no ha demostrado. Su experiencia previa es más técnica/operativa (mecánica, ensamblaje) y su experiencia en datos es académica/de proyecto. Por lo tanto, el fit es moderado, requiriendo formación o adaptación en el stack de Microsoft y la transición de un enfoque puramente ML/estadístico a un enfoque de automatización de procesos de negocio (low-code/Power Platform).</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La oferta se centra en el modelado de datos, creación de cuadros de mando (Power BI), y soporte de soluciones digitales/automatización, lo cual se alinea muy bien con las habilidades de análisis de datos (Pandas, Numpy, Scikit-learn) y la experiencia en proyectos predictivos del candidato. Aunque menciona herramientas de automatización (Power Platform), el núcleo es analítico.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(239)">
+    <div class="num">14</div>
+    <div class="info">
+      <div class="ti">Analista de Datos Junior - Sector Automoción</div>
+      <div class="me">data_analyst (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-239">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-239">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un Analista de Datos Junior enfocado en transformar datos de producción y operaciones (OEE, productividad, paradas, scrap) en información útil para la toma de decisiones, utilizando PowerBI y SQL. Esto se alinea directamente con el rol de Data Analyst, que se centra en el análisis y reporte de datos de negocio.</div>
+        <div class="rea">El candidato tiene una base técnica sólida adquirida en un bootcamp (Python, SQL, ML) y experiencia en proyectos de análisis predictivo (consumo de agua, mercado energético). Su experiencia previa en roles técnicos y de supervisión (mecánica, operaciones) le da un entendimiento del entorno industrial, lo cual es un plus para el sector automoción. Sin embargo, el puesto requiere experiencia específica en PowerBI, OEE, MES y SAP, herramientas o dominios que no están explícitamente listados como dominados por el candidato, aunque su capacidad de aprendizaje y su formación en Data Science sugieren que puede adquirir estas habilidades. El nivel de seniority solicitado es Junior (1-3 años), lo cual es coherente con su perfil de recién graduado de bootcamp con experiencia laboral previa no directamente analítica.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_analyst <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra fuertemente en el análisis, reporting, elaboración de cuadros de mando, análisis de procesos y uso de SQL/Excel, lo cual encaja perfectamente con el perfil de un Data Analyst. El candidato tiene bases sólidas en SQL, Pandas y ha realizado proyectos de análisis predictivo.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##c62828;">
+  <div class="card-h" onclick="toggleCard(240)">
+    <div class="num">15</div>
+    <div class="info">
+      <div class="ti">Consultor/a en análisis de datos y evaluación</div>
+      <div class="me">data_scientist (seniority)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+      <span class="rp">data_scientist</span>
+      <span class="ar" id="ar-240">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-240">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: seniority</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil muy amplio que abarca desde el diseño de estrategias de gobierno de datos, pasando por la ingeniería de pipelines, el modelado analítico (visualización, indicadores, predicción) hasta la consultoría de procesos. Las habilidades requeridas (Análisis de datos, Explotación de datos, Visualización de datos, Machine learning, AI, Forecasting) se alinean fuertemente con el rol de Data Scientist, aunque también toca aspectos de Data Engineer y Consultoría. Dado el énfasis en la predicción, el diseño de arquitecturas y la aplicación de modelos, Data Scientist es la clasificación más adecuada.</div>
+        <div class="rea">El candidato MIGUEL BOHÓRQUEZ GRANADOS tiene una formación reciente y sólida en Data Science (Bootcamp IE University) y ha demostrado capacidad práctica en Machine Learning y análisis predictivo (proyectos de mercado energético y consumo de agua). Sus skills (Python, SQL, Pandas, Scikit-learn) son fundamentales para el puesto. Sin embargo, el puesto requiere experiencia en &#x27;Gobierno de Datos&#x27;, &#x27;Diseño de arquitectura de almacenamiento e intercambio de datos&#x27; y &#x27;Alinear aspectos de gestión y gobierno de datos con áreas de negocio&#x27;, lo cual sugiere un nivel de senioridad o experiencia en consultoría de procesos/gobierno de datos que el perfil no demuestra explícitamente. El candidato es más un perfil junior/mid-level con potencial de crecimiento hacia roles más senior de consultoría de datos.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_engineer <strong>flag:</strong> core core</div>
+        <div class="rea">La oferta se centra fuertemente en el desarrollo de pipelines de datos (ETL), el uso de SQL, la automatización de flujos de trabajo y la integración con sistemas (APIs, ERPs), lo cual se alinea perfectamente con las responsabilidades de un Data Engineer, aunque también toca aspectos de BI y analítica.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(241)">
+    <div class="num">16</div>
+    <div class="info">
+      <div class="ti">Analista de Datos Ecommerce</div>
+      <div class="me">data_analyst (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-241">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-241">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere un perfil de Analista de Datos Ecommerce, centrado en el análisis de comportamiento de usuario y el rendimiento digital, lo cual se alinea directamente con el rol de Data Analyst. Aunque se mencionan habilidades avanzadas como Google Analytics 4 y SEO, el núcleo del trabajo es el análisis de datos y la generación de insights accionables, lo cual es el foco principal de un Data Analyst.</div>
+        <div class="rea">El candidato MIGUEL BOHÓRQUEZ GRANADOS tiene una formación reciente y sólida en Data Science (Bootcamp IE University) y ha desarrollado proyectos que demuestran capacidad para el análisis predictivo (modelos de consumo de agua, mercado energético). Posee conocimientos básicos de SQL, Python, Pandas y Machine Learning, lo cual es una base técnica relevante. Sin embargo, el puesto requiere experiencia específica en &#x27;Google Analytics 4&#x27; y &#x27;análisis de comportamiento de usuario en entornos ecommerce&#x27;, áreas que no están explícitamente cubiertas en su perfil. Además, su experiencia laboral previa es mixta (técnica/supervisión) y su experiencia directa en análisis de datos de ecommerce es un área de mejora (gap de dominio/herramienta). A pesar de esto, su formación y proyectos lo hacen un candidato con potencial de aprendizaje alto para este rol de nivel inicial/junior.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_engineer <strong>flag:</strong> core core</div>
+        <div class="rea">La descripción se centra fuertemente en el ciclo de vida completo del dato: captura, almacenamiento, extracción, análisis, procesamiento, visualización y predicción. Tareas como &#x27;Diseñar una arquitectura de almacenamiento e intercambio de datos&#x27; y &#x27;Diseñar, modelizar y automatizar procesos&#x27; son características centrales de un Data Engineer, aunque también toca aspectos de Data Analyst/Scientist.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid ##f57f17;">
+  <div class="card-h" onclick="toggleCard(242)">
+    <div class="num">17</div>
+    <div class="info">
+      <div class="ti">Analista-Programador/a Junior  — Automatización y Data</div>
+      <div class="me">data_analyst (dominio)</div>
+    </div>
+    <div class="bads">
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+      <span class="rp">data_analyst</span>
+      <span class="ar" id="ar-242">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-242">
+    <div class="g2">
+      <div>
+        <h4>V2 — gap_type: dominio</h4>
+        <div class="df"><strong>role_reasoning:</strong> El puesto requiere habilidades en desarrollo (Python, automatización, APIs), analítica y reporting (Power BI, SQL, ETL) y participación en proyectos de transformación digital y datos. El perfil de &#x27;Analista-Programador/a Junior&#x27; se alinea mejor con un rol de Data Analyst o Data Scientist Junior, ya que combina el análisis de datos con la necesidad de automatización y desarrollo de soluciones.</div>
+        <div class="rea">El candidato tiene una formación reciente en Data Science (Bootcamp) y ha desarrollado proyectos sólidos en análisis predictivo (ML, Pandas, Numpy) y manejo de datos. Sus habilidades en Python y SQL son fundamentales para el puesto. Aunque el puesto menciona ETL, Data Warehousing y APIs REST, el candidato tiene la base teórica y práctica (proyectos) para aprender rápidamente estos dominios, lo cual es coherente con un perfil Junior. El principal &#x27;gap&#x27; es la experiencia profesional directa en el ciclo completo de vida de los datos corporativos (ETL/Data Warehousing en un entorno empresarial grande), pero su perfil es muy prometedor para un rol de nivel inicial que requiere aprendizaje activo.</div>
+      </div>
+      <div>
+        <h4>V1<span style="font-weight:400;font-size:.85em;color:#888"> (reporte anterior)</span></h4>
+        <div class="df"><strong>role:</strong> data_scientist <strong>flag:</strong> core core</div>
+        <div class="rea">Aunque el título es &#x27;Data Analyst&#x27;, los requisitos son muy amplios e incluyen &#x27;Construcción de modelos predictivos y de machine learning&#x27;, &#x27;Machine Learning (Scikit-learn)&#x27; como valorable, y la necesidad de trabajar con ETL/ELT y modelos predictivos, lo cual apunta más a un perfil de Data Scientist o ML Engineer. El candidato tiene experiencia en proyectos de ML y sus habilidades técnicas (Python, Pandas, Scikit-learn) son centrales para este rol.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleCard(id) {
+  var b = document.getElementById('b-' + id);
+  var ar = document.getElementById('ar-' + id);
+  if (b.style.display === 'block') {
+    b.style.display = 'none';
+    ar.innerHTML = '&#9660;';
+  } else {
+    b.style.display = 'block';
+    ar.innerHTML = '&#9650;';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 {
   "role_normalized": "data_analyst",
-  "relevance_flag": "core",
+  "role_reasoning": "El título es 'Data Analyst Junior' y la descripción pide Python, SQL y análisis de datos. Función dominante: análisis/reporting. Seniority: ejecutar tareas definidas. Stack intercambiable: Python y SQL son herramientas estándar de análisis.",
+  "gap_types": ["none"],
   "is_new_role": false,
-  "reasoning": "Título y requisitos coinciden con Data Analyst. Python, SQL, análisis de datos son competencias centrales del candidato."
+  "reasoning": "Skills coinciden con el perfil del candidato. Sin gaps significativos. Data Analyst es core para este perfil."
 }

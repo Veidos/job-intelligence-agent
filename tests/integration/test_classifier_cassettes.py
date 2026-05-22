@@ -80,6 +80,27 @@ class TestRoleClassifier:
 
         assert result is None
 
+    def test_role_reasoning_contaminado_usaba_fallback(self, sample_offer):
+        from src.pipeline.role_classifier import classify_offer
+
+        catalog = ["data_analyst", "data_scientist", "ml_engineer", "bi_analyst"]
+        contaminated_response = {
+            "role_normalized": "data_analyst",
+            "role_reasoning": "El candidato tiene experiencia en Python y SQL",
+            "gap_types": ["none"],
+            "is_new_role": False,
+            "reasoning": "Coincidencia alta con el perfil",
+        }
+
+        with patch("src.pipeline.role_classifier.ollama_call") as mock:
+            mock.return_value = contaminated_response
+            result = classify_offer(sample_offer, catalog, "")
+
+        assert result is not None, "contaminado debería aplicar fallback, no None"
+        assert result.get("_contaminated") is True, "flag de contaminación presente"
+        assert result["role_reasoning"] == "", "role_reasoning vacío tras fallback"
+        assert result["relevance_flag"] == "core"
+
     def test_usa_perfil_content_en_prompt(self, sample_offer):
         from src.pipeline.role_classifier import classify_offer
 
