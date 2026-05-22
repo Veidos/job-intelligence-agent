@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Testing Fase 0 — Prerequisitos</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 800px; margin: 2em auto; padding: 0 1em; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+th { background: #f5f5f5; }
+.pass { color: #090; font-weight: bold; }
+.fail { color: #c00; font-weight: bold; }
+.pending { color: #fa0; font-weight: bold; }
+.timestamp { color: #666; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<h1>Testing Fase 0 — Prerequisitos</h1>
+<p class="timestamp">Generado: 2026-05-22 08:42</p>
+
+<h2>Resultados</h2>
+<table>
+<tr><th>#</th><th>Tipo</th><th>Ítem</th><th>Resultado</th></tr>
+<tr>
+  <td>0.1</td><td>🤖</td>
+  <td>Ollama en localhost:11434</td>
+  <td class="pass">✅ PASS</td>
+</tr>
+<tr>
+  <td>0.2</td><td>🤖</td>
+  <td>gemma4:e4b disponible</td>
+  <td class="pass">✅ PASS</td>
+</tr>
+<tr>
+  <td>0.3</td><td>🤖</td>
+  <td>.env con 3 variables requeridas</td>
+  <td class="pass">✅ PASS</td>
+</tr>
+<tr>
+  <td>0.4</td><td>🤖</td>
+  <td>Schema DB inicializado (15 tablas)</td>
+  <td class="pass">✅ PASS</td>
+</tr>
+<tr>
+  <td>0.5</td><td>👤</td>
+  <td>PERFIL.md coherente con CV real</td>
+  <td class="pending">⏳ Pendiente de revisión humana</td>
+</tr>
+</table>
+
+<h2>Notas</h2>
+<ul>
+  <li>CV freshness check (SHA-256 en run.py) verificado: ambos flujos OK</li>
+  <li>Fase 0 requisitos automáticos: 4/4 PASS</li>
+  <li>Pendiente: revisión manual de PERFIL.md vs CV real (ítem 0.5)</li>
+</ul>
+</body>
+</html>

@@ -20,62 +20,72 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
         dict con campos listos para candidate_profile
     """
     print("\n=== Entrevista de perfil laboral ===\n")
+    print("Responde con el detalle que consideres. Puedes dejar vacío si no aplica.\n")
 
     result: dict[str, Any] = {}
 
-    # 1. Modalidad de trabajo
-    print("1. ¿Preferencia de modalidad de trabajo?")
-    print("   (remoto / híbrido / presencial / sin preferencia)")
-    result["work_mode_preference"] = input("   > ").strip().lower()
-
-    # 2. Mudanza y condiciones
-    print("\n2. ¿Disponibilidad real de mudanza y condiciones?")
-    print("   (ej: dispuesto si pagan reubicación, solo remoto, etc.)")
+    # 1. Modalidad + mudanza (fusionado, abierto)
+    print("1. ¿Modalidad de trabajo y disponibilidad de mudanza?")
+    print(
+        "   (ej: 'remoto total', 'híbrido en Sevilla', 'presencial si pagan reubicación')"
+    )
     relocation_raw = input("   > ").strip()
 
-    # 3. Personal concerns (nuevo formato constructivo)
-    print("\n3. Contexto personal para encontrar el trabajo adecuado")
-    print(
-        "   [INFO] Esta información ayuda al sistema a encontrar ofertas\n"
-        "          que se ajusten mejor a tu situación."
-    )
+    # 2. Salario mínimo viable (opcional)
+    print("\n2. ¿Salario mínimo anual para considerar una oferta? (opcional)")
+    print("   (ej: '30.000€', déjalo vacío si no quieres filtrar por salario)")
+    salary_raw = input("   > ").strip()
+    if salary_raw:
+        # Extraer número del texto
+        import re
 
-    # Subpregunta 3a: Condiciones que afectan al trabajo
-    print("   3a. ¿Tienes alguna condición (TDAH, autism, limitaciones físicas, etc.)")
-    print("       que afecte cómo trabajas? (opcional, responde libremente)")
-    condition_raw = input("      > ").strip()
+        numbers = re.findall(r"\d+", salary_raw.replace(".", "").replace(",", ""))
+        if numbers:
+            result["salary_min_viable"] = int(numbers[0])
+            result["salary_notes"] = salary_raw
 
-    # Subpregunta 3b: Entorno de trabajo
-    print("\n   3b. ¿Qué tipo de entorno te hace funcionar mejor?")
-    print(
-        "       (ej: necesito silencio, soy introvertido, necesito movimiento, flexible)"
-    )
-    environment_raw = input("      > ").strip()
+    # 3. Contexto personal (abierto con expectativas claras)
+    print("\n3. Contexto personal relevante para tu búsqueda de trabajo")
+    print("   Puedes incluir (si aplica):")
+    print("   - Condiciones que afecten cómo trabajas (horarios, concentración, etc.)")
+    print("   - Tipo de entorno donde rindes mejor (silencio, equipo, autonomía, etc.)")
+    print("   - Cualquier otra cosa que quieras que el sistema considere")
+    print("   (déjalo vacío si no aplica)")
+    condition_raw = input("   > ").strip()
+    environment_raw = input("   Entorno preferido (opcional): ").strip()
 
-    # Subpregunta 3c: Inseguridades
-    print("\n   3c. ¿Hay algo que te dé inseguridad sobre buscar trabajo?")
-    print("       (ej: 'tengo 3 años gap', 'estoy desactualizado', 'tengo edad')")
-    insecurity_raw = input("      > ").strip()
-
-    # Unir todo en personal_concerns
     personal_parts = []
     if condition_raw:
         personal_parts.append(f"Condición: {condition_raw}")
     if environment_raw:
         personal_parts.append(f"Entorno: {environment_raw}")
-    if insecurity_raw:
-        personal_parts.append(f"Inseguridad: {insecurity_raw}")
 
     result["personal_concerns"] = (
         " | ".join(personal_parts) if personal_parts else "Sin información adicional"
     )
 
-    # 4. Sectores/empresas preferidas/evitar
-    print("\n4. ¿Sectores o tipos de empresa que prefieras o quieras evitar?")
-    print("   (menciona ambos libremente)")
+    # 4. Motivación profesional (sustituye inseguridades — enfoque positivo)
+    print("\n4. ¿Qué buscas en tu próximo rol profesional?")
+    print(
+        "   (ej: 'aprender ML en producción', 'consolidar análisis de datos',"
+        " 'cambiar a un sector con impacto social')"
+    )
+    motivation_raw = input("   > ").strip()
+    if motivation_raw:
+        if result["personal_concerns"] == "Sin información adicional":
+            result["personal_concerns"] = f"Motivación: {motivation_raw}"
+        else:
+            result["personal_concerns"] += f" | Motivación: {motivation_raw}"
+
+    # 5. Sectores preferidos / a evitar
+    print("\n5. ¿Hay sectores o tipos de empresa que te atraigan especialmente?")
+    print("   ¿Y alguno que prefieras evitar?")
+    print(
+        "   (ej: 'me gusta tecnología y energía renovable, evitar banca tradicional')"
+    )
     env_raw = input("   > ").strip()
 
-    # Procesar respuestas
+    # Procesar respuestas con gemma4
     print("\n[Procesando tus respuestas...]")
 
     reloc_prompt = f"""El candidato respondió: "{relocation_raw}"

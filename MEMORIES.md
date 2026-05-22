@@ -71,6 +71,16 @@
 - `daily_position` en `offer_evaluations` referencia la posición del mensaje diario para ligar feedback con oferta correcta.
 - Tablas: `user_feedback` almacena mensajes crudos, `user_psychology` almacena el summary evolutivo comprimido.
 
+## CV freshness check (SHA-256 en run.py)
+
+- `run.py` calcula SHA-256 de `assets/cv.pdf` al inicio y lo compara con `.cv_hash`
+- Si el hash cambia y hay TTY: pregunta interactiva "¿Regenerar PERFIL.md?"
+- Si responde sí: ejecuta onboarding completo (extracción + entrevista) y continúa pipeline
+- Si responde no o es headless (cron): pipeline detenido, warning pide onboarding manual
+- `--dry-run` salta el check completamente (no hay efectos laterales)
+- `.cv_hash` se guarda en raíz del proyecto (gitignored)
+- Testeado: ambos flujos (TTY y headless) verificados el 2026-05-22
+
 ## Modelos Ollama — Decisión de diseño
 
 - gemma4:e4b como único modelo para TODO el pipeline (técnico + HR)
