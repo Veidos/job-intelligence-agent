@@ -50,7 +50,8 @@ def build_report() -> None:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        """SELECT id, title, role_normalized, relevance_flag, gap_type, role_reasoning, classification_reasoning
+        """SELECT id, title, company_name, city, experience_min, description_clean,
+                  role_normalized, relevance_flag, gap_type, role_reasoning, classification_reasoning
            FROM offers WHERE id BETWEEN 226 AND 242 ORDER BY id"""
     ).fetchall()
     conn.close()
@@ -66,6 +67,11 @@ def build_report() -> None:
         role = row["role_normalized"] or ""
         role_r = row["role_reasoning"] or ""
         reasoning = row["classification_reasoning"] or ""
+        company = row["company_name"] or ""
+        city = row["city"] or ""
+        exp_min = row["experience_min"]
+        exp_str = f"{exp_min}+ años" if exp_min else "Sin especificar" if exp_min is None else "0 (Junior)"
+        desc = (row["description_clean"] or "")[:2000]
 
         fc = FLAG_COLORS.get(flag, FLAG_COLORS["stretch"])
 
@@ -75,7 +81,7 @@ def build_report() -> None:
     <div class="num">{i}</div>
     <div class="info">
       <div class="ti">{esc(row['title'])}</div>
-      <div class="me">{esc(role)}</div>
+      <div class="me">{esc(company)} &middot; {esc(city)} &middot; Exp: {exp_str} &middot; {esc(role)}</div>
     </div>
     <div class="bads">
       {flag_badge(flag)}
@@ -85,7 +91,9 @@ def build_report() -> None:
   </div>
   <div class="card-b" id="b-{oid}">
     <div class="sec">
-      <h4>gap_type: {esc(gap)} &middot; role_reasoning</h4>
+      <h4>Descripción de la oferta</h4>
+      <div class="desc">{esc(desc)}</div>
+      <h4 style="margin-top:8px;">gap_type: {esc(gap)} &middot; role_reasoning</h4>
       <div class="df">{esc(role_r)}</div>
       <h4 style="margin-top:8px;">classification_reasoning</h4>
       <div class="rea">{esc(reasoning)}</div>
@@ -130,6 +138,7 @@ h1{{font-size:1.4em;margin-bottom:.2em}}
 .dt td:first-child{{color:#888;width:85px}}
 .rea{{background:#fff8e1;border-left:3px solid #ffb300;border-radius:4px;padding:10px 12px;font-size:.85em;line-height:1.5;max-height:200px;overflow-y:auto}}
 .df{{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:10px;font-size:.85em;line-height:1.45;max-height:240px;overflow-y:auto;white-space:pre-wrap}}
+.desc{{background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:10px;font-size:.83em;line-height:1.45;max-height:300px;overflow-y:auto;white-space:pre-wrap}}
 .note{{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:10px 14px;font-size:.85em;margin-bottom:1em}}
 </style>
 </head>
