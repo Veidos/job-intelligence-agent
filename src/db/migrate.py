@@ -85,6 +85,7 @@ SCHEMA_DEFINITIONS = {
         ("classification_reasoning", "TEXT"),
         ("gap_type", "TEXT"),
         ("role_reasoning", "TEXT"),
+        ("is_new_role", "INTEGER DEFAULT 0"),
     ],
     "offer_evaluations": [
         ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),

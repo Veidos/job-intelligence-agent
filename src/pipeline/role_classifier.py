@@ -95,6 +95,11 @@ def ensure_columns_exist(conn: sqlite3.Connection) -> None:
         cursor.execute("ALTER TABLE offers ADD COLUMN role_reasoning TEXT")
         conn.commit()
 
+    if "is_new_role" not in offers_columns:
+        logger.info("Adding is_new_role column to offers")
+        cursor.execute("ALTER TABLE offers ADD COLUMN is_new_role INTEGER DEFAULT 0")
+        conn.commit()
+
 
 def get_role_catalog(conn: sqlite3.Connection) -> list[str]:
     """Get role catalog from search_config, or create initial one."""
@@ -369,8 +374,9 @@ def _run_logic(limit: int | None) -> None:
                 continue
             role_normalized = result["role_normalized"]
             relevance_flag = result["relevance_flag"]
-            is_new_role = result["is_new_role"]
-            if is_new_role and role_normalized not in catalog:
+            is_new_role = role_normalized not in catalog
+            result["is_new_role"] = is_new_role
+            if is_new_role:
                 logger.info(f"Adding new role to catalog: {role_normalized}")
                 catalog.append(role_normalized)
                 new_roles_added.append(role_normalized)
@@ -380,6 +386,7 @@ def _run_logic(limit: int | None) -> None:
                     role_normalized = ?, relevance_flag = ?,
                     gap_type = ?, role_reasoning = ?,
                     classification_reasoning = ?,
+                    is_new_role = ?,
                     updated_at = datetime('now')
                    WHERE id = ?""",
                 (
@@ -388,6 +395,7 @@ def _run_logic(limit: int | None) -> None:
                     result.get("gap_type", ""),
                     result.get("role_reasoning", ""),
                     result.get("reasoning", ""),
+                    int(is_new_role),
                     offer_dict["id"],
                 ),
             )

@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS offers (
     role_normalized TEXT,
     classification_reasoning TEXT,
     gap_type TEXT,
-    role_reasoning TEXT
+    role_reasoning TEXT,
+    is_new_role INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_offers_source_id ON offers(source_id);
 CREATE INDEX IF NOT EXISTS idx_offers_fetched_at ON offers(fetched_at);
