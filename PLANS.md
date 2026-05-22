@@ -10,6 +10,7 @@
 ## FASE 2 — Onboarding
   [x] cv_extractor.py (gemma4 → datos estructurados)
   [x] interviewer.py (gemma4 → preguntas secuenciales)
+  [x] Rediseño entrevista: preguntas positivas, salario opcional, contexto personal fusionado (ADR 003)
   [x] Generación de PERFIL.md (fuente única de verdad)
   [x] run.py orquesta el onboarding completo
 
@@ -17,7 +18,7 @@
   [x] fetch.py (InfoJobs API → limpieza → upsert en DB)
   [x] evaluate.py (gemma4:e4b técnico + HR → offer_evaluations)
   [x] send.py (formato Telegram → envío)
-  [x] run.py (orquestador del pipeline completo)
+  [x] run.py (orquestador del pipeline + CV freshness check vía SHA-256, ADR 002)
   [x] role_classifier.py (clasificación de ofertas y relevance_flag)
   [x] Añadir campos search_layer, role_level, relevance_flag a offers
   [x] Crear tabla search_config para configuración geográfica y de rol
@@ -59,8 +60,8 @@
 
 Ver checklist completo en docs/TESTING.md
 
-- [ ] Fase 0 — Prerequisitos verificados
-- [ ] Fase 1 — Onboarding validado manualmente
+- [x] Fase 0 — Prerequisitos verificados (4/5 🤖 OK, pendiente revisión 👤 ítem 0.5)
+- [x] Fase 1 — Onboarding validado manualmente (extracción + entrevista + PERFIL.md)
 - [ ] Fase 2 — fetch.py con sinceDate=_24_HOURS validado en producción
 - [ ] Fase 3 — fetch_company.py sin errores
 - [ ] Fase 4 — role_classifier.py coherente con las ofertas

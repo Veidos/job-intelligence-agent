@@ -86,7 +86,7 @@ job-intelligence-agent/
 │   │   └── interviewer.py ← gemma4:e4b conducts guided interview
 │   │
 │   ├── pipeline/
-│   │   ├── run.py         ← Full pipeline orchestrator
+│   │   ├── run.py         ← Full pipeline orchestrator + CV freshness check
 │   │   ├── fetch.py       ← InfoJobs via Apify → clean → upsert DB
 │   │   ├── role_classifier.py ← Classifies offers by real role + relevance
 │   │   ├── fetch_company.py   ← Company data and reviews
