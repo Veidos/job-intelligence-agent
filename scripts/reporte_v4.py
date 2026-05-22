@@ -96,11 +96,11 @@ def build_report() -> None:
         fc = FLAG_COLORS.get(flag, FLAG_COLORS["stretch"])
 
         cards_html += f"""
-<article class="card" style="border-left:4px solid {fc['border']};">
+<article class="card" style="border-left:4px solid {fc["border"]};">
   <header class="card-h" onclick="toggleCard({oid})">
     <span class="num">{i}</span>
     <div class="info">
-      <div class="ti">{esc(row['title'])}</div>
+      <div class="ti">{esc(row["title"])}</div>
       <div class="meta">{esc(company)} &middot; {esc(city)} &middot; {exp_str} &middot; <strong>{esc(role)}</strong></div>
     </div>
     <div class="tags">
@@ -221,8 +221,8 @@ a:hover {{ text-decoration: underline }}
 </head>
 <body>
 <h1>T-4 v4 — Classifier con prompt refactorizado</h1>
-<p class="sub">{datetime.now().strftime('%Y-%m-%d %H:%M')} &middot; 17 ofertas &middot; gemma4:e4b
-&middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a> &middot; <a href="04-classifier-v3.html">v3</a> &middot; <a href="04-classifier-v4.html">v4</a> &middot; <a href="04-classifier-v5.html">v5</a> &middot; <a href="04-classifier-v6.html">v6</a></p>
+<p class="sub">{datetime.now().strftime("%Y-%m-%d %H:%M")} &middot; 17 ofertas &middot; gemma4:e4b
+&middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a> &middot; <a href="04-classifier-v3.html">v3</a> &middot; <b>v4</b> &middot; <a href="04-classifier-v5.html">v5</a> &middot; <a href="04-classifier-v6.html">v6</a></p>
 
 <div class="note">
 <strong>Cambios en v4:</strong> Prompt refactorizado a <code>_build_prompt()</code> con FASE 1 (rol) y FASE 2
@@ -234,16 +234,16 @@ con herramienta.
 
 <div class="stats">
   <div class="st"><div class="n">{len(rows)}</div><div class="l">Ofertas</div></div>
-  <div class="st"><div class="n">{dist.get('adjacent', 0)}</div><div class="l">Adjacent</div></div>
-  <div class="st"><div class="n">{dist.get('stretch', 0)}</div><div class="l">Stretch</div></div>
-  <div class="st"><div class="n">{dist.get('core', 0)}</div><div class="l">Core</div></div>
-  <div class="st"><div class="n">{dist.get('temporal', 0)}</div><div class="l">Temporal</div></div>
+  <div class="st"><div class="n">{dist.get("adjacent", 0)}</div><div class="l">Adjacent</div></div>
+  <div class="st"><div class="n">{dist.get("stretch", 0)}</div><div class="l">Stretch</div></div>
+  <div class="st"><div class="n">{dist.get("core", 0)}</div><div class="l">Core</div></div>
+  <div class="st"><div class="n">{dist.get("temporal", 0)}</div><div class="l">Temporal</div></div>
 </div>
 
 <div class="stats">
-  <div class="st"><div class="n">{gap_dist.get('herramienta', 0)}</div><div class="l">Gap herramienta</div></div>
-  <div class="st"><div class="n">{gap_dist.get('dominio', 0)}</div><div class="l">Gap dominio</div></div>
-  <div class="st"><div class="n">{gap_dist.get('seniority', 0)}</div><div class="l">Gap seniority</div></div>
+  <div class="st"><div class="n">{gap_dist.get("herramienta", 0)}</div><div class="l">Gap herramienta</div></div>
+  <div class="st"><div class="n">{gap_dist.get("dominio", 0)}</div><div class="l">Gap dominio</div></div>
+  <div class="st"><div class="n">{gap_dist.get("seniority", 0)}</div><div class="l">Gap seniority</div></div>
 </div>
 
 {cards_html}

@@ -23,6 +23,7 @@ V1_DATA: dict[int, dict] = {}
 if V1_REPORT.exists():
     content = V1_REPORT.read_text(encoding="utf-8")
     import re
+
     sections = re.findall(
         r'<div class="card[^>]*>\s*<div class="card-h[^>]*>\s*<div class="num">(\d+)</div>.*?<div class="ti">([^<]+)</div>.*?<span class="rp">([^<]+)</span>.*?<span class="fl[^"]*"[^>]*>([^<]+)</span>.*?<div class="rea">([^<]*)</div>',
         content,
@@ -33,7 +34,11 @@ if V1_REPORT.exists():
         V1_DATA[oid] = {
             "title": title.strip(),
             "role": role.strip(),
-            "flag": flag.strip().replace("\U0001f7e2", "core").replace("\U0001f7e1", "adjacent").replace("\U0001f534", "stretch").replace("\U0001f7e0", "temporal"),
+            "flag": flag.strip()
+            .replace("\U0001f7e2", "core")
+            .replace("\U0001f7e1", "adjacent")
+            .replace("\U0001f534", "stretch")
+            .replace("\U0001f7e0", "temporal"),
             "reasoning": reasoning.strip(),
         }
 
@@ -44,9 +49,24 @@ def esc(text: str) -> str:
 
 FLAG_COLORS = {
     "core": {"bg": "#e8f5e9", "text": "#2e7d32", "border": "#2e7d32", "label": "core"},
-    "adjacent": {"bg": "#fff8e1", "text": "#f57f17", "border": "#f57f17", "label": "adjacent"},
-    "stretch": {"bg": "#fce4ec", "text": "#c62828", "border": "#c62828", "label": "stretch"},
-    "temporal": {"bg": "#f3e5f5", "text": "#7b1fa2", "border": "#7b1fa2", "label": "temporal"},
+    "adjacent": {
+        "bg": "#fff8e1",
+        "text": "#f57f17",
+        "border": "#f57f17",
+        "label": "adjacent",
+    },
+    "stretch": {
+        "bg": "#fce4ec",
+        "text": "#c62828",
+        "border": "#c62828",
+        "label": "stretch",
+    },
+    "temporal": {
+        "bg": "#f3e5f5",
+        "text": "#7b1fa2",
+        "border": "#7b1fa2",
+        "label": "temporal",
+    },
 }
 
 
@@ -99,8 +119,8 @@ def build_report() -> None:
   <div class="card-h" onclick="toggleCard({oid})">
     <div class="num">{i}</div>
     <div class="info">
-      <div class="ti">{esc(row['title'])}</div>
-      <div class="me">{esc(v2_role)}{' (' + esc(v2_gap) + ')' if v2_gap else ''}</div>
+      <div class="ti">{esc(row["title"])}</div>
+      <div class="me">{esc(v2_role)}{" (" + esc(v2_gap) + ")" if v2_gap else ""}</div>
     </div>
     <div class="bads">
       {flag_badge(v2_flag)}
@@ -166,7 +186,7 @@ h1{{font-size:1.4em;margin-bottom:.2em}}
 </head>
 <body>
 <h1>T-4 v2 &mdash; Clasificador reformado: comparativa v1 vs v2</h1>
-<p class="sub">{datetime.now().strftime('%Y-%m-%d %H:%M')} &middot; 17 ofertas &middot; gemma4:e4b &middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a> &middot; <a href="04-classifier-v3.html">v3</a> &middot; <a href="04-classifier-v4.html">v4</a> &middot; <a href="04-classifier-v5.html">v5</a> &middot; <a href="04-classifier-v6.html">v6</a></p>
+<p class="sub">{datetime.now().strftime("%Y-%m-%d %H:%M")} &middot; 17 ofertas &middot; gemma4:e4b &middot; <a href="04-classifier.html">v1 original</a> &middot; <b>v2</b> &middot; <a href="04-classifier-v3.html">v3</a> &middot; <a href="04-classifier-v4.html">v4</a> &middot; <a href="04-classifier-v5.html">v5</a> &middot; <a href="04-classifier-v6.html">v6</a></p>
 
 <div class="stats">
   <div class="st"><div class="n">{total}</div><div class="l">Ofertas</div></div>
