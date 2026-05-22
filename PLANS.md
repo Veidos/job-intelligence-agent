@@ -1,7 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Testing T-2 — fetch.py con sinceDate=_24_HOURS validado en producción real.
-> T-4 completado — ver ADR-005 para el historial de decisiones del clasificador.
+> **Próximo paso:** Testing T-5 — evaluate.py: requisitos imposibles penalizados.
+> T-2 ⏳ y T-3 ⏳ bloqueados por límite Apify (ADR-004). T-4 ✅ completado (ADR-005).
 > Ver docs/TESTING.md para el checklist completo.
 
 ## FASE 1 — Cimientos
@@ -69,8 +69,8 @@ Ver checklist completo en docs/TESTING.md
 
 - [x] T-0 — Prerequisitos verificados (4/5 🤖 OK, pendiente revisión 👤 ítem T-0.5)
 - [x] T-1 — Onboarding validado manualmente (extracción + entrevista + PERFIL.md)
-- [ ] T-2 — fetch.py con sinceDate=_24_HOURS validado en producción
-- [ ] T-3 — fetch_company.py sin errores
+- [ ] T-2 — fetch.py con sinceDate=_24_HOURS validado en producción ⏳ (bloqueado: Apify, ADR-004)
+- [ ] T-3 — fetch_company.py sin errores ⏳ (bloqueado: depende de T-2, employer_id en ofertas)
 - [x] T-4 — role_classifier.py coherente con las ofertas (v5/v6 validado, ADR-005 documenta evolución)
 - [ ] T-5 — evaluate.py — requisitos imposibles penalizados
 - [ ] T-6 — send.py — mensaje Telegram correcto

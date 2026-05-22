@@ -1,4 +1,4 @@
-# 004 — Aplazar testing T-2 por límite de API Apify
+# 004 — Aplazar testing T-2 y T-3 por límite de API Apify
 
 **Fecha:** 2026-05-22
 **Tipo:** `operativo`
@@ -15,10 +15,16 @@ El plan FREE de Apify tiene 5 USD/mes de crédito. Se agotó durante los
 desarrollos previos (último fetch real: 2026-05-19). Quedan 0.30€ pero el
 límite duro mensual impide cualquier ejecución, incluso con `maxItems=3`.
 
+**Dependencia adicional detectada (2026-05-22):** T-3 (fetch_company.py)
+también está bloqueado. El campo `employer_id` se captura desde la respuesta
+de Apify en `fetch.py` (`author.id` de InfoJobs). Las 147 ofertas en DB
+tienen `employer_id = NULL`, por lo que `fetch_company.py` no encuentra datos
+que procesar. T-3 comparte la misma raíz que T-2.
+
 ## Decisión
 
-Aplazar T-2 hasta el próximo ciclo de facturación de Apify (junio 2026).
-Continuar con T-3 a T-9 usando las 147 ofertas existentes en DB y Ollama local.
+Aplazar T-2 y T-3 hasta el próximo ciclo de facturación de Apify (junio 2026).
+Continuar con T-4 a T-9 usando las 147 ofertas existentes en DB y Ollama local.
 
 ## Alternativas descartadas
 
@@ -30,9 +36,10 @@ Continuar con T-3 a T-9 usando las 147 ofertas existentes en DB y Ollama local.
 
 ## Consecuencias
 
-- T-2 queda en estado ⏳ pendiente, no ❌ fallido.
+- T-2 y T-3 quedan en estado ⏳ pendiente, no ❌ fallido.
 - El pipeline real no se ha validado end-to-end con fetch real contra InfoJobs.
 - La deduplicación por `source_id` ya se probó con 147 offers en DB.
 - `build_search_urls` y el parámetro `sinceDate` se validan a nivel unit test
   con cassettes (test_fetch_cassettes.py).
-- En junio 2026 se retoma T-2 con prioridad antes de cualquier nuevo fetch.
+- `fetch_company.py` no puede probarse sin `employer_id` en las ofertas.
+- En junio 2026 se retoman T-2 y T-3 con prioridad antes de cualquier otro avance.
