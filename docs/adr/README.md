@@ -35,3 +35,4 @@ una decisión no trivial.
 | 002 | CV freshness check con regeneración interactiva | 2026-05-21 | activo |
 | 003 | Entrevista ligera con enfoque positivo | 2026-05-22 | activo |
 | 004 | Aplazar testing T-2 por límite Apify | 2026-05-22 | activo |
+| 005 | Role Classifier — Evolución v1 → v6 y decisiones de diseño | 2026-05-22 | activo |
