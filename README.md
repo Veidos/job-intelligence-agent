@@ -320,12 +320,12 @@ Send time and number of daily offers are configurable via Telegram commands (Pha
 > **Status legend:** ✅ complete (implemented + validated end-to-end) · 🟡 coded (implemented, validation pending via [TESTING.md](docs/TESTING.md)) · ⬜ not yet implemented
 
 ```
-Phase 1 — Foundation        🟡 Coded (validation pending)
-Phase 2 — Onboarding        🟡 Coded (validation pending)
+Phase 1 — Foundation        ✅ T-0 verified
+Phase 2 — Onboarding        ✅ T-1 validated
 Phase 3 — Base pipeline     🟡 Coded (validation pending)
-  ├── fetch.py              🟡 Coded
+  ├── fetch.py              🟡 Coded (T-2 ⏳ ADR-004)
   ├── role_classifier.py    ✅ Validated (v6 estable, ADR-005)
-  ├── fetch_company.py      🟡 Coded
+  ├── fetch_company.py      🟡 Coded (T-3 ⏳ ADR-004)
   ├── evaluate.py           🟡 Coded
   ├── send.py               🟡 Coded
   └── run.py (pipeline)     🟡 Coded
