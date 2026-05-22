@@ -241,8 +241,8 @@ def _run_logic(limit: int | None) -> None:
                 new_roles_added.append(role_normalized)
                 update_role_catalog(conn, catalog)
             cursor.execute(
-                "UPDATE offers SET role_normalized = ?, relevance_flag = ?, updated_at = datetime('now') WHERE id = ?",
-                (role_normalized, relevance_flag, offer_dict["id"]),
+                "UPDATE offers SET role_normalized = ?, relevance_flag = ?, classification_reasoning = ?, updated_at = datetime('now') WHERE id = ?",
+                (role_normalized, relevance_flag, result.get("reasoning", ""), offer_dict["id"]),
             )
             classified_count += 1
             relevance_distribution[relevance_flag] = (

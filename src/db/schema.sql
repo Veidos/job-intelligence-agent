@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS offers (
     search_layer INTEGER,
     role_level INTEGER,
     relevance_flag TEXT,
-    role_normalized TEXT
+    role_normalized TEXT,
+    classification_reasoning TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_offers_source_id ON offers(source_id);
 CREATE INDEX IF NOT EXISTS idx_offers_fetched_at ON offers(fetched_at);

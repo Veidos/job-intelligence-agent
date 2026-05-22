@@ -82,6 +82,7 @@ SCHEMA_DEFINITIONS = {
         ("role_level", "INTEGER"),
         ("relevance_flag", "TEXT"),
         ("role_normalized", "TEXT"),
+        ("classification_reasoning", "TEXT"),
     ],
     "offer_evaluations": [
         ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),

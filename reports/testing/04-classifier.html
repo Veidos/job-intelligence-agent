@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>T-4 &mdash; role_classifier</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',-apple-system,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em;background:#f5f5f5;color:#222;font-size:15px}
+h1{font-size:1.4em;margin-bottom:.2em}
+.sub{color:#888;font-size:.85em;margin-bottom:1.2em}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1em}
+.st{background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);flex:1;min-width:80px;text-align:center}
+.st .n{font-size:1.6em;font-weight:700}
+.st .l{font-size:.75em;color:#888;margin-top:2px}
+.br{display:flex;height:24px;border-radius:4px;overflow:hidden;margin-bottom:1.2em;font-size:.7em;font-weight:600}
+.brs{display:flex;align-items:center;justify-content:center;color:#fff}
+.tag{display:inline-block;background:#e8eaf6;color:#283593;padding:2px 9px;border-radius:10px;font-size:.8em;margin:1px}
+.card{background:#fff;border-radius:8px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+.card-h{display:flex;align-items:center;padding:10px 14px;cursor:pointer;gap:10px;transition:background .12s}
+.card-h:hover{background:#fafafa}
+.num{background:#37474f;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75em;font-weight:700;flex-shrink:0}
+.info{flex:1;min-width:0}
+.ti{font-weight:600;font-size:.93em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me{font-size:.78em;color:#888}
+.bads{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rp{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:8px;font-size:.76em;font-weight:600}
+.fl{padding:2px 8px;border-radius:8px;font-size:.76em;font-weight:600;border:1px solid}
+.ar{font-size:.75em;color:#aaa;transition:transform .2s}
+.card-b{padding:0 14px 14px;border-top:1px solid #eee;display:none}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0}
+.sec{margin:10px 0}
+.sec h4{font-size:.8em;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:6px}
+.dt{width:100%;font-size:.85em}
+.dt td{padding:2px 0}
+.dt td:first-child{color:#888;width:85px}
+.sk{display:flex;flex-wrap:wrap;gap:3px}
+.skill{display:inline-block;background:#e3f2fd;color:#1565c0;padding:1px 7px;border-radius:4px;font-size:.8em}
+.rea{background:#fff8e1;border-left:3px solid #ffb300;border-radius:4px;padding:10px 12px;font-size:.85em;line-height:1.5;max-height:180px;overflow-y:auto}
+.df{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:10px;font-size:.85em;line-height:1.45;max-height:280px;overflow-y:auto;white-space:pre-wrap}
+.qs{background:#fff;border-radius:8px;padding:1em 1.3em;box-shadow:0 1px 3px rgba(0,0,0,.06);margin:1.2em 0;font-size:.9em}
+.qs h3{font-size:.95em;margin-bottom:.6em}
+.qs ol{padding-left:1.1em}
+.qs li{margin-bottom:.5em;line-height:1.4}
+@media(max-width:700px){.g2{grid-template-columns:1fr}.bads{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<h1>T-4 &mdash; Clasificador de roles</h1>
+<p class="sub">2026-05-22 &middot; 17 ofertas &middot; gemma4:e4b &middot; role_classifier.py</p>
+<div class="stats">
+  <div class="st"><div class="n" style="color:#1565c0">17</div><div class="l">Ofertas</div></div>
+  <div class="st"><div class="n" style="color:#2e7d32">15</div><div class="l">Core</div></div>
+  <div class="st"><div class="n" style="color:#f57f17">2</div><div class="l">Adjacent</div></div>
+  <div class="st"><div class="n" style="color:#e65100">0</div><div class="l">Stretch</div></div>
+  <div class="st"><div class="n" style="color:#757575">0</div><div class="l">Temporal</div></div>
+  <div class="st"><div class="n" style="color:#1565c0">17</div><div class="l">Cat&aacute;logo</div></div>
+</div>
+<div class="br">
+  <div class="brs" style="flex:15;background:#43a047">15 core</div>
+  <div class="brs" style="flex:2;background:#ffb300">2 adjacent</div>
+  <div class="brs" style="flex:1;background:#e0e0e0;color:#999">stretch 0 &middot; temporal 0</div>
+</div>
+<div style="margin-bottom:1em"><strong>Cat&aacute;logo (17):</strong> <span class="tag">b2b_sales_representative</span> <span class="tag">bi_analyst</span> <span class="tag">data_analyst</span> <span class="tag">data_engineer</span> <span class="tag">data_scientist</span> <span class="tag">erp_consultant</span> <span class="tag">it_consultant</span> <span class="tag">market_research_analyst</span> <span class="tag">martech_consultant</span> <span class="tag">ml_engineer</span> <span class="tag">operations_analyst</span> <span class="tag">process_engineer</span> <span class="tag">quality_analyst</span> <span class="tag">real_estate_consultant</span> <span class="tag">recruitment_specialist</span> <span class="tag">technical_support</span> <span class="tag">temporal</span></div>
+<h3 style="margin-bottom:8px">Las 17 ofertas <span style="font-weight:400;font-size:.78em;color:#888">(clasifica para expandir)</span></h3>
+
+<div class="card" style="border-left:4px solid #f57f17;">
+  <div class="card-h" onclick="toggleCard(227)">
+    <div class="num">1</div>
+    <div class="info">
+      <div class="ti">Analista de bases de datos</div>
+      <div class="me">IZERTIS &middot; Madrid &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">bi_analyst</span>
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">🟡 adjacent</span>
+      <span class="ar" id="ar-227">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-227">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>3 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-13</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">SQL avanzado</span> <span class="skill">SQL Developer</span> <span class="skill">MySQL Workbench</span> <span class="skill">Integración y explotación de bases de datos relacionales con extensiones GIS</span> <span class="skill">Power BI</span> <span class="skill">SAP Business Objects</span> <span class="skill">Qlik</span> <span class="skill">Tableau</span> <span class="skill">Java 1.7 o superior</span> <span class="skill">WSDL</span> <span class="skill">WMS</span> <span class="skill">SOAP</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La oferta se centra fuertemente en SQL avanzado, soporte a soluciones BI (Power BI, Tableau, etc.) y análisis de bases de datos. Aunque el candidato tiene bases en SQL y ha trabajado en análisis de datos (Pandas, ML), los requisitos de 'SQL avanzado', 'experiencia mínima de 3 años' y el enfoque en herramientas BI específicas (que no menciona) lo sitúan más cerca de un BI Analyst que de un Data Analyst puro o un Data Engineer.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Desde Izertis, buscamos ampliar nuestro equipo con la incorporación de un/a Analista de Bases de Datos (SQL/BI/Java), encargado/a de la consulta avanzada, análisis y explotación de bases de datos corporativas, dando soporte a soluciones BI y colaborando en el diseño e integración de soluciones técnicas en entornos corporativos complejos.
+
+
+¿Cuáles serán tus funciones?
+- Consulta avanzada, análisis y explotación de bases de datos corporativas.
+- Desarrollo y optimización de consultas SQL complejas para la obtención y validación de información.
+- Soporte a soluciones BI mediante integración, tratamiento y análisis de datos.
+- Participación en la validación de modelos analíticos y elaboración de documentación técnica.
+- Integración y explotación de bases de datos relacionales con extensiones GIS.
+- Colaboración en el análisis y diseño de soluciones técnicas en entornos Java.
+- Diseño e integración de servicios web utilizando tecnologías WSDL, WMS y SOAP.
+- Coordinación con distintos equipos técnicos y funcionales para garantizar la correcta integración y explotación de la información.
+
+
+¿Qué buscamos de ti?
+- Experiencia mínima de 3 años en análisis, consulta avanzada y explotación de bases de datos.
+- Experiencia demostrable de al menos 2 años en cada una de las siguientes tecnologías y competencias:
+-- SQL avanzado con SQL Developer.
+-- SQL avanzado con MySQL Workbench.
+-- Integración y explotación de bases de datos relacionales con extensiones GIS.
+-- Herramientas BI como Power BI, SAP Business Objects, Qlik o Tableau.
+-- Análisis y diseño de soluciones en entornos Java 1.7 o superior.
+-- Diseño e integración de servicios web (WSDL, WMS o SOAP).
+- Capacidad analítica, orientación al detalle y habilidades de documentación técnica.
+
+
+¿Qué podemos ofrecerte?
+- Contratación indefinida.
+- Salario adaptado a tu experiencia y expectativas profesionales.
+- Flexibilidad horaria y buen ambiente de trabajo.
+- Participación en proyectos tecnológicos de alto impacto y entornos corporativos complejos.
+- Acceso a formación continua y desarrollo profesional.
+- Paquete de retribución flexible que incluye seguro médico, ticket restaurante, cheque guardería y transporte.
+- Clases gratuitas de inglés.
+
+
+Conoce Izertis
+En Izertis impulsamos la transformación digital de empresas, organizaciones y personas a través de soluciones tecnológicas a medida, innovadoras y con impacto.
+Fundada en 1996, a punto de cumplir 30 años de historia e incluida en el Mercado Continuo BME, Izertis se consolida como una de las 1000 empresas que más rápido crecen entre los países europeos.
+Actualmente somos más de 2.300 profesionales distribuidos en oficinas de Europa, América y África y con presencia en más de 50 países donde prestamos servicios y proyectos a través de un amplio porfolio de soluciones tales como:
+Software Engineering; Consultancy &amp; Governance; Cloud &amp; Infrastructure; Cybersecurity; IA &amp; Data &amp; Emerging Technologies; CX &amp; Business Solutions y otras tecnologías habilitadoras de los procesos de transformación.
+Y a ti, ¿te gustaría formar parte de nuestro equipo? Si es así, ¡no dudes en aplicar para que el equipo de Talento pueda conocerte!
+Además, no olvides revisar en el apartado de ofertas de nuestra web otras opciones que puedan ser interesantes para ti:
+https://www.izertis.com/es/talento</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #f57f17;">
+  <div class="card-h" onclick="toggleCard(234)">
+    <div class="num">2</div>
+    <div class="info">
+      <div class="ti">Ingeniero/a Export Control/Trade Compliance</div>
+      <div class="me">Indra Sistemas &middot; Alcobendas &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">it_consultant</span>
+      <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">🟡 adjacent</span>
+      <span class="ar" id="ar-234">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-234">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>2 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Ingeniería Industrial, Organización Industrial, Aeroespacial, Electrónica, Mecánica, Telecomunicaciones o similares</td></tr>
+          <tr><td>Publicado</td><td>2026-05-11</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Export Control</span> <span class="skill">Trade Compliance</span> <span class="skill">PowerBI</span> <span class="skill">SAP</span> <span class="skill">Regulaciones de defensa y doble uso</span> <span class="skill">Microsoft Office</span> <span class="skill">Inglés</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">Aunque el título es de 'Export Control/Trade Compliance', las tareas implican mucho soporte documental, gestión de bases de datos y cumplimiento normativo en un entorno tecnológico/industrial (defensa). Esto se alinea mejor con un rol de consultoría IT o de procesos complejos, más que con un rol puramente de análisis de datos o ingeniería de procesos. El candidato tiene formación técnica (Mecánica) y experiencia en procesos, lo que lo acerca a un consultor de procesos/sistemas.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">En Indra Group, protegemos lo que más importa. Lideramos el desarrollo de soluciones tecnológicas punteras que refuerzan la seguridad nacional e internacional. ¡Únete a nuestro equipo de Export Control/Trade Compliance!
+
+En nuestro posicionamiento como compañía líder en el ámbito de defensa, queremos reforzar nuestro equipo con Analista de Datos/Power BI con ganas de aprender y crecer en proyectos de Defensa. Si disfrutas enfrentándote a retos tecnológicos y quieres crecer en un entorno puntero, ¡este es tu sitio!
+
+Lo que harás
+- Clasificación de productos y tecnologías de acuerdo a las regulaciones de defensa y doble uso aplicables.
+- Soporte en solicitud de licencias de importación y exportación, así como sus renovaciones.
+- Screening de empresas, proveedores y clientes frente a embargos y sanciones vigentes.
+- Revisión, validación y emisión de documentación asociada a los productos y tecnologías de defensa y doble uso (End User Statements, Export Control Classification Questionnaires, Agreements, etc.).
+- Mantenimiento de las bases de datos de clasificaciones y licencias de la Compañía.
+- Soporte operacional y transversal a las diferentes áreas de la Compañía, así como al Cliente interno.
+- Revisión de documentación de envío y cláusulas de Export Control para asegurar el cumplimiento de acuerdo a las autorizaciones de exportación en vigor.
+
+Lo que buscamos en ti
+- Ingeniería Industrial, Organización Industrial, Aeroespacial, Electrónica, Mecánica, Telecomunicaciones o similares.
+- Valorable Master en Logística y/o Supply Chain.
+- Al menos Experiencia de 2 años como Export Control o Trade Compliance, principalmente en sector tecnológico, aeroespacial o tecnológico.
+- Conocimientos en regulaciones de defensa y doble uso, tanto nacionales como internacionales (UE, US).
+- Conocimientos de Microsoft Office, PowerBI, SAP.
+- Inglés alto.
+
+Teletrabajo: 40%, 2 días en casa, 3 días en oficina.
+
+Lo que te ofrecemos 
+- Estabilidad y Futuro: Proyectos a largo plazo en una empresa líder de Defensa con más de 50.000 profesionales, con seguridad financiera.
+- Proyectos Innovadores y de Alto Alcance: Trabajarás con tecnologías de vanguardia, con un impacto tanto a nivel nacional como internacional.
+- Ambiente Cercano y Transparente: Disfrutarás de una comunicación directa y fluida con responsables y compañeros, en un entorno colaborativo y abierto.
+- Autonomía y Flexibilidad: Tendrás libertad para organizar tu trabajo, con una conciliación real y adaptada a tu ritmo. 
+· Plan de carrera adaptado a ti: Diseñado para impulsar tu crecimiento y desarrollo profesional.
+- Formación continua: en Open University y Udemy for Business (¡más de 6.000 cursos para especializarte!).
+- Descuentos exclusivos para tu bienestar: Disfruta de ventajas en gimnasios, restaurantes, tiendas, ocio y mucho más al ser empleado de Indra.
+- Retribución competitiva y planes de compensación flexibles a tus necesidades.
+
+¡INDRA ES EMPRESA TOP EMPLOYER 2025! Incorpórate a una empresa certificada como una de las mejores empresas empleadoras de España, gracias a nuestra gestión integral de RRHH y a las condiciones para nuestros profesionales.
+
+Nuestro compromiso es promover ambientes de trabajo en los que se trate con respeto y dignidad a las personas, procurando el desarrollo profesional de la plantilla y garantizando la igualdad de oportunidades en su selección, formación y promoción ofreciendo un entorno de trabajo libre de cualquier discriminación por motivo de género, edad, discapacidad, orientación sexual, identidad o expresión de género, religión, etnia, estado civil o cualquier otra circunstancia personal o social.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(229)">
+    <div class="num">3</div>
+    <div class="info">
+      <div class="ti">Analista Power BI Junior</div>
+      <div class="me">NTT DATA ofertas de empleo profesionales &middot; Madrid &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">bi_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-229">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-229">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>1 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-13</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Power BI</span> <span class="skill">Modelado de datos</span> <span class="skill">Excel avanzado</span> <span class="skill">SQL</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra en la configuración, explotación y análisis de información operativa, la elaboración de cuadros de mando e indicadores (KPIs), y el modelado de datos, lo cual encaja perfectamente con las responsabilidades de un BI Analyst. Aunque pide Power BI, las funciones son analíticas y de reporting.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">NTT DATA BPO, es una sociedad perteneciente al grupo NTT DATA, la cual presta servicios de externalización de procesos de negocio. 
+
+NTT DATA es una consultora multinacional que ofrece soluciones de negocio, estrategia, desarrollo y mantenimiento de aplicaciones tecnológicas, y outsourcing. La compañía, desarrolla su actividad en los sectores de telecomunicaciones, entidades financieras, industria, utilities, energía, administración pública y sanidad.
+
+Buscamos un perfil Junior en Power BI, orientado a la configuración, explotación y análisis de información operativa del proyecto. La persona seleccionada participará en la elaboración de cuadros de mando e indicadores (KPIs) que permitan el seguimiento continuo de la operación y faciliten la toma de decisiones.
+
+Tus funciones serán:
+
+Configuración y mantenimiento de Power BI
+
+- Conexión a las fuentes de datos definidas para el proyecto
+- Configuración de modelos de datos y relaciones necesarias para el reporting operativo
+- Ajuste y optimización de informes existentes
+
+Extracción y explotación de información
+
+- Extracción de datos bajo demanda para dar soporte a distintas líneas de trabajo
+- Preparación de datasets y ficheros de apoyo (Excel u otros formatos)
+
+Elaboración de cuadros de mando y KPIs
+
+- Diseño y desarrollo de cuadros de mando de seguimiento de la operación
+- Definición e implementación de KPIs operativos y de control
+- Evolución y mejora continua de los indicadores en función de las necesidades del servicio
+
+Soporte al seguimiento del proyecto
+
+- Apoyo al responsable del proyecto en el análisis de datos y detección de desviaciones
+- Identificación de inconsistencias, anomalías o patrones relevantes
+- Colaboración con otros equipos técnicos para la validación de datos
+
+Conocimientos necesarios:
+
+- Experiencia previa (1 año) con Power BI
+- Conocimientos en modelado de datos
+- Manejo de Excel a nivel avanzado
+- Capacidad analítica y orientación a resultados
+
+Requisitos valorables:
+
+- Conocimientos de SQL
+- Experiencia trabajando con datos operativos
+- Experiencia en entornos de proyectos o servicios
+
+Competencias:
+
+- Capacidad de análisis
+- Proactividad
+- Trabajo en equipo
+- Orientación a detalle
+
+Valor aportado al proyecto:
+
+- Visión clara y estructurada del estado de la operación
+- Soporte sólido a la toma de decisiones basada en datos
+- Mayor control y trazabilidad de la información operativa
+
+Te ofrecemos formar parte del equipo de profesionales de NTT DATA BPO , lo que significa que desde el primer día ponemos todos los mecanismos necesarios en funcionamiento para que tengas un plan de carrera y formación especializada para el desempeño de tus funciones profesionales:
+
+- Contrato Indefinido.
+- Plan de Carrera profesional en función de la formación, experiencia, potencial profesional y expectativas del candidato.
+- Formación desde el primer día dirigida a la especialización técnica y de transformación digital.
+- Salario en función de la experiencia del candidato.
+- Horario Lunes a Viernes en jornada flexible.
+- Modelo Híbrido: 3 días presenciales y 2 de teletrabajo semanales.
+- Integrarte en una compañía multinacional líder (Una de las 10 compañías más grandes del sector a nivel mundial), joven y dinámica.
+- Formar parte de un ambiente creativo y colaborador donde puedes disfrutar de la experiencia del trabajo en equipo para lograr el máximo valor para nuestros clientes.
+- Trabajar en una empresa en constante evolución y crecimiento, realizando un trabajo enriquecedor con grandes oportunidades de desarrollo profesional.
+- Participación en proyectos innovadores y punteros para grandes clientes de primer nivel en distintos sectores de mercado.
+
+Si eres una persona con buenas capacidades de trabajo en equipo e interés en la tecnología, te esperamos!</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(226)">
+    <div class="num">4</div>
+    <div class="info">
+      <div class="ti">Analista de Datos (Looker)</div>
+      <div class="me">Quest Global &middot; Valladolid &middot; Presencial</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-226">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-226">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Grado en matemáticas, informática, telecomunicaciones, ingeniería, física o similar</td></tr>
+          <tr><td>Publicado</td><td>2026-05-13</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Looker</span> <span class="skill">Excel</span> <span class="skill">Oracle</span> <span class="skill">SQL</span> <span class="skill">Python</span> <span class="skill">Inglés (B2)</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La oferta se centra en el desarrollo de soluciones basadas en análisis, modelos estadísticos, algoritmos, y la creación de informes/dashboards interactivos (Looker). Esto se alinea perfectamente con las responsabilidades de un Data Analyst, aunque requiere un dominio avanzado de Looker y Excel que el candidato no posee, pero sus habilidades en SQL, Python, Pandas y sus proyectos de análisis de datos son muy relevantes.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">
+En Quest Global creemos que la ingeniería tiene el poder único de resolver los problemas del presente que marcarán el camino hacia el futuro. Por eso, desde hace más de 25 años, desarrollamos soluciones de ingeniería y tecnología en todo el ciclo de vida del producto, que permiten a nuestros clientes resolver los grandes retos a los que se enfrentan en los sectores aeroespacial y de defensa, automoción, comunicaciones, energía, alta tecnología, ferrocarril y semiconductores.
+
+Operamos a nivel local-global desde 18 países, donde contamos con 78 centros de entrega globales, y más de 20.000 profesionales que trabajan con el espíritu de hacer las cosas de forma diferente. En España, somos más de 800 profesionales trabajando desde distintas provincias y nuestras 8 oficinas de Madrid, Barcelona, Bilbao, Valladolid, Ferrol, Sevilla, Cádiz y Cartagena. Quest Global es un lugar donde nuestra gente puede realmente marcar la diferencia. Nos apasiona la innovación y nos comprometemos a hacer del mundo un lugar mejor, superando los límites cada día para hacer posible lo imposible.
+
+Buscamos una persona con formación en ingeniería de materiales metálicos o conocimientos avanzados de estos para realizar las siguientes funciones principales dentro de un laboratorio de materiales de sector automoción:
+
+¿QUÉ HARÁS EN TU DÍA A DÍA?
+
+- Desarrollo de soluciones basadas en análisis, modelos estadísticos y algoritmos. 
+- Desarrollo de estrategias a partir del análisis de datos. 
+- Convertir datos en informes muy visuales y dashboards interactivos.
+
+¿QUÉ BUSCAMOS?
+- Formación de grado en matemáticas, informática, telecomunicaciones, ingeniería, física o similar.
+- Imprescindible dominio avanzado de Looker
+- Usuario avanzado de herramientas de ofimática, en especial de Excel.
+- Conocimientos de bases de datos: Oracle, SQL.
+Deseable:
+- Conocimientos de IA.
+- Experiencia en programación y usuario avanzado de Python.
+- Inglés nivel B2 y deseable conocimientos de francés.
+
+¿QUÉ TE OFRECEMOS?
+
+En Quest Global, creemos en la igualdad de oportunidades y nos comprometemos en preservar un entorno de trabajo inclusivo y seguro, garantizando la igualdad de oportunidades en selección, formación y desarrollo en un entorno libre de discriminación por motivos de etnia, edad, nacionalidad, religión, orientación sexual, identidad o expresión de género o cualquier otra circunstancia personal, física o social.
+
+En Quest Global tendrás:
+
+-Política de teletrabajo y planes de conciliación. Jornada flexible y posibilidad de trabajo híbrido y en remoto, en función de las características del puesto.
+-23 días laborales de vacaciones al año, 24 y 31 de diciembre no laborables.
+-Un día libre por tu cumpleaños, a elegir dentro del mes en el que los cumples.
+-Plan retributivo flexible: seguro médico privado, tickets restaurante, tickets transporte, cheque guardería, etc.
+-Plan de formación individualizado y acceso a nuestra plataforma de aprendizaje con más de 7.000 cursos.
+-Comité de Responsabilidad Social Corporativa, con implicación en diversas actividades de ayuda a grupos sociales desfavorecidos, infancia y diversidad.
+-Actividades para equipos: deporte, team-building, gestión emocional, Quest Global Fest anual.
+
+Horario: 
+- 07:00 a 15:00</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(241)">
+    <div class="num">5</div>
+    <div class="info">
+      <div class="ti">Analista de Datos Ecommerce</div>
+      <div class="me">SOFTTEK &middot; A Coruña &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-241">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-241">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-04-29</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Google Analytics 4</span> <span class="skill">SQL</span> <span class="skill">Análisis de comportamiento de usuario</span> <span class="skill">Reporting orientado a negocio</span> <span class="skill">SEO</span> <span class="skill">Entornos ágiles</span> <span class="skill">IA aplicada al análisis digital</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La oferta se centra en el análisis de datos de ecommerce, comportamiento de usuario y generación de insights accionables, lo cual encaja perfectamente con el perfil de un Data Analyst. El candidato tiene bases sólidas en SQL, Pandas y ha realizado proyectos de análisis de datos.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Softtek es un socio global de ingeniería de software que impulsa el progreso de las compañías. Desde hace más de 40 años, hemos ayudado a nuestros clientes a desarrollar, implementar y gestionar tecnología que mejora la vida de las personas.
+
+Con presencia en más de 20 países y más de 16,000 softtekians en todo el mundo, en Softtek estamos en constante crecimiento. En España, te ofrecemos la oportunidad de unirte a nuestra comunidad en ubicaciones como Albacete, Asturias, Ávila, Barcelona, Córdoba, Coruña, Madrid, Narón, Segovia o Zaragoza, donde podrás desarrollar tu carrera dentro de un modelo híbrido y flexible.
+
+En 2025, hemos sido reconocidos en la Lista Forbes como una de las 100 mejores empresas para trabajar en España, destacando por nuestra flexibilidad y personalización en la experiencia del empleado. Creemos en el poder de las habilidades diversas y la la iniciativa personal para lograr cosas asombrosas, y valoramos el talento único de cada persona para contribuir al crecimiento y diversidad de nuestro equipo. ¿Nos acompañas en esta aventura? #FutureTogether
+
+ ¿Te apasiona el análisis de datos digitales y quieres trabajar directamente con métricas clave de un ecommerce líder del sector retail?
+
+Buscamos un/a Analista de Datos Ecommerce, con foco en análisis de comportamiento de usuario y rendimiento del canal digital, que disfrute trabajando con datos y ayudando a tomar decisiones de negocio.
+
+ ¿Qué esperamos de ti?
+Experiencia analizando datos de ecommerce y entornos digitales.
+Uso habitual de Google Analytics 4 para análisis de comportamiento y conversión.
+Conocimientos de SQL para consulta y extracción de datos desde bases de datos.
+Capacidad para cruzar datos, detectar patrones y generar insights accionables.
+Experiencia en elaboración de reporting orientado a negocio.
+
+¿ Valorable
+Conocimientos de SEO.
+Experiencia en entornos ágiles.
+Interés por el impacto de la IA aplicada al análisis digital.
+
+
+ ¿Cómo será tu día a día?
+Analizarás los datos del ecommerce para entender cómo navegan, convierten y compran los usuarios.
+Trabajarás con GA4 y SQL para extraer, cruzar y analizar información.
+Elaborarás análisis e informes que ayuden a optimizar conversión, tráfico y rendimiento del canal digital.
+Colaborarás con distintos equipos para apoyar la toma de decisiones basada en datos.
+
+ Inicio con onboarding presencial en las oficinas de Narón durante las primeras semanas.
+Posteriormente, modelo con menor presencialidad, aunque será necesario acudir varios días por semana a oficinas del cliente.
+
+¿Conoce nuestra propuesta de valor
+
+Contrato indefinido.
+Modelo híbrido: Súmate a nuestro modelo Softtek 56, que se adapta a las circunstancias de cada Softtekian y en donde podrás conectar y desarrollarte con nuestros equipos en las diferentes sedes 56 horas al mes y disfruta de teletrabajo el resto del tiempo.
+ Conciliación: Horario flexible y el programa BetterWork que apoya el equilibrio entre tu vida personal y profesional.
+¿¿24 días de vacaciones.
+ Seguro médico.
+Retribución flexible: tarjeta transporte, tarjeta restaurante, cheque guardería o seguro médico familiares.
+ Tarde de cumpleaños libre (también por el cumple de tus hijos).
+ Club del empleado: Beneficios y promociones exclusivas por ser Softtekian.
+Planes de formación: idiomas, tecnologías y habilidades interpersonales.
+ Oportunidad de movilidad interna: en nuestras sedes internacionales y dentro de España.
+
+ Valoraremos especialmente la candidatura de personas que posean habilidades y capacidades únicas y diversas, reconociendo la importancia de facilitar su integración plena en el mercado laboral. Cada individuo, con sus capacidades singulares, aporta una riqueza invaluable a nuestra comunidad, y nuestro compromiso es asegurar que todos tengan la oportunidad de demostrar su valía y contribuir al crecimiento y la diversidad de nuestro equipo.
+
+ ¡Estamos deseando conocerte!</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(239)">
+    <div class="num">6</div>
+    <div class="info">
+      <div class="ti">Analista de Datos Junior - Sector Automoción</div>
+      <div class="me">Talent Search People &middot; Barcelona &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-239">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-239">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>30,000€ – 33,000€</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>1 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-04-30</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">PowerBI</span> <span class="skill">SQL</span> <span class="skill">OEE</span> <span class="skill">MES</span> <span class="skill">SAP</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra en analizar datos de producción y operaciones (OEE, productividad, scrap), desarrollar dashboards con PowerBI y usar SQL para extraer datos, lo cual encaja perfectamente con las responsabilidades de un Data Analyst. El candidato tiene experiencia en análisis de datos y proyectos con modelos predictivos.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">¿Tienes experiencia como Analista de datos con PowerBI? ¿Quieres trabajar en una empresa especializada en fabricación de componentes para la industria automotriz?, ¡está oferta es para ti! 
+
+Estamos en búsqueda de un/a  Analista de datos junior, con entre 1 y 3 años de experiencia. Esta persona será responsable de transformar los datos de producción y operaciones en información útil para la toma de decisiones, con el objetivo de mejorar la eficiencia, la productividad y el rendimiento global de la planta.
+
+En tu día a día te encargarás de: 
+-Analizar datos de producción (OEE, productividad, paradas, scrap), extraídos de modelos de datos SQL.
+-Desarrollar dashboards analizando previamente los datos estructurados con PowerBI.
+- Soporte a decisiones con diferentes responsables de área.
+-  Asegurar captura, análisis y extración de datos multifuente.
+- Validar integridad MES-SAP.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(232)">
+    <div class="num">7</div>
+    <div class="info">
+      <div class="ti">Analista de Datos RR.HH.</div>
+      <div class="me">Barceló Hotel Group &middot; Palma de Mallorca &middot; Presencial</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-232">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-232">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-11</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Analítica de datos de Recursos Humanos</span> <span class="skill">Reporting estratégico y regulatorio</span> <span class="skill">Calidad y gobierno del dato</span> <span class="skill">ETL/ELT</span> <span class="skill">Metabase</span> <span class="skill">Superset</span> <span class="skill">Snowflake</span> <span class="skill">Python</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">Aunque el título es de RR.HH., las responsabilidades clave (Reporting estratégico, diseñar dashboards, ETL/ELT, automatizar con Python, calidad de datos) encajan perfectamente con un Data Analyst avanzado o un Data Engineer junior. Dado el catálogo, 'data_analyst' es el más apropiado, ya que cubre el análisis y el reporting, y el candidato tiene bases sólidas en Python, SQL y ML.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Serás responsable de liderar la analítica de datos de Recursos Humanos a nivel corporativo, garantizando la calidad, coherencia y trazabilidad del dato en un entorno internacional. Tendrás un rol clave en la homogeneización y reconciliación de datos entre múltiples sistemas, habilitando la toma de decisiones estratégicas y asegurando el cumplimiento regulatorio (EINF / RSC). 
+
+Responsabilidades clave:
+1. Reporting estratégico y regulatorio 
+- Liderar el reporting de RRHH del Estado de Información No Financiera (Memoria de sostenibilidad) 
+- Garantizar calidad, consistencia y trazabilidad del dato 
+- Coordinar auditorías y evidencias con los auditores  
+ 
+2. Analítica y explotación del dato 
+- Diseñar y evolucionar dashboards y modelos analíticos 
+- Impulsar la toma de decisiones basada en datos 
+- Reducir procesos manuales 
+ 
+3. Calidad, gobierno y reconciliación del dato 
+- Definir controles de calidad y marcos de gobierno del dato 
+- Homogeneizar y reconciliar datos entre sistemas (Workday, turnos, compensación, BI) 
+- Diseñar y mantener procesos ETL / ELT  
+- Explotar y evolucionar herramientas open source (ej. Metabase, Superset o similares) a nivel funcional y de modelo 
+ 
+4. Data and Tech 
+- Definir estructuras de datos y ETL 
+- Colaborar con IT (Snowflake, BI) 
+- Automatizar procesos con Python </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(228)">
+    <div class="num">8</div>
+    <div class="info">
+      <div class="ti">Analista de Datos y Automatización de Procesos</div>
+      <div class="me">New Tandem &middot; Madrid &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-228">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-228">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-13</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">SQL</span> <span class="skill">Python</span> <span class="skill">Excel avanzado</span> <span class="skill">Business Intelligence</span> <span class="skill">Analítica de Negocio</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra fuertemente en el análisis de datos, la creación de dashboards (KPIs), la explotación de datos cuantitativos/cualitativos, y el uso de SQL y Python para reporting, lo cual encaja perfectamente con el perfil de Data Analyst. Aunque toca aspectos de BI y procesos, Data Analyst es el rol más abarcador y preciso.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Estamos buscando un Profesional de Data, Business Intelligence y Analítica de Negocio para un empresa en pleno crecimiento de gestión de recuperación de deuda.
+
+Misión de rol, Apoyar la toma de decisiones y la eficiencia operativa mediante el análisis, estructuración y visualización del dato, asegurando coherencia, fiabilidad y alineación con los objetivos de negocio en contextos regulados.
+• Análisis y explotación de datos cuantitativos y cualitativos relacionados con actividad legal y financiera.
+• Traducción de necesidades de negocio en análisis, informes y dashboards útiles para distintas áreas.
+• Diseño y mantenimiento de cuadros de mando operativos y de gestión (KPIs, volúmenes, costes, eficiencia, rendimientos).
+• Desarrollo de consultas SQL sobre bases de datos relacionales.
+• Soporte en el modelado de datos y en la validación de calidad de la información.
+• Automatización básica de procesos de análisis y reporting (Python, Excel avanzado).
+• Colaboración transversal con equipos de legal, finanzas, operaciones, producto e IT.
+• Documentación de procesos analíticos y reporting.
+• Contribución a buenas prácticas de gobierno del dato y reporting.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(230)">
+    <div class="num">9</div>
+    <div class="info">
+      <div class="ti">Data &amp; Analitics Internship</div>
+      <div class="me">EY GDS Spain &middot; Málaga &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-230">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-230">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato otros contratos</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Bachelor's Degree in Economics, Finance, Business Administration, Engineering, Data Analytics or similar</td></tr>
+          <tr><td>Publicado</td><td>2026-05-12</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Power BI</span> <span class="skill">Tableau</span> <span class="skill">Excel</span> <span class="skill">Power Query</span> <span class="skill">Python</span> <span class="skill">SQL</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra fuertemente en el análisis de datos financieros, la creación de dashboards (BI tools), la preparación y transformación de datos, y el soporte a la toma de decisiones, lo cual encaja perfectamente con el perfil de un Data Analyst. Aunque menciona Python, el enfoque es más analítico y de reporting que de ingeniería o ciencia avanzada.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">As a member of our team in GDS office in Malaga, Spain, you'll have the opportunity to extend your knowledge and experience by working on interesting projects using cutting-edge data and analytics technologies. You will support financial services clients in improving decision-making processes, optimizing financial performance, and driving digital transformation through data-driven insights.
+
+Your key responsibilities
+We are looking to integrate an Intern within the Financial Services Consulting practice in GDS Spain to support projects in Data &amp; Analytics applied to Finance. Key responsibilities include:
+• Support the analysis of financial data to identify trends, patterns, and actionable insights for business decision-making.
+• Assist in the design, development, and maintenance of dashboards and reporting solutions using BI tools (e.g. Power BI, Tableau).
+• Contribute to data preparation, cleansing, and transformation processes to ensure data quality and reliability.
+• Support financial planning, forecasting, and performance management processes through data analysis.
+• Collaborate in the implementation of data-driven solutions for finance transformation initiatives.
+• Assist in automation of financial reporting processes using tools such as Excel, Power Query, or Python.
+• Provide functional support in the design and deployment of finance-related analytics tools and data models.
+
+Skills and attributes for success
+• Strong analytical and problem-solving skills
+• Good communication skills, especially when interacting with clients and stakeholders
+• Ability to work both independently and collaboratively within multidisciplinary teams
+• Attention to detail and commitment to delivering high-quality outputs
+• Interest in data, technology, and finance
+
+To qualify for the role, you must have
+• Bachelor's Degree in Economics, Finance, Business Administration, Engineering, Data Analytics or similar
+• High level of English / Francés
+
+Ideally, you'll also have
+• Basic knowledge of data analysis tools (Excel, Power BI, SQL, Python or similar)
+• Understanding of financial concepts (e.g. P&amp;L, balance sheet, KPIs, forecasting)
+• Previous internship or academic experience in finance, consulting, or data analytics
+
+What we look for
+• Teamwork and collaboration skills
+• Strong communication and innovation mindset
+• Proactivity and willingness to learn
+• Critical thinking and analytical capability
+• Ability to identify solutions and drive results</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(231)">
+    <div class="num">10</div>
+    <div class="info">
+      <div class="ti">Data Analyst (SQL, Python, PBI)</div>
+      <div class="me">BETWEEN Technology &middot; Madrid &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-231">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-231">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>36,000€ – 42,000€</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-11</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">SQL</span> <span class="skill">Python</span> <span class="skill">Power BI</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">El rol se centra en el análisis de datos, creación de dashboards (Power BI), automatización y actuar como puente entre negocio y técnico, lo cual coincide directamente con las habilidades y el enfoque del candidato en Data Analysis (SQL, Python, Pandas, proyectos de análisis).</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">En BETWEEN te ofrecemos las oportunidades que necesitas para alcanzar tus objetivos profesionales. Si quieres desarrollar tus capacidades en IT e Ingeniería ¡este es tu próximo destino! Damos soporte en una gran variedad de áreas como Firmware, Software, BI, Diseño, Project Management y muchas más. Además, desarrollamos soluciones tecnológicas a medida desde nuestros BETWEEN Labs.
+Estamos buscando un perfil de Data Analyst para ampliar uno de nuestros equipos en importante empresa del sector Retail en Madrid.
+
+FuncionesActuar como puente entre equipo de negocio y el equipo técnico, usando datos, automatización y reporting para mejorar cómo trabaja el área corporativa.
+Definir y analizar los requerimientos del usuario
+Crear planes de cambio en función de los requerimientos analizados
+Desarrollo de cuadros de mando y dashboards en Power BI.
+Preparación de presentaciones de cara a negocio
+Automatización de procesos
+BeneficiosSeguro médico.
+Oportunidades de formación: Idiomas, Certificaciones, Bootcamps y mucho más.
+Multitud de eventos: BETWEEN Night, Torneo de Padel y mucho más.
+Retribución flexible (restaurant, transporte, guardería).
+Incentivos por validar o recomendar talento.
+#LI-MR1</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(237)">
+    <div class="num">11</div>
+    <div class="info">
+      <div class="ti">Data Analyst - Power BI / Reporting</div>
+      <div class="me">BETWEEN Technology &middot; Sant Cugat del Vallès &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-237">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-237">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>2 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-07</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Excel</span> <span class="skill">Power BI</span> <span class="skill">Power Query</span> <span class="skill">DAX</span> <span class="skill">Python</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra en el análisis de datos, la creación de informes (Power BI, DAX) y el uso de Python para procesamiento, lo cual encaja perfectamente con el perfil de Data Analyst. Aunque el candidato tiene conocimientos básicos, la naturaleza de las tareas es directamente aplicable.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">En BETWEEN Technology, buscamos un/a Data Analyst para unirse a nuestro equipo en Sant Cugat. Buscamos un/a Analista de Datos con al menos 2-3 años de experiencia en herramientas de análisis y visualización como Excel, Power BI, Power Query, DAX, y conocimientos en Python.
+Esta posición contribuye al desarrollo de informes y análisis de datos, principalmente mediante Power BI, proporcionando soporte al equipo de Reporting. Su labor será asegurar la disponibilidad, trazabilidad y calidad de la información.
+Responsabilidades Principales:
+Análisis de datos: Recopilar, transformar y analizar datos provenientes de diversas fuentes utilizando Excel, Power BI y Power Query, con el objetivo de generar informes para el negocio.
+Modelado de datos: Diseñar y mantener modelos de datos robustos mediante DAX, que permitan realizar análisis complejos y cálculos personalizados adaptados a las necesidades de cada área.
+Desarrollo de informes: Crear dashboards e informes interactivos en Power BI que faciliten la visualización clara y efectiva de los resultados, orientados a distintos niveles de la organización.
+Automatización de procesos: Utilizar Python para procesamiento de datos, mejorando la eficiencia operativa y reducir errores manuales.
+Cierres mensuales y reporting corporativo: Participar activamente en los cierres mensuales, asegurando la correcta consolidación de datos y elaboración de reportes que se remiten a las oficinas de Corporate, cumpliendo con los estándares de calidad y plazos establecidos.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(233)">
+    <div class="num">12</div>
+    <div class="info">
+      <div class="ti">Data Analyst - Sant Cugat del Vallès</div>
+      <div class="me">DABA, S.A. &middot; Sant Cugat del Vallès &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-233">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-233">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>2 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Licenciatura o Grado en Ingeniería, Economía, Matemáticas, Estadística o Investigación y Técnicas de Mercado</td></tr>
+          <tr><td>Publicado</td><td>2026-05-11</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Power BI</span> <span class="skill">Microstrategy</span> <span class="skill">Tableau</span> <span class="skill">Looker Studio</span> <span class="skill">Microsoft Excel</span> <span class="skill">SQL</span> <span class="skill">R</span> <span class="skill">Python</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra en generar insights, analizar patrones de consumo, analizar KPIs, y realizar análisis descriptivos, predictivos y prescriptivos, lo cual coincide directamente con las responsabilidades de un Data Analyst. El candidato tiene experiencia y proyectos en análisis de datos y ML.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">¡Quieres formar parte del futuro de DABA como Data Analyst? 
+Formarás parte del equipo de analistas que se encarga de aportar conocimiento sobre el comportamiento de cliente y de negocio a través de los datos en el que basar la toma de decisiones.
+ 
+¡Cuáles serán tus retos?
+Generarás insights que ayuden maximizar el lifetime value del cliente.
+Analizarás e identificarás patrones de consumo por tipología de cliente.
+Analizarás la evolucion de los KPIs de cliente y explicarás los factores clave subyacentes para permitir adaptar el plan de acción de la forma más eficiente.
+Realizarás análisis descriptivos, predictivos, prescriptivos, prospectivos. Apoyándote en herramientas de IA cuando sea necesario.
+Pondrás en práctica tus habilidades analíticas en un entorno en el que se valora la iniciativa y se anima a aportar ideas y perspectivas propias.
+ 
+¡Qué nos hace diferentes?
+Proyecto estable con contrato indefinido.
+Flexibilidad y autogestión horaria.
+Jornada intensiva todos los viernes del año y en verano.
+Oportunidad de liderar tu propio desarrollo profesional. En 2025, el 25% de las vacantes se cubrieron con talento interno.
+Sistema híbrido de trabajo: presencial y teletrabajo. Cuando vengas a la oficina, tendrás acceso a instalaciones deportivas (gimnasio, sauna, pista de pádel y piscina).
+Sistema de retribución variable asociado a objetivos.
+Retribución flexible con posibilidad de destinar salario para la compra de tickets restaurante, ticket transporte, seguro médico, formación, compra de equipos electrónicos, etc.
+Servicio de expertos en bienestar, coaching, psicología y nutrición con la misión de cuidar de tu bienestar y acompañarte en los momentos clave de tu vida.
+Plan de formación técnica y de habilidades según necesidades.
+Oportunidad de liderar tu propio desarrollo profesional. 
+Un ambiente de trabajo socialmente responsable y comprometido con la diversidad, por lo que damos la bienvenida a todas aquellas candidaturas, independientemente de su edad, género o expresión de género, orientación o identidad sexual, discapacidad (se requerirá certificado) o creencias religiosas.
+Y en nuestras oficinas, ¡nunca te faltará café y fruta!
+ 
+Es tu momento si…
+Has estudiado una Licenciatura o Grado en Ingeniería, Economía, Matemáticas, Estadística o Investigación y Técnicas de Mercado.
+Tienes al menos 2 años de experiencia realizando análisis descriptivos y predictivos de comportamiento de cliente y negocio.
+Quieres aportar tu visión analítica y capacidad de obtener insights a partir de tus análisis.
+Tienes facilidad para sintetizar y comunicar de forma efectiva los resultados de dichos análisis.
+Has trabajado con herramientas de dashboarding o visual analytics (ej Power BI, Microstrategy, Tableau o Looker Studio)
+Dominas Microsoft Excel y SQL. Conocimientos en R o Python deseables.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(238)">
+    <div class="num">13</div>
+    <div class="info">
+      <div class="ti">Técnico/a Analista de Datos - Sector</div>
+      <div class="me">Grupo Crit: Trabajemos juntos &middot; Madrid &middot; Presencial</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-238">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-238">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>33,000€ – 33,000€</td></tr>
+          <tr><td>Contrato</td><td>Contrato de duración determinada</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-05</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">IA Agéntica</span> <span class="skill">Power Platform</span> <span class="skill">low-code</span> <span class="skill">analítica avanzada</span> <span class="skill">Power Apps</span> <span class="skill">Power Automate</span> <span class="skill">Copilot Studio</span> <span class="skill">IA generativa</span> <span class="skill">Microsoft Fabric</span> <span class="skill">Power BI</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La oferta se centra en el modelado de datos, creación de cuadros de mando (Power BI), y soporte de soluciones digitales/automatización, lo cual se alinea muy bien con las habilidades de análisis de datos (Pandas, Numpy, Scikit-learn) y la experiencia en proyectos predictivos del candidato. Aunque menciona herramientas de automatización (Power Platform), el núcleo es analítico.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Desde Grupo Crit estamos seleccionando un/a Técnico/a Analista de Datos para empresa líder de infraestructuras energéticas y gestor de redes de transporte de gas natural y gases renovables ubicada en Pirámides, Madrid.
+
+FUNCIONES DEL PUESTO:
+- Participar en el gobierno, modelado y soporte de soluciones digitales orientadas a casos de uso de negocio, mediante tecnologías business-built (IA Agéntica, Power Platform, herramientas low-code y analítica avanzada).
+- Digitalización y soluciones business-built
+- Desarrollo y mantenimiento de aplicaciones y flujos con Power Apps y Power Automate
+- Diseño, evolución y mantenimiento de agentes de IA (Copilot Studio, IA generativa y agéntica).
+- Modelado y validación de modelos semánticos en Microsoft Fabric.
+- Creación de cuadros de mando e informes en Power BI.
+- Gobierno y estructuración de activos digitales (apps, flujos, modelos, agentes).
+- Soporte funcional.
+- Identificación de oportunidades de automatización y mejora de procesos.
+
+CONDICIONES:
+- Contrato inicial por ETT con posibilidad de pasar a la plantilla fija de la empresa. 
+- Jornada completa de lunes a viernes. De lunes a jueves de 9:00 a 18:00 y lo viernes de 7:45 a 14:30. Jornada intensiva del 15 de julio al 14 de septiembre.
+- Salario: 32.934,56€ B/A
+- Zona de trabajo: Metro Pirámides
+- Formarás parte de un entorno profesional, competente y orientado al alto rendimiento, donde se fomenta la excelencia, la colaboración y el desarrollo continuo de las personas.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(235)">
+    <div class="num">14</div>
+    <div class="info">
+      <div class="ti">Técnico/a analista de datos</div>
+      <div class="me">HomeServe Asistencia &middot; Madrid &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_analyst</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-235">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-235">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>1 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Estudios superiores (Estadística, Matemáticas, ADE o similares)</td></tr>
+          <tr><td>Publicado</td><td>2026-05-11</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Power BI</span> <span class="skill">Power Quey</span> <span class="skill">SQL</span> <span class="skill">Excel</span> <span class="skill">Análisis de Datos</span> <span class="skill">Reporting</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra fuertemente en el análisis, reporting, elaboración de cuadros de mando, análisis de procesos y uso de SQL/Excel, lo cual encaja perfectamente con el perfil de un Data Analyst. El candidato tiene bases sólidas en SQL, Pandas y ha realizado proyectos de análisis predictivo.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">MISIÓN:
+
+En HomeServe buscamos incorporar un/a Técnico/a de Análisis de Red cuya misión será analizar, auditar y controlar la red de profesionales, asegurando su correcta gestión y proponiendo mejoras continuas que permitan ofrecer un servicio de calidad a nuestros clientes.
+
+FUNCIONES:
+
+- Análisis y reporting de la red de profesionales.
+- Valorable conocimientos en Power BI y Power Quey.
+- Elaboración de informes y análisis periódicos sobre el funcionamiento y rendimiento de la red.
+- Desarrollo de cuadros de mando y reporting para áreas internas y dirección.
+- Participación en proyectos de mejora y optimización de la red de profesionales.
+- Realización de estudios ad hoc.
+- Extracción y tratamiento de datos desde los sistemas corporativos mediante SQL y Excel.
+- Elaboración de presentaciones e informes específicos para la toma de decisiones.
+- Análisis de procesos y ciclo de vida del profesional
+- Análisis de los procesos operativos asociados a la red y a su ciclo de vida.
+- Identificación de ineficiencias y propuesta de mejoras en procesos y procedimientos.
+- Control de procesos y procedimientos. 
+- Colaboración con otros departamentos en la mejora de procesos transversales.
+- Gestión administrativa de la red de profesionales.
+
+REQUISITOS:
+
+Estudios superiores en Estadística, Matemáticas, ADE o similares.
+Conocimientos y experiencia en Análisis de Datos y SQL.
+Nivel avanzado de Excel.
+Experiencia mínima de 1 año en análisis, reporting o consultoría de negocio.
+Experiencia valorable en sectores como logística, transporte, asistencia, seguros o servicios.
+
+OFRECEMOS:
+
+Incorporación estable a una compañía líder, con clara orientación a resultados y a la mejora continua.
+Contrato indefinido.
+Retribución competitiva acorde a la experiencia, con variable ligado a objetivos.
+Medidas de flexibilidad horaria y teletrabajo.
+Beneficios sociales: seguro de salud cofinanciado, entre otros.
+Centro de trabajo: La Finca - Pozuelo de Alarcón (Madrid).
+
+
+Desde HomeServe apostamos por las personas y su talento. Nuestro compromiso como empleador es ofrecer igualdad de oportunidades, evaluando todas las candidaturas sin tener en cuenta el género, origen, etnia, religión, edad, orientación sexual, identidad, capacidad o cualquier otra característica individual.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(242)">
+    <div class="num">15</div>
+    <div class="info">
+      <div class="ti">Analista-Programador/a Junior  — Automatización y Data</div>
+      <div class="me">AUXITEC &middot; Vitoria-Gasteiz &middot; Presencial</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_engineer</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-242">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-242">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>19,000€ – 29,000€</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>1 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Ingeniería Informática o similar</td></tr>
+          <tr><td>Publicado</td><td>2026-05-19</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Python</span> <span class="skill">SQL</span> <span class="skill">Git</span> <span class="skill">Linux</span> <span class="skill">APIs REST</span> <span class="skill">Power BI</span> <span class="skill">ETL</span> <span class="skill">Data Warehousing</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La oferta se centra fuertemente en el desarrollo de pipelines de datos (ETL), el uso de SQL, la automatización de flujos de trabajo y la integración con sistemas (APIs, ERPs), lo cual se alinea perfectamente con las responsabilidades de un Data Engineer, aunque también toca aspectos de BI y analítica.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Sobre la oportunidad  
+Buscamos incorporar al Departamento de Informática de Auxitec un/a Analista-Programador/a  Junior para sumarse a las áreas de Procesos y Transformación Digital y de Datos, Analítica y  Reporting. Auxitec es una empresa en pleno proceso de transformación digital, lo que te brinda  una oportunidad única de participar activamente en la construcción y evolución de los sistemas  e infraestructura tecnológica de la compañía.  
+Es un rol ideal para profesionales junior con ganas de crecer en un entorno técnico real, con  proyectos de impacto desde el primer día.  
+Funciones y áreas de trabajo  
+Trabajarás en las áreas de Procesos y Transformación Digital y de Datos, Analítica y Reporting,  participando en:  
+Desarrollo y automatización
+Desarrollo de automatizaciones en Python para procesos internos  
+Integraciones con APIs (Microsoft Graph, ERPs, proveedores)  
+Automatización de flujos de trabajo mediante herramientas como n8n  
+Datos, analítica y reporting
+Colaboración en pipelines de datos (ETL) sobre el Data Warehouse PostgreSQL  
+Diseño y desarrollo de soluciones de analítica y reporting con Power BI / Power Query y SQL  
+Identificación y modelado de fuentes de datos corporativas  
+Proyectos transversales
+Participación en proyectos de ERP, PIM, SGA y EDI  
+Mapeo y documentación de procesos internos  
+Investigación y evaluación de nuevas soluciones tecnológicas 
+Perfil buscado
+Formación en Ingeniería Informática o similar  
+Recién titulado/a o con 1–2 años de experiencia profesional
+Conocimientos sólidos de Python
+Nociones de SQL y bases de datos relacionales
+Manejo básico de Git, entornos Linux y línea de comandos
+Ganas de aprender, autonomía y mentalidad de resolver problemas reales de negocio
+Valorables conocimientos en: APIs REST, automatización web (Selenium / Playwright),  EDI, Power BI, ETL, Data Warehousing, inglés técnico
+Qué ofrecemos
+Contrato estable a jornada completa
+Proyecto técnico variado y en crecimiento, sin tareas repetitivas
+Mentoría directa del IT Manager y autonomía para proponer soluciones
+Stack moderno: Python, PostgreSQL, Microsoft 365, n8n, APIs cloud
+Buen ambiente de trabajo en una empresa pequeña donde tu trabajo se ve
+Horario: Lunes a jueves de 8:00 a 16:00 · Viernes de 8:00 a 14:30 </div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(240)">
+    <div class="num">16</div>
+    <div class="info">
+      <div class="ti">Consultor/a en análisis de datos y evaluación</div>
+      <div class="me">HOGAR SI &middot; Madrid &middot; Híbrido</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_engineer</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-240">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-240">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>desde 30,000€</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>3 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>Universitario (Telecomunicaciones, Informática, Física, Estadística, Sociología, Psicología Social o afines)</td></tr>
+          <tr><td>Publicado</td><td>2026-04-30</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">Bases de datos relacionales</span> <span class="skill">Bases de datos no relacionales</span> <span class="skill">Extracción de datos</span> <span class="skill">Análisis de datos</span> <span class="skill">Explotación de datos</span> <span class="skill">Visualización de datos</span> <span class="skill">Programación con R</span> <span class="skill">Machine learning</span> <span class="skill">AI</span> <span class="skill">Analítica avanzada</span> <span class="skill">Simulación</span> <span class="skill">Forecasting</span> <span class="skill">Microsoft Power Platform</span> <span class="skill">UX</span> <span class="skill">API de datos</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">La descripción se centra fuertemente en el ciclo de vida completo del dato: captura, almacenamiento, extracción, análisis, procesamiento, visualización y predicción. Tareas como 'Diseñar una arquitectura de almacenamiento e intercambio de datos' y 'Diseñar, modelizar y automatizar procesos' son características centrales de un Data Engineer, aunque también toca aspectos de Data Analyst/Scientist.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">DESCRIPCIÓN DEL PUESTO DE TRABAJO 
+En dependencia de la coordinación técnica del programa, las funciones principales del puesto serán las siguientes: 
+-Colaborar en el diseño de estrategias completas vinculadas a un gobierno del dato eficiente por parte de la entidad, aportando experiencia directa en el ciclo completo del dato desde su captura al almacenamiento, extracción, análisis, procesamiento, visualización y predicción, promoviendo su uso en la toma de decisiones de negocio.
+-Dar soporte y apoyo en todo lo relativo al ciclo del dato a los diferentes equipos de la organización, promover una cultura del dato y liderar el conocimiento de las tendencias tecnológicas y de negocio vinculadas a los mismos.
+-Participar en el diseño y ejecución de temas de evaluación y medición a los diferentes programas
+-Liderar las iniciativas que identifiquen las necesidades de gestión del dato, su aplicabilidad en los procesos de negocio y potencien su uso efectivo
+-Diseñar una arquitectura de almacenamiento e intercambio de datos dentro de la organización que permita generar pipelines de diferentes fuentes
+-Diseñar, modelizar y automatizar procesos vinculados a indicadores y resultados de negocio, preparando y consolidando los datos a través de aplicaciones analíticas que faciliten su visualización en cuadros de mando y gestión como Power BI
+-Construir y garantizar una estrategia de seguridad y calidad de los datos de la entidad
+-Alinear los aspectos de la gestión y del gobierno de los datos con áreas de negocio, IT y seguridad de la información.
+-Trabajar en el marco de Calidad organizacional promoviendo mejoras en los procesos
+-Relacionarse con actores internos y externos en los procesos de evaluación e investigación
+-Colaborar con la Unidad en la elaboración de proyectos de intervención
+COMPETENCIAS              
+-Identificación con el propósito de HOGAR SÍ
+-Trabajo en equipo y capacidad de integración
+-Creatividad e Innovación
+-Resolutividad
+-Cultura del feedback, aprendizaje y mejora continua
+-Planificación y Organización.
+-Orientación a resultados.
+-Capacidad de síntesis, de comunicar y de presentar resultados.
+-Iniciativa y toma de decisiones 
+PERFIL REQUERIDO 
+-Experiencia mínima de tres años en funciones vinculadas a la gestión del dato o la transformación digital.
+-Experiencia en trasladar el valor del dato a la toma de decisiones estratégicas.
+-Solvencia técnica probada en bases de datos relacionales y no relacionales y en las herramientas más extendidas de extracción, análisis, explotación y visualización del dato.
+-Formación en el ámbito de las Telecomunicaciones, Informática, Física, Estadística, Sociología, Psicología Social, o ramas afines.
+-Experiencia en programación, especialmente orientada al dato, con R o similares, así como en creación de flujos operativos basados en datos.
+-Conocimientos de sistemas de gestión de la seguridad de la información.
+-Habilidades con machine learning, AI, analítica avanzada, simulación, forecasting y creación de modelos predictivos y automatización de procesos, especialmente en Microsoft Power Platform.
+-Experiencia en UX y optimización de la experiencia cliente 
+Se valorará
+-Nivel medio-alto de inglés.
+-Experiencia en el uso de herramientas de integración de software  y conocimiento de API de datos.
+-Experiencia en evaluación de programas, entornos de trabajo ágiles y lean management
+-Conocimiento en herramientas de automatización
+-En el marco de nuestro compromiso con la igualdad de oportunidades, se valorará positivamente contar con un certificado de discapacidad igual o superior al 33% 
+CONDICIONES LABORALES:
+-Incorporación prevista: inmediata.
+-Tipo de contrato: indefinido, con 6 meses de período de prueba.
+-Jornada laboral: completa
+-Horario intensivo de verano
+-Modalidad de trabajo híbrido
+-Condiciones salariales: Según tablas salariales del grupo 2 del convenio de aplicación (CIS) y a valorar según candidato/a
+El plazo de recepción de candidaturas finalizará el 15 de mayo.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-left:4px solid #2e7d32;">
+  <div class="card-h" onclick="toggleCard(236)">
+    <div class="num">17</div>
+    <div class="info">
+      <div class="ti">Data analyst</div>
+      <div class="me">Embragues Pedreño, s.l. &middot; Las Torres de Cotillas &middot; Presencial</div>
+    </div>
+    <div class="bads">
+      <span class="rp">data_scientist</span>
+      <span class="fl" style="background:#e8f5e9;color:#2e7d32;border-color:#2e7d32">🟢 core</span>
+      <span class="ar" id="ar-236">&#9660;</span>
+    </div>
+  </div>
+  <div class="card-b" id="b-236">
+    <div class="g2">
+      <div>
+        <h4>Detalles</h4>
+        <table class="dt">
+          <tr><td>Salario</td><td>No especificado</td></tr>
+          <tr><td>Contrato</td><td>Contrato indefinido</td></tr>
+          <tr><td>Exp. m&iacute;n</td><td>0 a&ntilde;os</td></tr>
+          <tr><td>Educaci&oacute;n</td><td>N/E</td></tr>
+          <tr><td>Publicado</td><td>2026-05-07</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Skills requeridas</h4>
+        <div class="sk"><span class="skill">SQL</span> <span class="skill">Microsoft SQL Server</span> <span class="skill">Power BI</span> <span class="skill">QlikView</span> <span class="skill">Qlik Sense</span> <span class="skill">Python</span> <span class="skill">Excel avanzado</span> <span class="skill">Pandas</span> <span class="skill">NumPy</span> <span class="skill">Matplotlib</span> <span class="skill">Seaborn</span> <span class="skill">ETL</span> <span class="skill">Machine Learning</span> <span class="skill">Scikit-learn</span> <span class="skill">Deep Learning</span> <span class="skill">NLP</span> <span class="skill">Azure</span> <span class="skill">AWS</span> <span class="skill">Google Cloud</span> <span class="skill">Data Warehouse</span> <span class="skill">Data Lake</span> <span class="skill">Spark</span> <span class="skill">Big Data</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h4>Razonamiento de gemma4</h4>
+      <div class="rea">Aunque el título es 'Data Analyst', los requisitos son muy amplios e incluyen 'Construcción de modelos predictivos y de machine learning', 'Machine Learning (Scikit-learn)' como valorable, y la necesidad de trabajar con ETL/ELT y modelos predictivos, lo cual apunta más a un perfil de Data Scientist o ML Engineer. El candidato tiene experiencia en proyectos de ML y sus habilidades técnicas (Python, Pandas, Scikit-learn) son centrales para este rol.</div>
+    </div>
+    <div class="sec">
+      <h4>Descripci&oacute;n completa</h4>
+      <div class="df">Buscamos incorporar un/a Analista de Datos / Data Scientist para reforzar nuestro equipo y apoyar la toma de decisiones basada en datos en distintas áreas del negocio.
+La persona seleccionada participará en el diseño, desarrollo e implementación de soluciones analíticas, modelos predictivos y herramientas de visualización, así como en proyectos de automatización y uso de Inteligencia Artificial aplicada.
+Trabajará con grandes volúmenes de datos provenientes de sistemas transaccionales, ERP, CRM, transformándolos en información útil para negocio.
+Funciones principales
+Extracción, limpieza y transformación de datos (ETL / ELT)
+Diseño y optimización de consultas SQL
+Desarrollo de cuadros de mando y reporting ejecutivo
+Construcción de modelos predictivos y de machine learning
+Análisis exploratorio de datos (EDA)
+Automatización de procesos analíticos
+Integración de modelos de IA en procesos de negocio
+Identificación de patrones, tendencias y oportunidades
+Soporte analítico a departamentos (finanzas, compras, ventas, postventa, logística)
+Documentación técnica y funcional de desarrollos
+Presentación de resultados a perfiles técnicos y no técnicos
+Requisitos técnicos (imprescindibles)
+Experiencia trabajando con SQL.
+Manejo de Microsoft SQL Server (procedimientos almacenados, vistas, índices, triggers)
+Desarrollo de dashboards en Power BI
+Experiencia con QlikView / Qlik Sense
+Programación en Python
+Excel avanzado (Power Query, DAX)
+Uso de librerías de análisis de datos:
+Pandas
+NumPy
+Matplotlib / Seaborn
+Tratamiento de datos y análisis estadístico
+Modelado de datos y estructuras relacionales
+Conocimientos de ETL y calidad de datos
+Requisitos técnicos valorables
+Machine Learning (Scikit-learn)
+Deep Learning
+NLP (procesamiento de lenguaje natural)
+Series temporales y forecasting
+APIs y automatización
+Azure / AWS / Google Cloud
+Data Warehouse / Data Lake
+Spark / Big Data
+Creación de KPIs y métricas de negocio
+Experiencia en proyectos de Inteligencia Artificial aplicada (chatbots, predicción, recomendadores)
+Requisitos personales
+Perfil analítico y orientado a resolución de problemas
+Capacidad de comunicación con áreas de negocio
+Pensamiento crítico
+Autonomía y organización
+Proactividad e interés por aprendizaje continuo
+Capacidad para explicar resultados a perfiles no técnicos
+Se ofrece
+Participación en proyectos reales de IA y analítica avanzada
+Desarrollo profesional
+Formación continua y certificaciones
+Buen ambiente de trabajo y equipo multidisciplinar
+Salario competitivo según experiencia</div>
+    </div>
+  </div>
+</div>
+<div class="qs">
+<h3>Tu revisi&oacute;n manual</h3>
+<ol>
+  <li><strong>Indra (Export Control) &rarr; adjacent?</strong> El reasoning dice: soporte documental + cumplimiento normativo en entorno tecnol&oacute;gico. &iquest;O temporal?</li>
+  <li><strong>IZERTIS (Analista BD SQL/BI/Java) &rarr; adjacent?</strong> Reasoning: SQL avanzado + BI pero con perfil Java, por eso bi_analyst.</li>
+  <li><strong>AUXITEC &rarr; data_engineer core?</strong> Reasoning: pipelines ETL, SQL, automatizaci&oacute;n, APIs.</li>
+  <li><strong>Embragues Pedre&ntilde;o &rarr; data_scientist core?</strong> Reasoning: modelos predictivos, ML, Scikit-learn en requisitos.</li>
+  <li><strong>HOGAR SI &rarr; data_engineer core?</strong> Reasoning: ciclo completo del dato, arquitectura de datos, predicci&oacute;n.</li>
+  <li><strong>&iquest;Tiene sentido?</strong> Si tu criterio difiere, ajustamos el prompt.</li>
+</ol>
+</div>
+<script>
+
+function toggleCard(id) {
+  var b = document.getElementById('b-' + id);
+  var a = document.getElementById('ar-' + id);
+  if (b.style.display === 'none' || b.style.display === '') {
+    b.style.display = 'block';
+    a.style.transform = 'rotate(180deg)';
+  } else {
+    b.style.display = 'none';
+    a.style.transform = 'rotate(0deg)';
+  }
+}
+
+</script>
+</body>
+</html>

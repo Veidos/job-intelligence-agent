@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Testing T-2 — fetch.py (sinceDate=_24_HOURS)</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 800px; margin: 2em auto; padding: 0 1em; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+th { background: #f5f5f5; }
+.pass { color: #090; font-weight: bold; }
+.fail { color: #c00; font-weight: bold; }
+.skip { color: #fa0; font-weight: bold; }
+.pending { color: #888; font-weight: bold; }
+.timestamp { color: #666; font-size: 0.9em; }
+pre { background: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>Testing T-2 — fetch.py con sinceDate=_24_HOURS</h1>
+<p class="timestamp">Generado: 2026-05-22</p>
+
+<h2>Resultado</h2>
+<p style="font-size:1.2em; color:#fa0; font-weight:bold;">⏳ NO EJECUTADO — límite de API Apify excedido</p>
+<p>Ver <a href="../docs/adr/004-aplazar-testing-fetch-por-limite-apify.md">ADR 004</a> para contexto completo.</p>
+
+<h2>Detalle del intento</h2>
+<table>
+<tr><th>#</th><th>Tipo</th><th>Ítem</th><th>Resultado</th></tr>
+<tr>
+  <td>2.1</td><td>🤖</td>
+  <td>Apify actor responde sin error</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+<tr>
+  <td>2.2</td><td>🤖</td>
+  <td>sinceDate=_24_HOURS aplicado</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+<tr>
+  <td>2.3</td><td>🤖</td>
+  <td>maxItems=50 respetado</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+<tr>
+  <td>2.4</td><td>🤖</td>
+  <td>Campos críticos mapeados</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+<tr>
+  <td>2.5</td><td>🤖</td>
+  <td>Deduplicación funciona</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+<tr>
+  <td>2.6</td><td>🤖</td>
+  <td>gemma4:e4b enriquece sin errores</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+<tr>
+  <td>2.7</td><td>👤</td>
+  <td>Muestra de 5 ofertas coherentes</td>
+  <td class="skip">⏳ Pendiente (junio 2026)</td>
+</tr>
+</table>
+
+<h2>Errores detectados</h2>
+<pre>Monthly usage hard limit exceeded</pre>
+
+<h2>Estado de la DB (datos existentes)</h2>
+<table>
+<tr><th>Métrica</th><th>Valor</th></tr>
+<tr><td>Total ofertas</td><td>147</td></tr>
+<tr><td>Rango fechas</td><td>2026-03-02 → 2026-05-19</td></tr>
+<tr><td>Última oferta</td><td>Analista-Programador/a Junior (2026-05-19)</td></tr>
+<tr><td>Sin clasificar</td><td>17</td></tr>
+<tr><td>Sin evaluar</td><td>17</td></tr>
+<tr><td>Companies</td><td>0</td></tr>
+</table>
+
+<h2>Próximos pasos</h2>
+<ul>
+  <li>✅ Continuar con T-3 (fetch_company.py) — no requiere API externa</li>
+  <li>✅ Continuar con T-4 a T-9 con datos existentes</li>
+  <li>⏳ Retomar T-2 en junio 2026 al reiniciar crédito Apify</li>
+</ul>
+
+<h2>Notas</h2>
+<ul>
+  <li>Plan FREE Apify: 5 USD/mes, se agotó con fetches previos (147 ofertas)</li>
+  <li>Crédito restante: 0.30€ pero bloqueado por límite duro mensual</li>
+  <li>La URL de prueba sería:
+    <code>https://www.infojobs.net/ofertas-trabajo/espana?keyword=Data&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS</code>
+  </li>
+  <li>Se validó que <code>build_search_urls</code> construye correctamente la URL con
+    <code>sinceDate</code> — ver test_fetch_cassettes.py</li>
+</ul>
+</body>
+</html>
