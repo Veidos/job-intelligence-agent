@@ -1,6 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
 > **Próximo paso:** Testing T-2 — fetch.py con sinceDate=_24_HOURS validado en producción real.
+> T-4 completado — ver ADR-005 para el historial de decisiones del clasificador.
 > Ver docs/TESTING.md para el checklist completo.
 
 ## FASE 1 — Cimientos
@@ -54,10 +55,13 @@
 [x] Pipeline tests: test_pipeline.py (10 tests, flujo completo con cassettes)
 [x] 167 tests passing total
 
-## BUGS DETECTADOS POR TESTS
+## BUGS DETECTADOS (TESTS Y REVISIÓN)
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)
   [x] pre_filtro_requisitos_imposibles: PROFILE_CHECK_PATTERNS comparaba regex vs string
   [x] test_phase1.py: eliminada (tabla candidate_profile ya no existe)
+  [x] Reportes HTML: `<title>` de v5 y v6 copiado de v4 sin actualizar ("T-4 v4" en la pestaña del navegador)
+  [x] Reportes HTML: falta `ORDER BY id ASC` en queries SQL — IDs 241/242 invertidos en las cards
+  [x] Navegación entre reportes: v3–v5 no tenían enlaces a versiones posteriores (imposible volver a v6 desde v5)
 
 ## Testing pendiente — Pipeline completo
 
@@ -67,7 +71,7 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-1 — Onboarding validado manualmente (extracción + entrevista + PERFIL.md)
 - [ ] T-2 — fetch.py con sinceDate=_24_HOURS validado en producción
 - [ ] T-3 — fetch_company.py sin errores
-- [ ] T-4 — role_classifier.py coherente con las ofertas
+- [x] T-4 — role_classifier.py coherente con las ofertas (v5/v6 validado, ADR-005 documenta evolución)
 - [ ] T-5 — evaluate.py — requisitos imposibles penalizados
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores

@@ -109,6 +109,11 @@ job-intelligence-agent/
 ├── logs/
 │   └── pipeline.log
 ├── scripts/
+│   ├── reporte_v3.py      ← Classifier HTML report generators (v3–v6)
+│   ├── reporte_v4.py
+│   ├── reporte_v5.py
+│   ├── reporte_v6.py
+│   ├── comparativa_classifier.py
 │   ├── setup_cron.sh      ← Installs cron job for pipeline
 │   ├── start_bot.sh       ← Starts Telegram bot
 │   └── stop_bot.sh        ← Stops Telegram bot
@@ -233,16 +238,27 @@ Daily Telegram sends the **top 3 offers with score ≥ 35**, prioritizing highes
 
 Before scoring, each offer is classified by its **actual requirements** — not its job title. A "Data Scientist" posting that only requires SQL and Excel is classified as `bi_analyst`. A "Data Analyst" posting requiring PyTorch and MLOps is classified as `ml_engineer`.
 
-The classifier maintains a dynamic catalog of canonical role names (in `snake_case`). If an offer doesn't match any existing role, a new one is created and added to the catalog automatically.
+The classifier maintains a dynamic catalog of canonical role names (in `snake_case`). New roles are detected deterministically (`role_normalized not in catalog`) and added automatically.
 
-Each offer receives a `relevance_flag`:
+Each offer receives a `relevance_flag` and a `gap_type`:
 
 | Flag | Meaning |
 |---|---|
 | `core` | Requirements match >70% of candidate profile |
-| `adjacent` | 40–70% match, manageable gap |
-| `stretch` | 20–40% match, significant learning required |
+| `adjacent` | 40–70% match, manageable gap (herramienta/dominio) |
+| `stretch` | 20–40% match, significant learning required (seniority) |
 | `temporal` | Viable bridge job while searching |
+
+### Design principles (ADR-005)
+
+The classifier follows four rules established after 6 iterations (v1–v6):
+
+1. **El modelo razona, Python decide** — `is_new_role`, `gap_type` resolution, JSON validation live in code, not the prompt
+2. **Atomic prompt changes** — never bundle a parsing fix with a prompt restructure
+3. **Separated decision axes** — FASE 1 (role objective) vs FASE 2 (candidate fit) are never mixed
+4. **Trazabilidad siempre** — every computed field is persisted to DB
+
+See [`docs/adr/005-classifier-evolucion-v1-a-v6.md`](docs/adr/005-classifier-evolucion-v1-a-v6.md) for the full evolution and validation tables.
 
 ---
 
@@ -308,7 +324,7 @@ Phase 1 — Foundation        🟡 Coded (validation pending)
 Phase 2 — Onboarding        🟡 Coded (validation pending)
 Phase 3 — Base pipeline     🟡 Coded (validation pending)
   ├── fetch.py              🟡 Coded
-  ├── role_classifier.py    🟡 Coded
+  ├── role_classifier.py    ✅ Validated (v6 estable, ADR-005)
   ├── fetch_company.py      🟡 Coded
   ├── evaluate.py           🟡 Coded
   ├── send.py               🟡 Coded
@@ -333,7 +349,7 @@ This project uses the **Método Ledger** for AI-assisted development:
 | `PLANS.md` | Live project state with task checklist |
 | `MEMORIES.md` | Accumulated non-obvious learnings (prompts, field behavior, model quirks) |
 | `PERFIL.md` | Candidate profile — source of truth for all evaluations |
-| `docs/adr/` | Architecture Decision Records — one file per decision |
+| `docs/adr/` | Architecture Decision Records — 5 files: onboarding, CV check, classifier design, testing, etc. |
 | `docs/TESTING.md` | Pipeline integration checklist — human/auto distinction |
 
 > `PERFIL.md` is in `.gitignore`. Never auto-regenerate without explicit user confirmation.
