@@ -202,11 +202,19 @@ FASE 2 — evalúa el fit con el perfil.
 Perfil:
 {perfil_content}
 
-Identifica todos los gaps (puede ser array vacío):
-- herramienta: tool específica que el candidato no acredita tener
-- dominio: sector o contexto que el candidato no ha trabajado
-- seniority: nivel de experiencia práctica o responsabilidad que el candidato no demuestra
-- estructural: requisito imposible de cumplir (titulación obligatoria, certificación, etc.)
+Para cada gap, pregúntate:
+- ¿La oferta pide una herramienta concreta (Power BI, Looker, DAX, SAP...)
+  que NO aparece en el perfil? → herramienta
+- ¿La oferta requiere experiencia en un sector (automoción, finanzas, 
+  defensa, legal...) que el candidato no tiene? → dominio  
+- ¿La oferta exige experiencia práctica acreditable, años de experiencia
+  o nivel de responsabilidad que el candidato no demuestra? → seniority
+- ¿La oferta exige algo imposible para el candidato (titulación 
+  obligatoria, certificación específica, discapacidad)? → estructural
+- ¿El candidato cubre todo lo requerido? → none
+
+Devuelve TODOS los gaps que apliquen (puede ser más de uno).
+Si hay algún gap, gap_types NO puede ser [].
 
 Responde SOLO este JSON:
 {{"role_normalized":"...","role_reasoning":"...","gap_types":[],"is_new_role":false,"reasoning":"..."}}"""
