@@ -77,7 +77,7 @@ def build_report() -> None:
         fc = FLAG_COLORS.get(flag, FLAG_COLORS["stretch"])
 
         cards_html += f"""
-<div class="card" style="border-left:4px solid #{fc['border']};">
+<div class="card" style="border-left:4px solid {fc['border']};">
   <div class="card-h" onclick="toggleCard({oid})">
     <div class="num">{i}</div>
     <div class="info">
