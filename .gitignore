@@ -11,3 +11,4 @@ assets/
 jobs.db
 data/jobs.db
 *.db
+.cv_hash

@@ -32,3 +32,4 @@ una decisión no trivial.
 | # | Título | Fecha | Estado |
 |---|--------|-------|--------|
 | 001 | ADR como sistema de documentación de decisiones | 2026-05-21 | activo |
+| 002 | CV freshness check con regeneración interactiva | 2026-05-21 | activo |
