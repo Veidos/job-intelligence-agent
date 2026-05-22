@@ -130,7 +130,7 @@ def build_report() -> None:
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>T-4 v2 &mdash; Comparativa Classifier</title>
+<title>T-4 v2 &mdash; Clasificador reformado: comparativa v1 vs v2</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Segoe UI',-apple-system,sans-serif;max-width:1200px;margin:2em auto;padding:0 1em;background:#f5f5f5;color:#222;font-size:15px}}
@@ -166,7 +166,7 @@ h1{{font-size:1.4em;margin-bottom:.2em}}
 </head>
 <body>
 <h1>T-4 v2 &mdash; Clasificador reformado: comparativa v1 vs v2</h1>
-<p class="sub">{datetime.now().strftime('%Y-%m-%d %H:%M')} &middot; 17 ofertas &middot; gemma4:e4b &middot; <a href="04-classifier.html">Ver reporte v1</a></p>
+<p class="sub">{datetime.now().strftime('%Y-%m-%d %H:%M')} &middot; 17 ofertas &middot; gemma4:e4b &middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a> &middot; <a href="04-classifier-v3.html">v3</a> &middot; <a href="04-classifier-v4.html">v4</a> &middot; <a href="04-classifier-v5.html">v5</a> &middot; <a href="04-classifier-v6.html">v6</a></p>
 
 <div class="stats">
   <div class="st"><div class="n">{total}</div><div class="l">Ofertas</div></div>

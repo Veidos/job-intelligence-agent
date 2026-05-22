@@ -133,7 +133,7 @@ def build_report() -> None:
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>T-4 v3 — Classifier con ajuste seniority</title>
+<title>T-4 v3 — Classifier con ajuste de seniority</title>
 <style>
 *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0 }}
 body {{
@@ -222,7 +222,7 @@ a:hover {{ text-decoration: underline }}
 <body>
 <h1>T-4 v3 — Classifier con ajuste de seniority</h1>
 <p class="sub">{datetime.now().strftime('%Y-%m-%d %H:%M')} &middot; 17 ofertas &middot; gemma4:e4b
-&middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a></p>
+&middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a> &middot; <a href="04-classifier-v3.html">v3</a> &middot; <a href="04-classifier-v4.html">v4</a> &middot; <a href="04-classifier-v5.html">v5</a> &middot; <a href="04-classifier-v6.html">v6</a></p>
 
 <div class="note">
 <strong>Cambio respecto a v2:</strong> Se añadió definición explícita de cada gap_type,
