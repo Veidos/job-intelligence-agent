@@ -21,11 +21,31 @@ def esc(text: str) -> str:
     return html.escape(text or "")
 
 
+def fmt_skills(raw: str) -> str:
+    if not raw:
+        return ""
+    try:
+        skills = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        skills = [raw]
+    if not isinstance(skills, list):
+        skills = [str(skills)]
+    return " ".join(f'<span class="sk">{esc(s)}</span>' for s in skills if s)
+
+
 FLAG_COLORS = {
     "core": {"bg": "#e8f5e9", "text": "#2e7d32", "border": "#2e7d32"},
     "adjacent": {"bg": "#fff8e1", "text": "#f57f17", "border": "#f57f17"},
     "stretch": {"bg": "#fce4ec", "text": "#c62828", "border": "#c62828"},
     "temporal": {"bg": "#f3e5f5", "text": "#7b1fa2", "border": "#7b1fa2"},
+}
+
+GAP_COLORS = {
+    "seniority": {"bg": "#c62828"},
+    "dominio": {"bg": "#e65100"},
+    "herramienta": {"bg": "#1565c0"},
+    "none": {"bg": "#757575"},
+    "": {"bg": "#757575"},
 }
 
 
@@ -34,16 +54,9 @@ def flag_badge(flag: str) -> str:
     return f'<span class="fl" style="background:{fc["bg"]};color:{fc["text"]};border-color:{fc["border"]}">{flag}</span>'
 
 
-def gap_badge(gap: str, flag: str) -> str:
-    if gap == "seniority":
-        return f'<span class="gb gb-s">{gap}</span>'
-    elif gap == "dominio":
-        return f'<span class="gb gb-d">{gap}</span>'
-    elif gap == "herramienta":
-        return f'<span class="gb gb-h">{gap}</span>'
-    elif gap == "none" or not gap:
-        return f'<span class="gb gb-n">{gap or "none"}</span>'
-    return f'<span class="gb">{gap}</span>'
+def gap_badge(gap: str) -> str:
+    gc = GAP_COLORS.get(gap, {"bg": "#757575"})
+    return f'<span class="gb" style="background:{gc["bg"]}">{gap or "none"}</span>'
 
 
 def build_report() -> None:
@@ -65,96 +78,156 @@ def build_report() -> None:
         flag = row["relevance_flag"] or ""
         gap = row["gap_type"] or ""
         role = row["role_normalized"] or ""
-        role_r = row["role_reasoning"] or ""
-        reasoning = row["classification_reasoning"] or ""
+        role_r = (row["role_reasoning"] or "").strip()
+        reasoning = (row["classification_reasoning"] or "").strip()
         company = row["company_name"] or ""
         city = row["city"] or ""
-        exp_min = row["experience_min"]
-        exp_str = f"{exp_min}+ años" if exp_min else "Sin especificar" if exp_min is None else "0 (Junior)"
-        desc = (row["description_clean"] or "")[:2000]
+        exp = row["experience_min"]
+        if exp is None:
+            exp_str = "No especificada"
+        elif exp == 0:
+            exp_str = "0 años (Junior)"
+        else:
+            exp_str = f"{exp}+ años"
+
+        desc = (row["description_clean"] or "").strip()
         skills = row["skills_required"] or ""
 
         fc = FLAG_COLORS.get(flag, FLAG_COLORS["stretch"])
 
         cards_html += f"""
-<div class="card" style="border-left:4px solid {fc['border']};">
-  <div class="card-h" onclick="toggleCard({oid})">
-    <div class="num">{i}</div>
+<article class="card" style="border-left:4px solid {fc['border']};">
+  <header class="card-h" onclick="toggleCard({oid})">
+    <span class="num">{i}</span>
     <div class="info">
       <div class="ti">{esc(row['title'])}</div>
-      <div class="me">{esc(company)} &middot; {esc(city)} &middot; Exp: {exp_str} &middot; {esc(role)}</div>
+      <div class="meta">{esc(company)} &middot; {esc(city)} &middot; {exp_str} &middot; <strong>{esc(role)}</strong></div>
     </div>
-    <div class="bads">
+    <div class="tags">
       {flag_badge(flag)}
-      {gap_badge(gap, flag)}
-      <span class="ar" id="ar-{oid}">&#9660;</span>
+      {gap_badge(gap)}
+      <span class="arr" id="ar-{oid}">&#9660;</span>
     </div>
-  </div>
-  <div class="card-b" id="b-{oid}">
-    <div class="sec">
+  </header>
+  <div class="body" id="b-{oid}">
+    <section>
       <h4>Skills requeridas</h4>
-      <div class="skills">{esc(skills)}</div>
-      <h4 style="margin-top:8px;">Descripción de la oferta</h4>
+      <div class="skill-list">{fmt_skills(skills)}</div>
+    </section>
+    <section>
+      <h4>Descripción</h4>
       <div class="desc">{esc(desc)}</div>
-      <h4 style="margin-top:8px;">gap_type: {esc(gap)} &middot; role_reasoning</h4>
+    </section>
+    <section>
+      <h4>role_reasoning</h4>
       <div class="df">{esc(role_r)}</div>
-      <h4 style="margin-top:8px;">classification_reasoning</h4>
+    </section>
+    <section>
+      <h4>classification_reasoning</h4>
       <div class="rea">{esc(reasoning)}</div>
-    </div>
+    </section>
   </div>
-</div>"""
+</article>"""
 
     html_out = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>T-4 v3 &mdash; Classifier con ajuste seniority</title>
+<title>T-4 v3 — Classifier con ajuste seniority</title>
 <style>
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Segoe UI',-apple-system,sans-serif;max-width:1200px;margin:2em auto;padding:0 1em;background:#f5f5f5;color:#222;font-size:15px}}
-h1{{font-size:1.4em;margin-bottom:.2em}}
-.sub{{color:#888;font-size:.85em;margin-bottom:1.2em}}
-.stats{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1em}}
-.st{{background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);flex:1;min-width:80px;text-align:center}}
-.st .n{{font-size:1.6em;font-weight:700}}
-.st .l{{font-size:.75em;color:#888;margin-top:2px}}
-.card{{background:#fff;border-radius:8px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}}
-.card-h{{display:flex;align-items:center;padding:10px 14px;cursor:pointer;gap:10px;transition:background .12s}}
-.card-h:hover{{background:#fafafa}}
-.num{{background:#37474f;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75em;font-weight:700;flex-shrink:0}}
-.info{{flex:1;min-width:0}}
-.ti{{font-weight:600;font-size:.93em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
-.me{{font-size:.78em;color:#888}}
-.bads{{display:flex;align-items:center;gap:6px;flex-shrink:0}}
-.fl{{padding:2px 8px;border-radius:8px;font-size:.76em;font-weight:600;border:1px solid}}
-.gb{{padding:2px 8px;border-radius:8px;font-size:.76em;font-weight:600;color:#fff}}
-.gb-s{{background:#c62828}}
-.gb-d{{background:#f57f17}}
-.gb-h{{background:#1565c0}}
-.gb-n{{background:#888}}
-.ar{{font-size:.75em;color:#aaa;transition:transform .2s}}
-.card-b{{padding:0 14px 14px;border-top:1px solid #eee;display:none}}
-.sec{{margin:10px 0}}
-.sec h4{{font-size:.8em;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}}
-.dt{{width:100%;font-size:.85em}}
-.dt td{{padding:2px 0}}
-.dt td:first-child{{color:#888;width:85px}}
-.rea{{background:#fff8e1;border-left:3px solid #ffb300;border-radius:4px;padding:10px 12px;font-size:.85em;line-height:1.5;max-height:200px;overflow-y:auto}}
-.df{{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:10px;font-size:.85em;line-height:1.45;max-height:240px;overflow-y:auto;white-space:pre-wrap}}
-.desc{{background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:10px;font-size:.83em;line-height:1.45;max-height:300px;overflow-y:auto;white-space:pre-wrap}}
-.skills{{background:#e8eaf6;border:1px solid #c5cae9;border-radius:4px;padding:8px 10px;font-size:.83em;line-height:1.4;max-height:120px;overflow-y:auto}}
-.note{{background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:10px 14px;font-size:.85em;margin-bottom:1em}}
+*, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0 }}
+body {{
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+  background: #f0f2f5; color: #1a1a2e; font-size: 15px; line-height: 1.5
+}}
+h1 {{ font-size: 1.3rem; font-weight: 700; margin-bottom: 0.15em }}
+.sub {{ color: #666; font-size: 0.85rem; margin-bottom: 1em }}
+a {{ color: #1565c0; text-decoration: none }}
+a:hover {{ text-decoration: underline }}
+
+.stats {{ display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1em }}
+.st {{
+  background: #fff; border-radius: 10px; padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); flex: 1; min-width: 90px; text-align: center
+}}
+.st .n {{ font-size: 1.5rem; font-weight: 800; color: #1a1a2e }}
+.st .l {{ font-size: 0.7rem; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px }}
+
+.note {{
+  background: #e8eaf6; border: 1px solid #c5cae9;
+  border-radius: 8px; padding: 12px 16px; font-size: 0.88rem;
+  margin-bottom: 1.2em; line-height: 1.5
+}}
+
+.card {{
+  background: #fff; border-radius: 10px; margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden
+}}
+.card-h {{
+  display: flex; align-items: center; padding: 12px 16px;
+  cursor: pointer; gap: 12px; transition: background 0.12s
+}}
+.card-h:hover {{ background: #fafafa }}
+.num {{
+  background: #37474f; color: #fff; width: 28px; height: 28px;
+  border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0
+}}
+.info {{ flex: 1; min-width: 0 }}
+.ti {{ font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }}
+.meta {{ font-size: 0.78rem; color: #888; margin-top: 1px }}
+.tags {{ display: flex; align-items: center; gap: 6px; flex-shrink: 0 }}
+.arr {{ font-size: 0.7rem; color: #bbb; transition: transform 0.2s; margin-left: 2px }}
+
+.fl {{
+  padding: 3px 10px; border-radius: 20px; font-size: 0.72rem;
+  font-weight: 700; border: 1.5px solid; letter-spacing: 0.3px
+}}
+.gb {{
+  padding: 3px 10px; border-radius: 20px; font-size: 0.72rem;
+  font-weight: 600; color: #fff; letter-spacing: 0.3px
+}}
+
+.body {{ padding: 0 16px 16px; border-top: 1px solid #eee; display: none }}
+.body section {{ margin-top: 12px }}
+.body h4 {{
+  font-size: 0.68rem; color: #888; text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 4px; font-weight: 600
+}}
+
+.skill-list {{ display: flex; flex-wrap: wrap; gap: 5px }}
+.sk {{
+  background: #e8eaf6; color: #283593; border-radius: 14px;
+  padding: 3px 11px; font-size: 0.78rem; font-weight: 500
+}}
+
+.desc {{
+  background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px;
+  padding: 10px 12px; font-size: 0.85rem; line-height: 1.5;
+  max-height: 280px; overflow-y: auto; white-space: pre-wrap
+}}
+.df {{
+  background: #f9f9f9; border: 1px solid #eee; border-radius: 6px;
+  padding: 10px 12px; font-size: 0.85rem; line-height: 1.5;
+  max-height: 240px; overflow-y: auto
+}}
+.rea {{
+  background: #fff8e1; border-left: 3px solid #ffb300; border-radius: 4px;
+  padding: 10px 12px; font-size: 0.85rem; line-height: 1.5;
+  max-height: 200px; overflow-y: auto
+}}
 </style>
 </head>
 <body>
-<h1>T-4 v3 &mdash; Classifier con ajuste de seniority</h1>
+<h1>T-4 v3 — Classifier con ajuste de seniority</h1>
 <p class="sub">{datetime.now().strftime('%Y-%m-%d %H:%M')} &middot; 17 ofertas &middot; gemma4:e4b
 &middot; <a href="04-classifier.html">v1 original</a> &middot; <a href="04-classifier-v2.html">v2</a></p>
 
 <div class="note">
-<strong>Cambio respecto a v2:</strong> Se añadió definición explícita de cada gap_type en QE,
-ancorando <code>seniority</code> a la oferta: "la oferta exige explícitamente ≥2 años de experiencia,
-liderazgo de equipos o autonomía senior (no lo infieras del perfil)".
+<strong>Cambio respecto a v2:</strong> Se añadió definición explícita de cada gap_type,
+ancorando <code>seniority</code> a la oferta: «la oferta exige explícitamente ≥2 años de
+experiencia, liderazgo de equipos o autonomía senior (no lo infieras del perfil)».
 </div>
 
 <div class="stats">
@@ -169,7 +242,6 @@ liderazgo de equipos o autonomía senior (no lo infieras del perfil)".
   <div class="st"><div class="n">{gap_dist.get('herramienta', 0)}</div><div class="l">Gap herramienta</div></div>
   <div class="st"><div class="n">{gap_dist.get('dominio', 0)}</div><div class="l">Gap dominio</div></div>
   <div class="st"><div class="n">{gap_dist.get('seniority', 0)}</div><div class="l">Gap seniority</div></div>
-  <div class="st"><div class="n">{gap_dist.get('none', 0)}</div><div class="l">Sin gap</div></div>
 </div>
 
 {cards_html}
