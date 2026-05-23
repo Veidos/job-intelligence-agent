@@ -36,3 +36,4 @@ una decisión no trivial.
 | 003 | Entrevista ligera con enfoque positivo | 2026-05-22 | activo |
 | 004 | Aplazar testing T-2 por límite Apify | 2026-05-22 | activo |
 | 005 | Role Classifier — Evolución v1 → v6 y decisiones de diseño | 2026-05-22 | activo |
+| 006 | evaluate.py — tercer prompt (evaluate_final) y eliminación del pre-filtro | 2026-05-23 | activo |

@@ -1,0 +1,9 @@
+{
+  "relevance_validation": "confirmed",
+  "relevance_corrected": null,
+  "relevance_reasoning": "La oferta es core para el perfil del candidato, confirmando la clasificación del classifier.",
+  "apply_block": null,
+  "apply_block_reason": null,
+  "apply_recommendation": "maybe",
+  "verdict": "Oferta coherente con el perfil técnico. Se recomienda aplicar con expectativas moderadas."
+}

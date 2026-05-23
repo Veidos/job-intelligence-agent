@@ -193,6 +193,7 @@ class TestRunEvaluateWithCassettes:
 
         tech_response = CASSETTES["evaluate_technical_core"]
         hr_response = CASSETTES["evaluate_hr_core"]
+        final_response = CASSETTES["evaluate_final_core"]
 
         call_count = 0
 
@@ -203,6 +204,8 @@ class TestRunEvaluateWithCassettes:
                 return tech_response
             elif call_count == 2:
                 return hr_response
+            elif call_count == 3:
+                return final_response
             return {}
 
         with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
@@ -216,7 +219,6 @@ class TestRunEvaluateWithCassettes:
 
         assert stats["evaluated"] == 1
         assert stats["errors"] == 0
-        assert stats["descarte"] == 0
         assert len(stats["scores"]) == 1
 
         row = test_db.execute(
@@ -224,49 +226,6 @@ class TestRunEvaluateWithCassettes:
         ).fetchone()
         assert row is not None
         assert row[0] > 0
-
-    def test_run_evaluate_descarta_requisito_imposible(
-        self, test_db, test_conn, sample_offer_with_impossible_requirements
-    ):
-        from src.pipeline.evaluate import run_evaluate
-
-        test_db.execute(
-            """
-            INSERT INTO offers (
-                source_id, title, company_name, city, work_mode,
-                description_clean, skills_required, is_evaluated, is_active,
-                relevance_flag
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "RUN-DESC-001",
-                sample_offer_with_impossible_requirements["title"],
-                sample_offer_with_impossible_requirements["company_name"],
-                sample_offer_with_impossible_requirements["city"],
-                sample_offer_with_impossible_requirements["work_mode"],
-                sample_offer_with_impossible_requirements["description_clean"],
-                sample_offer_with_impossible_requirements["skills_required"],
-                0,
-                1,
-                "stretch",
-            ),
-        )
-
-        with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
-            with patch("src.pipeline.evaluate.load_perfil", return_value=""):
-                with patch("src.pipeline.evaluate.ollama_call"):
-                    stats = run_evaluate(limit=1)
-
-        assert stats["evaluated"] == 1
-        assert stats["descarte"] == 1
-        assert stats["scores"] == []
-
-        row = test_db.execute(
-            "SELECT match_score, recommendation, descarte_tipo FROM offer_evaluations WHERE offer_id = 1"
-        ).fetchone()
-        assert row[0] == 0
-        assert row[1] == "Descartado"
-        assert row[2] == "requisito_imposible"
 
     def test_run_evaluate_calcula_score_correcto(
         self, test_db, test_conn, sample_offer, sample_perfil_text
@@ -297,6 +256,7 @@ class TestRunEvaluateWithCassettes:
 
         tech_response = CASSETTES["evaluate_technical_core"]
         hr_response = CASSETTES["evaluate_hr_core"]
+        final_response = CASSETTES["evaluate_final_core"]
 
         call_count = 0
 
@@ -307,6 +267,8 @@ class TestRunEvaluateWithCassettes:
                 return tech_response
             elif call_count == 2:
                 return hr_response
+            elif call_count == 3:
+                return final_response
             return {}
 
         with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):

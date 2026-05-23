@@ -65,6 +65,7 @@ class TestSaveEvaluation:
                 },
                 match_score=58,
                 recommendation="Aplicar",
+                final={},
                 processing_ms=1500,
             )
 
@@ -80,52 +81,6 @@ class TestSaveEvaluation:
             "SELECT is_evaluated FROM offers WHERE id = ?", (offer_id,)
         ).fetchone()
         assert row[0] == 1
-
-    def test_guarda_descarte_por_requisito_imposible(self, test_db, test_conn):
-        test_db.execute(
-            """
-            INSERT INTO offers (
-                source_id, title, company_name, city, work_mode,
-                description_clean, skills_required, is_evaluated, is_active,
-                relevance_flag
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "DESC-001",
-                "Prácticas",
-                "Corp",
-                "Madrid",
-                "Remoto",
-                "Desc",
-                "[]",
-                0,
-                1,
-                "core",
-            ),
-        )
-        offer_id = test_db.execute("SELECT last_insert_rowid()").fetchone()[0]
-
-        with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
-            from src.pipeline.evaluate import save_evaluation
-
-            save_evaluation(
-                offer_id=offer_id,
-                technical={},
-                hr={},
-                match_score=0,
-                recommendation="Descartado",
-                processing_ms=50,
-                descarte_tipo="requisito_imposible",
-                descarte_razon="No es estudiante de último año",
-            )
-
-        row = test_db.execute(
-            "SELECT match_score, recommendation, descarte_tipo FROM offer_evaluations WHERE offer_id = ?",
-            (offer_id,),
-        ).fetchone()
-        assert row[0] == 0
-        assert row[1] == "Descartado"
-        assert row[2] == "requisito_imposible"
 
     def test_serializa_json_penalty_breakdown(self, test_db, test_conn):
         test_db.execute(
@@ -177,6 +132,7 @@ class TestSaveEvaluation:
                 },
                 match_score=42,
                 recommendation="Con expectativas bajas",
+                final={},
                 processing_ms=2000,
             )
 

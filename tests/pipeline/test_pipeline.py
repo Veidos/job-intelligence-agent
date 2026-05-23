@@ -44,6 +44,7 @@ class TestPipelineEndToEnd:
 
         tech_response = CASSETTES["evaluate_technical_core"]
         hr_response = CASSETTES["evaluate_hr_core"]
+        final_response = CASSETTES["evaluate_final_core"]
 
         call_count = 0
 
@@ -54,6 +55,8 @@ class TestPipelineEndToEnd:
                 return tech_response
             elif call_count == 2:
                 return hr_response
+            elif call_count == 3:
+                return final_response
             return {}
 
         with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
@@ -121,6 +124,7 @@ class TestPipelineEndToEnd:
 
         tech_core = CASSETTES["evaluate_technical_core"]
         hr_core = CASSETTES["evaluate_hr_core"]
+        final_response = CASSETTES["evaluate_final_core"]
         tech_junior = CASSETTES["evaluate_technical_junior"]
         hr_temporal = CASSETTES["evaluate_hr_temporal"]
 
@@ -129,10 +133,18 @@ class TestPipelineEndToEnd:
         def mock_ollama_call(model, prompt, **kwargs):
             nonlocal call_count
             call_count += 1
-            if call_count in (1, 3):
-                return tech_core if call_count == 1 else tech_junior
-            elif call_count in (2, 4):
-                return hr_core if call_count == 2 else hr_temporal
+            if call_count == 1:
+                return tech_core
+            elif call_count == 2:
+                return hr_core
+            elif call_count == 3:
+                return final_response
+            elif call_count == 4:
+                return tech_junior
+            elif call_count == 5:
+                return hr_temporal
+            elif call_count == 6:
+                return final_response
             return {}
 
         with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
@@ -199,6 +211,7 @@ class TestPipelineEndToEnd:
 
         tech_core = CASSETTES["evaluate_technical_core"]
         hr_core = CASSETTES["evaluate_hr_core"]
+        final_response = CASSETTES["evaluate_final_core"]
         tech_junior = CASSETTES["evaluate_technical_junior"]
         hr_temporal = CASSETTES["evaluate_hr_temporal"]
 
@@ -212,9 +225,13 @@ class TestPipelineEndToEnd:
             elif call_count == 2:
                 return hr_core
             elif call_count == 3:
-                return tech_junior
+                return final_response
             elif call_count == 4:
+                return tech_junior
+            elif call_count == 5:
                 return hr_temporal
+            elif call_count == 6:
+                return final_response
             return {}
 
         with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
@@ -361,53 +378,3 @@ class TestPipelineTelegramFormatting:
         assert len(rows) == 1
         assert rows[0][0] == "Oferta Alta"
         assert rows[0][1] == 75
-
-
-class TestPipelinePreFiltro:
-    """Tests del pre-filtro de requisitos impossibles en pipeline."""
-
-    def test_prefiltro_no_llama_a_modelo(
-        self, test_db, test_conn, sample_offer_with_impossible_requirements
-    ):
-        from src.pipeline.evaluate import run_evaluate
-
-        test_db.execute(
-            """
-            INSERT INTO offers (source_id, title, company_name, city, work_mode,
-                description_clean, skills_required, is_evaluated, is_active, relevance_flag)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "PREF-001",
-                sample_offer_with_impossible_requirements["title"],
-                sample_offer_with_impossible_requirements["company_name"],
-                sample_offer_with_impossible_requirements["city"],
-                sample_offer_with_impossible_requirements["work_mode"],
-                sample_offer_with_impossible_requirements["description_clean"],
-                sample_offer_with_impossible_requirements["skills_required"],
-                0,
-                1,
-                "stretch",
-            ),
-        )
-        test_db.execute("INSERT INTO cv_versions (version, is_active) VALUES ('v1', 1)")
-
-        call_count = 0
-
-        def mock_ollama_call(model, prompt, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return {}
-
-        with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
-            with patch("src.pipeline.evaluate.load_perfil", return_value="perfil"):
-                with patch(
-                    "src.pipeline.evaluate.ollama_call", side_effect=mock_ollama_call
-                ):
-                    from src.pipeline.evaluate import run_evaluate
-
-                    stats = run_evaluate(limit=1)
-
-        assert stats["descarte"] == 1
-        assert stats["evaluated"] == 1
-        assert call_count == 0

@@ -1,7 +1,7 @@
 """
 Pipeline: evaluación de ofertas con gemma4:e4b (técnico y HR).
 Procesa ofertas clasificadas (relevance_flag NOT NULL, is_evaluated=0).
-Incluye pre-filtro de requisitos impossibles y evaluación de skills con nivel.
+Incluye evaluación técnica, HR y validación final (relevance + bloqueos).
 PERFIL.md es la única fuente de verdad del candidato.
 """
 
@@ -100,64 +100,7 @@ def load_gap_from_perfil(perfil: str) -> float | None:
             return float(years_match.group(1))
         except ValueError:
             pass
-
     return None
-
-
-def check_impossible_requirements(offer: dict, perfil: str) -> dict:
-    """Usa gemma4 para detectar requisitos estructuralmente imposibles.
-
-    Un requisito es estructuralmente imposible cuando requiere una condición
-    que el candidato NO puede cumplir por su naturaleza (no por falta de
-    formación): ser estudiante activo, tener discapacidad, tener carné de
-    conducir/vehículo (si no constan en el perfil), ser menor de X años, etc.
-
-    Retorna: {"descartable": bool, "razon": str}
-    """
-    prompt = f"""Eres un evaluador de requisitos laborales. Analiza si esta
-oferta contiene requisitos estructuralmente imposibles para el candidato
-específico.
-
-Un requisito es ESTRUCTURALMENTE IMPOSIBLE cuando:
-
-1. Requiere una condición que el candidato no puede cumplir por su
-   naturaleza (no es falta de formación):
-   - Ser estudiante activo / estar en último año / firmar convenio de
-     prácticas (el candidato NO es estudiante)
-   - Tener certificado de discapacidad / minusvalía (no lo tiene)
-   - Ser menor de X años (no lo es)
-
-2. Requiere algo que el perfil del candidato no menciona tener:
-   - Carné de conducir (si no aparece en el perfil)
-   - Vehículo propio / coche propio (si no aparece en el perfil)
-
-NO es requisito imposible:
-- Skills técnicas que el candidato no domina (se evalúa aparte)
-- Experiencia que no tiene (se evalúa aparte)
-- Educación formal que no tiene (se evalúa aparte)
-- Nivel de idioma (se evalúa aparte)
-- Preferencias de entorno / modalidad (son contexto, no filtro)
-
-PERFIL DEL CANDIDATO:
-{perfil[:2000]}
-
-OFERTA:
-Título: {offer.get("title", "")}
-Empresa: {offer.get("company_name", "")}
-Descripción: {(offer.get("description_clean") or "")[:1500]}
-
-Responde SOLO con este JSON exacto, sin texto adicional:
-{{"descartable": false, "razon": ""}}
-
-Si hay requisitos imposibles, pon "descartable": true y explica
-en "razon" QUÉ requisito y POR QUÉ es imposible para ESTE candidato."""
-    result = ollama_call(
-        model=MODEL_HR,
-        prompt=prompt,
-        expect_json=True,
-        temperature=0.0,
-    )
-    return result if isinstance(result, dict) else {"descartable": False, "razon": ""}
 
 
 RATING = {
@@ -344,25 +287,108 @@ Devuelve SOLO este JSON:
     return result if isinstance(result, dict) else {}
 
 
+def evaluate_final(
+    offer: dict,
+    perfil: str,
+    technical: dict,
+    hr: dict,
+    raw_score: int,
+) -> dict:
+    """Tercer prompt: valida el relevance_flag del classifier y detecta
+    bloqueos reales de aplicación. No altera el score numérico.
+
+    Retorna:
+    {
+      "relevance_validation": "confirmed|corrected",
+      "relevance_corrected": "core|adjacent|stretch|temporal|null",
+      "relevance_reasoning": str,
+      "apply_block": null | "requisito_imposible|practicas|otro",
+      "apply_block_reason": str | null,
+      "apply_recommendation": "yes|maybe|no",
+      "verdict": str
+    }
+    """
+    prompt = f"""Eres un evaluador senior de ofertas de trabajo. Tienes ya la evaluación técnica y HR de esta oferta.
+
+PERFIL DEL CANDIDATO:
+{perfil[:2500]}
+
+OFERTA:
+Título: {offer["title"]}
+Empresa: {offer.get("company_name", "")}
+Ciudad: {offer.get("city", "")} | Modalidad: {offer.get("work_mode", "")}
+Descripción: {(offer.get("description_clean") or "")[:2000]}
+
+CLASIFICACIÓN PREVIA (role_classifier):
+relevance_flag: {offer.get("relevance_flag")}
+role_normalized: {offer.get("role_normalized")}
+
+EVALUACIÓN TÉCNICA:
+{json.dumps(technical, ensure_ascii=False)}
+
+EVALUACIÓN HR:
+{json.dumps(hr, ensure_ascii=False)}
+
+SCORE CALCULADO: {raw_score}/100
+
+---
+
+TU TAREA TIENE DOS PARTES INDEPENDIENTES:
+
+PARTE 1 — VALIDAR EL RELEVANCE_FLAG:
+El classifier asignó "{offer.get("relevance_flag")}" a esta oferta basándose
+en el título y skills. Tú tienes ahora la descripción completa y las evaluaciones.
+¿Confirmas esa clasificación o la corriges? Razona brevemente.
+- "confirmed": la clasificación es correcta
+- "corrected": propón una corrección (core/adjacent/stretch/temporal) y explica por qué
+
+PARTE 2 — DETECTAR BLOQUEOS DE APLICACIÓN:
+Evalúa si la oferta tiene algún requisito que haga inviable la candidatura
+independientemente del score. Razona desde la descripción completa, no desde reglas.
+Ejemplos de bloqueo real: convenio de prácticas universitarias, certificado de
+discapacidad obligatorio, requisito legal de nacionalidad.
+NO son bloqueos: falta de experiencia, skills no dominadas, gap laboral.
+
+Si hay bloqueo: apply_block = "requisito_imposible" | "practicas" | "otro"
+Si no hay bloqueo: apply_block = null
+
+Responde SOLO este JSON:
+{{
+  "relevance_validation": "<confirmed|corrected>",
+  "relevance_corrected": <"core"|"adjacent"|"stretch"|"temporal"|null>,
+  "relevance_reasoning": "<una frase>",
+  "apply_block": <"requisito_imposible"|"practicas"|"otro"|null>,
+  "apply_block_reason": <"<texto>"|null>,
+  "apply_recommendation": "<yes|maybe|no>",
+  "verdict": "<síntesis ejecutiva honesta en 2-3 frases>"
+}}"""
+
+    result = ollama_call(
+        model=MODEL_HR,
+        prompt=prompt,
+        expect_json=True,
+        temperature=0.0,
+        think=True,
+    )
+    return result if isinstance(result, dict) else {}
+
+
 def save_evaluation(
     offer_id: int,
     technical: dict,
     hr: dict,
+    final: dict,
     match_score: int,
     recommendation: str,
     processing_ms: int,
-    coherence_note: str | None = None,
-    descarte_tipo: str = "ninguno",
-    descarte_razon: str | None = None,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
     verdict_final = hr.get("verdict", "") if hr else ""
-    if coherence_note:
-        verdict_final += f"\n\n[COHERENCIA]: {coherence_note}"
 
     technical_data = technical if technical else {}
     hr_data = hr if hr else {}
+    final_data = final if final else {}
 
     cur.execute(
         """
@@ -379,8 +405,9 @@ def save_evaluation(
             model_technical, model_hr,
             company_fit_score, company_green_flags, company_red_flags,
             interview_prep,
-            descarte_tipo, descarte_razon
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            relevance_validation, relevance_corrected, relevance_reasoning,
+            apply_block, apply_block_reason, llm_apply_signal
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             offer_id,
@@ -409,23 +436,17 @@ def save_evaluation(
             json.dumps(hr_data.get("company_green_flags", []), ensure_ascii=False),
             json.dumps(hr_data.get("company_red_flags", []), ensure_ascii=False),
             json.dumps(hr_data.get("interview_prep", []), ensure_ascii=False),
-            descarte_tipo,
-            descarte_razon,
+            final_data.get("relevance_validation"),
+            final_data.get("relevance_corrected"),
+            final_data.get("relevance_reasoning"),
+            final_data.get("apply_block"),
+            final_data.get("apply_block_reason"),
+            final_data.get("apply_recommendation"),
         ),
     )
     cur.execute("UPDATE offers SET is_evaluated=1 WHERE id=?", (offer_id,))
     conn.commit()
     conn.close()
-
-
-def coherence_check(
-    offer: dict,
-    perfil: str,
-    technical: dict,
-    hr: dict,
-    raw_score: int,
-) -> tuple[int, str | None]:
-    pass
 
 
 def run_evaluate(limit: int = 10) -> dict:
@@ -438,35 +459,12 @@ def run_evaluate(limit: int = 10) -> dict:
     if employment_gap:
         log.info("Employment gap: %.1f años", employment_gap)
 
-    stats = {"evaluated": 0, "errors": 0, "scores": [], "descarte": 0}
+    stats = {"evaluated": 0, "errors": 0, "scores": []}
 
     for offer in offers:
         t0 = time.monotonic()
         try:
             log.info("Evaluando: %s", offer["title"])
-
-            # PRE-FILTRO: gemma4 detecta requisitos estructuralmente imposibles
-            filtro = check_impossible_requirements(offer, perfil)
-            es_descartable = filtro.get("descartable", False)
-            razon_descarte = filtro.get("razon", "")
-
-            if es_descartable:
-                log.warning("DESCARTE: %s - %s", offer["title"], razon_descarte)
-                ms = int((time.monotonic() - t0) * 1000)
-                save_evaluation(
-                    offer_id=offer["id"],
-                    technical={},
-                    hr={},
-                    match_score=0,
-                    recommendation="Descartado",
-                    processing_ms=ms,
-                    descarte_tipo="requisito_imposible",
-                    descarte_razon=razon_descarte,
-                )
-                stats["descarte"] += 1
-                stats["evaluated"] += 1
-                log.info("✓ %s → DESCARTADO (%s)", offer["title"], razon_descarte)
-                continue
 
             technical = evaluate_technical(offer, perfil)
             if not technical:
@@ -495,17 +493,31 @@ def run_evaluate(limit: int = 10) -> dict:
             match_score = max(0, min(100, bloque_a + bloque_b - penalty))
             recommendation = get_rating(match_score)
 
+            final = evaluate_final(offer, perfil, technical, hr, match_score)
+            if not final:
+                log.warning("Sin resultado final: %s", offer["title"])
+                stats["errors"] += 1
+                continue
+
             ms = int((time.monotonic() - t0) * 1000)
             save_evaluation(
                 offer["id"],
                 technical,
                 hr,
+                final,
                 match_score,
                 recommendation,
                 ms,
             )
 
-            log.info("✓ %s → %d/100 (%s)", offer["title"], match_score, recommendation)
+            block = final.get("apply_block")
+            log.info(
+                "✓ %s → %d/100 (%s)%s",
+                offer["title"],
+                match_score,
+                recommendation,
+                f" [BLOQUEADO: {block}]" if block else "",
+            )
             stats["evaluated"] += 1
             stats["scores"].append(match_score)
 
