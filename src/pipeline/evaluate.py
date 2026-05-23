@@ -128,14 +128,16 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
     cur = conn.cursor()
     rows = cur.execute(
         """
-        SELECT id, title, company_name, city, work_mode,
-               description_clean, skills_required,
-               relevance_flag, role_normalized,
-               salary_min, salary_max, published_at
-        FROM offers
-        WHERE relevance_flag IS NOT NULL
-          AND is_evaluated = 0
-        ORDER BY published_at DESC
+        SELECT o.id, o.title, o.company_name, o.city, o.work_mode,
+               o.description_clean, o.skills_required,
+               o.relevance_flag, o.role_normalized,
+               o.salary_min, o.salary_max, o.published_at,
+               c.sector AS company_sector, c.size_range AS company_size
+        FROM offers o
+        LEFT JOIN companies c ON o.company_id = c.id
+        WHERE o.relevance_flag IS NOT NULL
+          AND o.is_evaluated = 0
+        ORDER BY o.published_at DESC
         LIMIT ?
     """,
         (limit,),
@@ -193,6 +195,13 @@ CANDIDATO SKILLS (con nivel):
 PERFIL:
 {perfil[:2500]}
 
+CLASIFICACIÓN DE LA OFERTA: {offer["relevance_flag"]}
+- core: el rol encaja directamente con el perfil del candidato
+- adjacent: hay transferencia parcial, existe gap real
+- stretch: fuera del área principal del candidato
+Calibra el score acorde: un 14/30 en skills para una oferta "stretch"
+es resultado razonable. El mismo score en "core" indica desajuste real.
+
 OFERTA:
 Título: {offer["title"]}
 Empresa: {offer["company_name"]}
@@ -224,16 +233,27 @@ EVALÚA y responde SOLO este JSON:
 
 
 def evaluate_hr(
-    offer: dict, perfil: str, technical: dict, employment_gap: float | None = None
+    offer: dict,
+    perfil: str,
+    technical: dict,
+    employment_gap: float | None = None,
+    company_sector: str | None = None,
+    company_size: str | None = None,
 ) -> dict:
     """gemma4 evalúa bloque HR (40 pts). Con think=True para razonamiento."""
-    gap_info = f"\n- **Gap de empleo:** {employment_gap} años" if employment_gap else ""
 
     prompt = f"""Eres un recruiter senior con criterio real. Evalúa honestamente.
 NO suavices la realidad. Evalúa como si tuvieras que defender tu decisión.
 
-PERFIL DEL CANDIDATO (resumen):{gap_info}
+PERFIL DEL CANDIDATO (resumen):
 {perfil[:2800]}
+
+CONTEXTO DE EMPRESA: {company_sector or "desconocido"} | Tamaño: {company_size or "desconocido"}
+Clasificación de la oferta: {offer["relevance_flag"]}
+Gap de empleo del candidato: {employment_gap or "sin gap"} años
+Sobre el gap laboral y coherencia de trayectoria: evalúalos en función
+del tipo de empresa y oferta concreta. No apliques penalizaciones estándar.
+Razona qué peso tendría este historial para este empleador específico.
 
 OFERTA:
 Título: {offer["title"]} | Empresa: {offer["company_name"]}
@@ -315,7 +335,7 @@ PERFIL DEL CANDIDATO:
 
 OFERTA:
 Título: {offer["title"]}
-Empresa: {offer.get("company_name", "")}
+Empresa: {offer.get("company_name", "")} | Sector: {offer.get("company_sector") or "desconocido"} | Tamaño: {offer.get("company_size") or "desconocido"}
 Ciudad: {offer.get("city", "")} | Modalidad: {offer.get("work_mode", "")}
 Descripción: {(offer.get("description_clean") or "")[:2000]}
 
@@ -472,7 +492,14 @@ def run_evaluate(limit: int = 10) -> dict:
                 stats["errors"] += 1
                 continue
 
-            hr = evaluate_hr(offer, perfil, technical, employment_gap)
+            hr = evaluate_hr(
+                offer,
+                perfil,
+                technical,
+                employment_gap,
+                offer.get("company_sector"),
+                offer.get("company_size"),
+            )
             if not hr:
                 log.warning("gemma4 no devolvió resultado para: %s", offer["title"])
                 stats["errors"] += 1
