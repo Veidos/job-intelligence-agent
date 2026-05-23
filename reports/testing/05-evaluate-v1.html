@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>T-5 v1 — Evaluate con evaluate_final</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+  background: #f0f2f5; color: #1a1a2e; font-size: 15px; line-height: 1.5
+}
+h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.15em }
+.sub { color: #666; font-size: 0.85rem; margin-bottom: 1em }
+a { color: #1565c0; text-decoration: none }
+a:hover { text-decoration: underline }
+
+.stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1em }
+.st {
+  background: #fff; border-radius: 10px; padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); flex: 1; min-width: 90px; text-align: center
+}
+.st .n { font-size: 1.5rem; font-weight: 800; color: #1a1a2e }
+.st .l { font-size: 0.7rem; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px }
+
+.card {
+  background: #fff; border-radius: 10px; margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden
+}
+.card-h {
+  display: flex; align-items: center; padding: 12px 16px;
+  cursor: pointer; gap: 12px; transition: background 0.12s
+}
+.card-h:hover { background: #fafafa }
+.num {
+  background: #37474f; color: #fff; width: 28px; height: 28px;
+  border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0
+}
+.info { flex: 1; min-width: 0 }
+.ti { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.meta { font-size: 0.78rem; color: #888; margin-top: 1px }
+.tags { display: flex; align-items: center; gap: 6px; flex-shrink: 0 }
+.arr { font-size: 0.7rem; color: #bbb; transition: transform 0.2s; margin-left: 2px }
+
+.sc {
+  padding: 3px 10px; border-radius: 20px; font-size: 0.78rem;
+  font-weight: 700; letter-spacing: 0.3px
+}
+.rec {
+  padding: 3px 10px; border-radius: 20px; font-size: 0.7rem;
+  background: #37474f; color: #fff; font-weight: 600; letter-spacing: 0.3px
+}
+.fl {
+  padding: 3px 10px; border-radius: 20px; font-size: 0.72rem;
+  font-weight: 700; border: 1.5px solid; letter-spacing: 0.3px
+}
+.bl {
+  padding: 3px 10px; border-radius: 20px; font-size: 0.72rem;
+  font-weight: 700; letter-spacing: 0.3px
+}
+.rv { font-size: 0.78rem; color: #555; font-style: italic }
+
+.body { padding: 0 16px 16px; border-top: 1px solid #eee; display: none }
+.body section { margin-top: 12px }
+.body h4 {
+  font-size: 0.68rem; color: #888; text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 4px; font-weight: 600
+}
+
+.split { display: flex; gap: 12px; flex-wrap: wrap }
+.split section { flex: 1; min-width: 200px }
+
+.dt { width: 100%; font-size: 0.82rem; border-collapse: collapse }
+.dt td { padding: 3px 6px }
+.dt .r { text-align: right; font-weight: 600 }
+.dt .total { border-top: 1px solid #ddd; font-weight: 700 }
+
+.dt-line {
+  background: #f9f9f9; border: 1px solid #eee; border-radius: 6px;
+  padding: 8px 12px; font-size: 0.85rem; line-height: 1.5
+}
+.pv { font-weight: 700; color: #c62828 }
+
+.list {
+  display: flex; flex-wrap: wrap; gap: 5px
+}
+.kv {
+  background: #e8eaf6; color: #283593; border-radius: 14px;
+  padding: 3px 11px; font-size: 0.78rem; font-weight: 500
+}
+
+.ver {
+  background: #fff8e1; border-left: 3px solid #ffb300; border-radius: 4px;
+  padding: 10px 12px; font-size: 0.85rem; line-height: 1.5;
+  max-height: 240px; overflow-y: auto
+}
+</style>
+</head>
+<body>
+<h1>T-5 v1 — Evaluate con evaluate_final</h1>
+<p class="sub">2026-05-23 16:41:58 &middot; 17 ofertas &middot; gemma4:e4b &middot; score medio: 41/100
+&middot; <a href="04-classifier-v6.html">T-4 v6 classifier</a> &middot; <b>v1</b></p>
+
+<div class="stats">
+  <div class="st"><div class="n">17</div><div class="l">Evaluadas</div></div>
+  <div class="st"><div class="n">41</div><div class="l">Score medio</div></div>
+  <div class="st"><div class="n">0</div><div class="l">Prioritario</div></div><div class="st"><div class="n">3</div><div class="l">Aplicar</div></div><div class="st"><div class="n">11</div><div class="l">Con expectativas bajas</div></div><div class="st"><div class="n">3</div><div class="l">No aplicar</div></div>
+</div>
+
+
+<article class="card" style="border-left:4px solid #fff8e1;">
+  <header class="card-h" onclick="toggleCard(235)">
+    <span class="num">1</span>
+    <div class="info">
+      <div class="ti">Técnico/a analista de datos</div>
+      <div class="meta">HomeServe Asistencia &middot; Madrid &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff8e1"><b>63</b>/100</span>
+      <span class="rec">Aplicar</span>
+      
+      <span class="arr" id="ar-235">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-235">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">20/30</td></tr>
+          <tr><td>Experience match</td><td class="r">17/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">51/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">8/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">6/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">17/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-5</span> / 25 &middot; <span class="kv"><b>motivo:</b> El gap de 3.7 años es significativo y requiere una explicación sólida. Además, la transición de un perfil técnico/operativo (mecánica, operador) a Data Science es un salto grande que debe ser justificado en la entrevista, especialmente en un rol de analista de negocio que requiere experiencia directa en reporting corporativo.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff8e1;padding:2px 10px;border-radius:12px;"><b>63</b>/100 &middot; Aplicar</span></h4>
+      <div class="dt-line">A + B - penalty = 51 + 17 - 5 = 63 → clamp(0,100) = 63</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>Aunque hay carencias en herramientas específicas (Power BI, Excel avanzado), el rol de &#x27;Analista de Datos&#x27; es el objetivo directo del candidato y su formación en Data Science lo posiciona en el área correcta.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">El bootcamp de Data Science y los proyectos personales demuestran una base teórica y práctica sólida en ML, Python y SQL, lo cual es altamente relevante para el área de datos.</span> <span class="kv">La experiencia previa en roles de supervisión (Openwide) aporta habilidades de gestión de equipos y procesos, lo cual es valioso para un rol de &#x27;auditoría y mejora de red&#x27;.</span> <span class="kv">El perfil es proactivo y ha buscado activamente la reconversión, lo que indica alta motivación y capacidad de aprendizaje.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años sin empleo en el sector. Esto es un punto de fricción que debe ser abordado de inmediato.</span> <span class="kv">El nivel de habilidades técnicas se describe como &#x27;básico&#x27; en varias áreas, lo cual es insuficiente para un rol que exige &#x27;experiencia mínima de 1 año en análisis, reporting o consultoría de negocio&#x27;.</span> <span class="kv">La falta de mención de Excel avanzado o Power BI/Query en la experiencia o proyectos, a pesar de que son requisitos clave de la oferta.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años es el principal punto de preocupación. Se debe investigar la razón de la pausa y cómo ha mantenido la motivación y las habilidades técnicas durante este tiempo.</span> <span class="kv">La experiencia previa es muy operativa y técnica (mecánica, ensamblaje). El salto a un rol de análisis de negocio requiere demostrar una capacidad de adaptación rápida a entornos corporativos de datos.</span> <span class="kv">La falta de experiencia demostrable en herramientas clave de la oferta (Power BI, Power Query, Excel avanzado) es un riesgo alto para el puesto.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar una narrativa coherente y positiva para el gap laboral, enfocándose en el aprendizaje autodirigido y la preparación para la reconversión.</span> <span class="kv">Enfocarse en los proyectos para demostrar el *pensamiento analítico* y la *capacidad de negocio* (ej. ¿Qué decisión de negocio se tomó con los datos de energía?).</span> <span class="kv">Estudiar a fondo Power BI y Power Query. No basta con saber SQL; debe demostrar cómo usar los datos extraídos para crear un *dashboard* de negocio funcional, simulando el entorno de HomeServe.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este candidato es un perfil de alto potencial, pero con un riesgo de ejecución muy alto. Su transición de carrera es evidente y sus proyectos demuestran la capacidad de aprender y aplicar conceptos complejos (ML, Python). Sin embargo, la oferta de HomeServe es muy específica y requiere experiencia práctica en herramientas de reporting de negocio (Power BI, Excel avanzado) y un historial laboral más lineal en análisis de datos. El gap de 3.7 años y la falta de experiencia directa en el ciclo de vida de reporting corporativo son penalizaciones significativas. No lo descartaría inmediatamente, pero lo posicionaría como un candidato &#x27;aspiracional&#x27; o de &#x27;nivel junior con gran potencial&#x27;, y solo lo consideraría si la empresa está dispuesta a invertir en su formación en las herramientas específicas de reporting y si el gap laboral se explica de manera satisfactoria. La entrevista debe centrarse en la capacidad de negocio y la proactividad, más que en la experiencia técnica pura.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff8e1;">
+  <header class="card-h" onclick="toggleCard(226)">
+    <span class="num">2</span>
+    <div class="info">
+      <div class="ti">Analista de Datos (Looker)</div>
+      <div class="meta">Quest Global &middot; Valladolid &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff8e1"><b>61</b>/100</span>
+      <span class="rec">Aplicar</span>
+      
+      <span class="arr" id="ar-226">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-226">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">15/30</td></tr>
+          <tr><td>Experience match</td><td class="r">16/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">43/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">12/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">8/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">23/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-5</span> / 25 &middot; <span class="kv"><b>motivo:</b> Gap laboral de 3.7 años. Aunque la formación en Data Science es reciente y relevante, el tiempo sin empleo en un sector tan técnico y estructurado como el aeroespacial/automoción es un riesgo que debe ser mitigado en la entrevista.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff8e1;padding:2px 10px;border-radius:12px;"><b>61</b>/100 &middot; Aplicar</span></h4>
+      <div class="dt-line">A + B - penalty = 43 + 23 - 5 = 61 → clamp(0,100) = 61</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>La clasificación &#x27;stretch&#x27; es correcta porque el candidato tiene la base de ingeniería y las habilidades de Data Science (Python, SQL) necesarias para el rol, pero carece de la experiencia específica en herramientas de negocio (Looker, Oracle) y el nivel avanzado requerido.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>alta</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Fuerte base de Ingeniería Mecánica, lo cual es un activo enorme para una empresa de sector automoción/aeroespacial.</span> <span class="kv">Habilidades transferibles de gestión y operación (Supervisor, Operator, Technician) que demuestran disciplina y comprensión de procesos industriales.</span> <span class="kv">Formación reciente y enfocada en Data Science (Bootcamp), demostrando proactividad y capacidad de reconversión.</span> <span class="kv">Inglés avanzado, un plus en un entorno global como Quest Global.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años.</span> <span class="kv">El nivel de habilidades técnicas es &#x27;básico&#x27;, lo cual es insuficiente para un rol de &#x27;stretch&#x27; en una empresa de este calibre.</span> <span class="kv">La falta de mención de herramientas de negocio clave (Looker, Oracle) en el CV.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años requiere una explicación sólida y convincente.</span> <span class="kv">El nivel de habilidades técnicas (básico) es un riesgo, especialmente en una empresa que maneja tecnología crítica.</span> <span class="kv">Falta de experiencia directa con herramientas de negocio específicas (Looker, Oracle) requeridas por la oferta.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar la narrativa del gap laboral: Enfatizar que el tiempo se utilizó para la reconversión profesional (bootcamp) y el desarrollo de habilidades de alto valor (DS/ML), en lugar de simplemente &#x27;estar sin empleo&#x27;.</span> <span class="kv">Para los proyectos, no solo describir el modelo, sino el *impacto de negocio* y la *toma de decisiones* que el modelo permitió (el &#x27;por qué&#x27; y el &#x27;para qué&#x27;).</span> <span class="kv">Estudiar el vocabulario de la industria (aeroespacial, automoción, materiales metálicos) para demostrar interés y conocimiento del sector, más allá de la data science.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este es un perfil de &#x27;alto potencial, alto riesgo&#x27;. El candidato tiene una base de ingeniería excelente y una motivación clara para la reconversión, lo cual es un punto muy positivo para Quest Global, ya que valoran la experiencia técnica de base. Sin embargo, el gap laboral y el nivel &#x27;básico&#x27; de las habilidades técnicas son banderas rojas que deben ser abordadas de inmediato. La empresa es ideal para él porque su cultura es altamente estructurada, técnica y de proceso (lo que se alinea con su preferencia por el entorno industrial y su perfil de TDAH, que se beneficia de la estructura). Se debe aplicar, pero la entrevista debe centrarse en cómo su experiencia de ingeniería y sus proyectos demuestran la capacidad de operar en un entorno de alta exigencia y precisión, mitigando el riesgo del gap y el nivel básico de las herramientas.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff8e1;">
+  <header class="card-h" onclick="toggleCard(228)">
+    <span class="num">3</span>
+    <div class="info">
+      <div class="ti">Analista de Datos y Automatización de Procesos</div>
+      <div class="meta">New Tandem &middot; Madrid &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff8e1"><b>61</b>/100</span>
+      <span class="rec">Aplicar</span>
+      
+      <span class="arr" id="ar-228">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-228">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">20/30</td></tr>
+          <tr><td>Experience match</td><td class="r">16/20</td></tr>
+          <tr><td>Education match</td><td class="r">10/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">51/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">12/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">8/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">23/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-13</span> / 25 &middot; <span class="kv"><b>motivo:</b> Gap laboral de 3.7 años sin experiencia profesional directa en Data (penalización moderada, ya que el aprendizaje fue autodirigido y demostrado en proyectos). Nivel de skills listadas como &#x27;básico&#x27; para un rol de &#x27;Analista&#x27; (penalización moderada). Desajuste de ubicación (Madrid vs Jerez) (penalización menor).</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff8e1;padding:2px 10px;border-radius:12px;"><b>61</b>/100 &middot; Aplicar</span></h4>
+      <div class="dt-line">A + B - penalty = 51 + 23 - 13 = 61 → clamp(0,100) = 61</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>La descripción del rol (Análisis de Negocio, BI, SQL, Python) se alinea directamente con el perfil de Data Science de Miguel, aunque el nivel de experiencia sea un desafío.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Proyectos sólidos y altamente relevantes (Energy Market, Water Consumption) que demuestran aplicación práctica de ML y análisis de negocio.</span> <span class="kv">Habilidades transferibles de gestión y proceso (Supervisor, Technician) que son cruciales en entornos regulados como la recuperación de deuda.</span> <span class="kv">Motivación clara y enfoque en el aprendizaje de ML en producción, lo que indica proactividad.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel de habilidades listado como &#x27;básico&#x27; es un punto de fricción con la expectativa de un rol de Analista (intermedio).</span> <span class="kv">El gap laboral es significativo y debe ser abordado con mucha cautela.</span> <span class="kv">La falta de mención de &#x27;Excel avanzado&#x27; es un déficit crítico para un rol de BI/Analista de Negocio.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años requiere una explicación sólida y convincente que demuestre continuidad en el aprendizaje y la motivación.</span> <span class="kv">El nivel de habilidades listado como &#x27;básico&#x27; es un riesgo para un rol de &#x27;Analista&#x27; que requiere autonomía en BI y manejo de datos complejos.</span> <span class="kv">La preferencia por modalidad presencial y la ubicación en Jerez de la Frontera chocan con la oferta en Madrid.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar una narrativa impecable sobre el gap de 3.7 años, enfocándose en el aprendizaje continuo y la aplicación de conocimientos en proyectos, no en la inactividad.</span> <span class="kv">Para cada proyecto, no solo describir la herramienta (Python/Pandas), sino el *impacto de negocio* y la *decisión* que se tomó con el dato. Esto transforma el &#x27;básico&#x27; en &#x27;aplicado&#x27;.</span> <span class="kv">Estudiar a fondo los conceptos de BI y gobierno de datos, ya que la oferta se centra en la &#x27;coherencia, fiabilidad y alineación con los objetivos de negocio en contextos regulados&#x27;.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El candidato es un perfil de alto potencial con una trayectoria no lineal, pero con una base técnica que aún no está consolidada a nivel profesional. Los proyectos son su mayor activo y demuestran que la transición de carrera es genuina y con foco. Sin embargo, el nivel &#x27;básico&#x27; de las skills y el gap laboral son riesgos que deben ser mitigados en la entrevista. La oferta es un buen trampolín para un perfil en reconversión, pero el candidato debe estar preparado para demostrar que su &#x27;básico&#x27; es funcionalmente &#x27;intermedio&#x27; en el contexto de la toma de decisiones de negocio. Se recomienda aplicar, pero con la expectativa de que la entrevista se centre en la capacidad de resolución de problemas y la madurez profesional, más que en la profundidad técnica pura.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(242)">
+    <span class="num">4</span>
+    <div class="info">
+      <div class="ti">Analista-Programador/a Junior  — Automatización y Data</div>
+      <div class="meta">AUXITEC &middot; Vitoria-Gasteiz &middot; <strong>data_engineer</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>53</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-242">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-242">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">12/30</td></tr>
+          <tr><td>Experience match</td><td class="r">15/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">41/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">8/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">6/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">17/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-5</span> / 25 &middot; <span class="kv"><b>motivo:</b> El gap de 3.7 años es significativo para un perfil junior que busca su primera inmersión profesional en el sector IT. Aunque la reconversión es evidente, la falta de experiencia laboral técnica reciente (después de 2022) y la necesidad de demostrar la actualización constante de habilidades en un campo tan rápido como la programación, genera una bandera roja de riesgo para el empleador.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>53</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 41 + 17 - 5 = 53 → clamp(0,100) = 53</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>Aunque el núcleo de datos (Python, SQL, ETL) es relevante, la oferta exige herramientas de ingeniería de software y BI (Git, APIs, Power BI) que representan un salto técnico significativo para el perfil actual.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Motivación y enfoque claro en la reconversión de carrera hacia Data/IT.</span> <span class="kv">Habilidades blandas transferibles muy fuertes (Liderazgo, Gestión de Operaciones, Resolución de Problemas) adquiridas en roles previos, lo cual es valioso en un entorno de transformación digital.</span> <span class="kv">Los proyectos de portafolio son relevantes y demuestran la aplicación práctica de ML y análisis de datos (Python, Pandas, Scikit-learn).</span> <span class="kv">El nivel de inglés avanzado es un activo importante para la integración en equipos internacionales o de alto nivel.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años es el principal punto débil y debe ser abordado con extrema cautela.</span> <span class="kv">El stack técnico es demasiado &#x27;básico&#x27; y teórico. La oferta requiere herramientas de ingeniería de software (Git, APIs, Power BI) que no están en el CV, lo que indica un desajuste entre la formación y el rol específico.</span> <span class="kv">La experiencia laboral previa es muy alejada del sector IT, lo que obliga al reclutador a asumir un riesgo de curva de aprendizaje más alto.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de empleo de 3.7 años requiere una explicación sólida y convincente que no se centre solo en la motivación, sino en la gestión del tiempo y la disciplina.</span> <span class="kv">El perfil es muy &#x27;bootcamp-dependiente&#x27;. Aunque ha adquirido conocimientos, la falta de experiencia profesional en un ciclo de desarrollo de software real (SDLC) o en el uso de herramientas de ingeniería (Git, Linux, APIs) es un riesgo para un rol de &#x27;Analista-Programador&#x27;.</span> <span class="kv">La transición de roles (Mecánico -&gt; Operador -&gt; Supervisor -&gt; Data Scientist) es muy amplia. Se debe asegurar que el candidato entienda que el valor que aporta es la capacidad de aprendizaje y la disciplina, no la experiencia acumulada en cada sector.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar al candidato para que cuente la historia del gap laboral de manera proactiva, enfocándose en el aprendizaje autodirigido y la disciplina, no en la inactividad.</span> <span class="kv">En lugar de solo hablar de los proyectos, debe describir el proceso de desarrollo de software (SDLC) que siguió: ¿Cómo gestionó el código? ¿Usó Git? ¿Cómo depuró los errores? Esto transforma el conocimiento teórico en experiencia práctica.</span> <span class="kv">Estudiar a fondo el stack de la oferta (APIs, n8n, Power BI, PostgreSQL) y estar listo para responder preguntas técnicas de nivel intermedio sobre cómo se integrarían esos componentes.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este candidato es un perfil de reconversión con un potencial alto, pero un riesgo operativo medio-alto. El CV muestra una trayectoria de &#x27;saltos&#x27; (Mecánica -&gt; Operador -&gt; Supervisor -&gt; Data Scientist) que, si bien demuestra adaptabilidad, también genera incoherencia. La oferta de Auxitec es muy específica (Analista-Programador, APIs, ETL, Power BI), y el candidato carece de la experiencia demostrable en el stack de ingeniería de software que se requiere. El gap de 3.7 años es el factor más penalizador. No lo descartaría inmediatamente, pero sí lo pondría en una fase de entrevista de &#x27;evaluación de potencial&#x27; en lugar de &#x27;evaluación de experiencia&#x27;. Solo avanzaría si el candidato puede demostrar, en la entrevista, que ha cerrado el gap técnico (Git, APIs) y que su motivación es más que solo &#x27;aprender&#x27;, sino &#x27;aportar valor&#x27; desde el día uno. La ubicación (Vitoria-Gasteiz) y la modalidad (Presencial) son un desafío logístico que debe ser negociado.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(230)">
+    <span class="num">5</span>
+    <div class="info">
+      <div class="ti">Data &amp; Analitics Internship</div>
+      <div class="meta">EY GDS Spain &middot; Málaga &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>49</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-230">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-230">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">10/30</td></tr>
+          <tr><td>Experience match</td><td class="r">18/20</td></tr>
+          <tr><td>Education match</td><td class="r">10/10</td></tr>
+          <tr><td>Location match</td><td class="r">1/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">39/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">8/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">5/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">15/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-5</span> / 25 &middot; <span class="kv"><b>motivo:</b> El gap de 3.7 años es significativo para un rol de nivel &#x27;Internship&#x27; en un sector tan competitivo como el de consultoría financiera. Aunque la experiencia previa no es directamente técnica, la brecha temporal requiere una explicación sólida y el CV necesita demostrar que el conocimiento adquirido en el bootcamp es reciente y aplicable.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>49</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 39 + 15 - 5 = 49 → clamp(0,100) = 49</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>La oferta se centra en Data &amp; Analytics aplicado a Finanzas, lo cual es un área directamente adyacente al perfil de Data Science del candidato.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Los proyectos de Machine Learning son relevantes y demuestran la aplicación práctica de conocimientos (predicción de energía y agua).</span> <span class="kv">La experiencia previa en roles operativos y de supervisión (Honeywell, Openwide) le da una perspectiva de negocio y procesos que es muy valiosa en consultoría (EY).</span> <span class="kv">El nivel de inglés avanzado es un activo crucial para una empresa global como EY.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel de habilidades técnicas se describe como &#x27;básico&#x27; en todas las áreas (Python, SQL, ML). Esto es un riesgo alto para un rol de consultoría que espera resultados rápidos.</span> <span class="kv">La falta de mención de herramientas críticas para la oferta (Power BI, Tableau, Power Query) es una debilidad técnica muy grande que debe ser abordada inmediatamente.</span> <span class="kv">La ubicación (Jerez vs. Málaga) y la preferencia de modalidad (Presencial) pueden generar fricción inicial, aunque la oferta es híbrida.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de empleo de 3.7 años es la preocupación principal. Se debe investigar qué ha hecho el candidato durante este tiempo para asegurar que la motivación para el cambio de carrera es genuina y no un signo de inestabilidad.</span> <span class="kv">La transición de roles (Mecánica/Operador/Supervisor -&gt; Data Science) es muy amplia. Se debe asegurar que el candidato entiende que el valor de su experiencia pasada es la capacidad de resolver problemas en entornos industriales/operacionales, y no solo la lista de habilidades técnicas.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar al candidato para que cuente una narrativa coherente que conecte su experiencia mecánica/operativa con la lógica de los datos. Ejemplo: &#x27;En mi rol de supervisor, identifiqué cuellos de botella en el proceso X; ahora, uso Python para modelar y predecir cuándo ocurrirá ese cuello de botella.&#x27;</span> <span class="kv">Revisar a fondo los proyectos. No basta con saber qué hizo; debe saber defender las decisiones de modelado, las limitaciones de los datos y cómo el resultado impactaría el negocio (el &#x27;por qué&#x27; y el &#x27;para qué&#x27;).</span> <span class="kv">Estudiar Power BI y Power Query de manera intensiva. Si no puede demostrar conocimiento funcional de estas herramientas, el candidato no pasará el filtro técnico.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El candidato tiene un potencial de reconversión muy alto, respaldado por proyectos sólidos y una experiencia previa en entornos de procesos (operación, supervisión) que son oro puro en consultoría. Sin embargo, el perfil es un &#x27;bootcamp graduate&#x27; con un gap laboral considerable y, lo más crítico, carece de las herramientas de BI específicas que la oferta exige. No es un &#x27;no&#x27;, pero tampoco es un &#x27;sí&#x27; inmediato. El CV es prometedor, pero el candidato debe demostrar en la entrevista que ha cerrado la brecha de habilidades (Power BI/Tableau) y que su narrativa de carrera es más que solo &#x27;quiero cambiar de sector&#x27;; debe ser &#x27;mi experiencia pasada me preparó para entender los problemas de negocio que ahora resuelvo con datos&#x27;. Si logra esto, es un candidato a invertir tiempo; si no, es un riesgo demasiado grande para un rol de consultoría.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(229)">
+    <span class="num">6</span>
+    <div class="info">
+      <div class="ti">Analista Power BI Junior</div>
+      <div class="meta">NTT DATA ofertas de empleo profesionales &middot; Madrid &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>43</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-229">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-229">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">13/30</td></tr>
+          <tr><td>Experience match</td><td class="r">10/20</td></tr>
+          <tr><td>Education match</td><td class="r">10/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">38/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">6/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">7/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">15/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> El gap laboral de 3.7 años es considerable para un perfil de reconversión. Más importante aún, la falta de experiencia profesional directa en las herramientas críticas de la oferta (Power BI y manejo avanzado de Excel) es un déficit funcional grave para un rol Junior de consultoría, a pesar de la sólida base teórica de los proyectos.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>43</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 38 + 15 - 10 = 43 → clamp(0,100) = 43</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>Aunque la función de análisis de datos es relevante, la oferta se centra críticamente en herramientas específicas (Power BI y Excel avanzado) que el candidato no demuestra tener experiencia profesional, lo que eleva el nivel de dificultad del match.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Muestra iniciativa y capacidad de aprendizaje autodirigido (Bootcamp y Proyectos).</span> <span class="kv">Posee habilidades transferibles de resolución de problemas y gestión de procesos (provenientes de sus roles técnicos y de supervisor).</span> <span class="kv">Los proyectos demuestran la capacidad de aplicar el ciclo completo de datos (desde la extracción hasta la predicción de valor de negocio).</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El perfil es demasiado teórico y carece de la experiencia práctica en las herramientas de BI específicas (Power BI) que son el núcleo de la oferta.</span> <span class="kv">La trayectoria es incoherente y el gap laboral es un riesgo de compromiso para el empleador.</span> <span class="kv">La motivación por &#x27;aprender ML en producción&#x27; es ambiciosa, pero el puesto actual es de BI/Reporting, lo que podría generar frustración si no se gestiona bien la expectativa.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años requiere una explicación muy sólida y convincente.</span> <span class="kv">La transición de roles (Mecánica -&gt; Supervisor -&gt; Data Science) es muy discontinua, lo que genera dudas sobre la capacidad de mantener el foco y la disciplina en un entorno corporativo de alta exigencia.</span> <span class="kv">La mención de TDAH debe ser manejada con extrema delicadeza en la entrevista, enfocándose en la autoconciencia y las estrategias de manejo, no en la limitación.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar ejemplos concretos de cómo ha modelado datos o creado KPIs en sus proyectos, simulando el proceso de Power BI (aunque no use la herramienta).</span> <span class="kv">Anticipar preguntas sobre el gap laboral, enfocándose en el desarrollo de habilidades blandas y la autogestión durante ese tiempo.</span> <span class="kv">Investigar a fondo el sector de NTT DATA y cómo sus soluciones de BI impactan en la industria, demostrando interés por el negocio, no solo por la herramienta.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este candidato es un perfil de reconversión con potencial académico, pero su aplicación a esta oferta específica es de riesgo medio-alto. La empresa (NTT DATA) busca un perfil Junior de BI que debe ser operativo y funcional con Power BI y Excel avanzado. El candidato tiene la base teórica (SQL, Python, ML) pero carece de la experiencia práctica en las herramientas de reporting que son el 80% del trabajo. El gap laboral y la incoherencia de la trayectoria son puntos débiles que deben ser mitigados con una explicación impecable. No es un &#x27;no&#x27;, pero tampoco es un &#x27;sí&#x27; automático. Solo pasará el filtro si el reclutador está dispuesto a invertir en un perfil con alto potencial pero con un historial de empleo irregular y un déficit de herramientas críticas.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(233)">
+    <span class="num">7</span>
+    <div class="info">
+      <div class="ti">Data Analyst - Sant Cugat del Vallès</div>
+      <div class="meta">DABA, S.A. &middot; Sant Cugat del Vallès &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>43</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-233">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-233">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">7/30</td></tr>
+          <tr><td>Experience match</td><td class="r">15/20</td></tr>
+          <tr><td>Education match</td><td class="r">10/10</td></tr>
+          <tr><td>Location match</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">35/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">10/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">5/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">18/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> Gap laboral de 3.7 años en un sector altamente técnico (Data Science) es un riesgo significativo. Además, la falta de experiencia demostrable en herramientas de BI estándar (Tableau, Power BI) para un rol de Data Analyst es una brecha crítica que desajusta la coherencia técnica inmediata.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>43</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 35 + 18 - 10 = 43 → clamp(0,100) = 43</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>Aunque el título es correcto, la brecha crítica en herramientas de BI de mercado (Power BI, Tableau) eleva la relevancia de &#x27;adjacent&#x27; a &#x27;stretch&#x27;, ya que el candidato debe demostrar un aprendizaje muy rápido en herramientas específicas para cumplir con las expectativas del rol.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Muestra una capacidad de aprendizaje y adaptación muy alta (Mecánica -&gt; Data Science).</span> <span class="kv">Los proyectos son relevantes y demuestran la aplicación de ML y análisis de negocio.</span> <span class="kv">Posee habilidades blandas sólidas (liderazgo, gestión de equipos) adquiridas en roles anteriores, lo cual es valioso para un analista que debe comunicar insights.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel de habilidades técnicas es &#x27;básico&#x27; y la falta de experiencia en herramientas de BI de mercado (Power BI, Tableau) es un obstáculo casi insalvable para este rol específico.</span> <span class="kv">El gap laboral es demasiado largo para un perfil que busca entrar en un campo tan competitivo y especializado.</span> <span class="kv">La preferencia de modalidad (presencial) choca con la oferta (híbrido), lo que podría ser un punto de negociación difícil.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años requiere una explicación sólida y convincente.</span> <span class="kv">La transición de un perfil técnico/operativo a Data Science es un salto grande que debe ser respaldado por resultados de proyectos muy robustos.</span> <span class="kv">La preferencia de ubicación (Jerez) choca con la oferta (Sant Cugat), lo que podría generar fricción inicial.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar una narrativa impecable para el gap laboral, enfocándose en el desarrollo personal o la formación autodidacta durante ese tiempo, y no en la inactividad.</span> <span class="kv">En lugar de solo hablar de teoría, debe demostrar cómo usaría Power BI o Tableau para resolver un problema de negocio específico (ej. LTV), incluso si es un ejercicio simulado.</span> <span class="kv">Estudiar a fondo el negocio de DABA y sus KPIs de cliente para que las preguntas de los proyectos se centren en el impacto de negocio, no solo en la ejecución del modelo.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El candidato tiene el potencial y la motivación (el &#x27;drive&#x27;) para ser un buen Data Analyst, y su trayectoria de reconversión es admirable. Sin embargo, para esta oferta específica de Data Analyst en DABA, el perfil es arriesgado. La empresa busca un perfil que pueda generar valor *inmediatamente* con herramientas de BI de mercado, y el candidato carece de esa experiencia demostrable y reciente. El gap laboral y la falta de herramientas de BI son penalizaciones muy altas. Solo debería aplicar si la empresa está dispuesta a contratar por potencial y si el proceso de entrevista se centra más en la capacidad de pensamiento analítico (el &#x27;cómo pensar&#x27;) que en la ejecución técnica inmediata (el &#x27;qué hacer&#x27;). Si la empresa es muy estricta con las herramientas, el CV será descartado en el primer filtro.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(231)">
+    <span class="num">8</span>
+    <div class="info">
+      <div class="ti">Data Analyst (SQL, Python, PBI)</div>
+      <div class="meta">BETWEEN Technology &middot; Madrid &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>41</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-231">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-231">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">16/30</td></tr>
+          <tr><td>Experience match</td><td class="r">10/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">1/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">36/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">6/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">7/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">15/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> Gap laboral de 3.7 años sin experiencia profesional en el sector de datos. Además, la oferta requiere explícitamente Power BI, una herramienta crítica que no está listada en el perfil, lo que genera un déficit de habilidades técnicas clave para el puesto.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>41</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 36 + 15 - 10 = 41 → clamp(0,100) = 41</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>La clasificación &#x27;stretch&#x27; es correcta, ya que el candidato posee los fundamentos (Python, SQL) y la motivación, pero carece de la herramienta clave (Power BI) y presenta una gran discrepancia geográfica y de experiencia.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Posee una base técnica fundamental (Python, SQL) adquirida recientemente y con enfoque práctico (bootcamp).</span> <span class="kv">Los proyectos de portafolio demuestran la capacidad de aplicar ML y análisis de datos a problemas de negocio reales (energía, agua).</span> <span class="kv">La experiencia previa en supervisión y operación le ha dotado de habilidades transferibles de gestión de procesos, calidad y liderazgo, cruciales para el rol de &#x27;puente entre negocio y técnico&#x27;.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años es significativo y debe ser el foco de la entrevista.</span> <span class="kv">La ausencia de Power BI es un punto de fallo técnico inmediato para esta oferta específica.</span> <span class="kv">La trayectoria profesional es altamente incoherente con el puesto de Data Analyst, lo que obliga al candidato a contar una narrativa de cambio de carrera muy convincente.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años requiere una explicación sólida y convincente que no se centre solo en la motivación, sino en el proceso de reconversión.</span> <span class="kv">La falta de experiencia profesional directa en el ciclo de vida de datos (desde la definición de requerimientos hasta el dashboard final) es un riesgo alto.</span> <span class="kv">La discrepancia geográfica (Jerez vs. Madrid) y la preferencia de modalidad (presencial) deben ser abordadas de inmediato, ya que son puntos de fricción logísticos.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar ejemplos concretos de cómo las habilidades de &#x27;Supervisor&#x27; (gestión de equipos, optimización de procesos, control de calidad) se traducen directamente en la definición de requerimientos de negocio y la automatización de procesos de datos.</span> <span class="kv">Estudiar Power BI intensivamente y estar listo para hablar de su uso en los proyectos de portafolio, incluso si fue un aprendizaje autodidacta reciente.</span> <span class="kv">Anticipar la pregunta sobre el gap laboral y tener una respuesta que vincule la pausa con el estudio intensivo y la preparación para el cambio de carrera, en lugar de simplemente &#x27;estar sin trabajar&#x27;.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El candidato es un perfil de &#x27;alto potencial, alto riesgo&#x27;. Técnicamente, tiene los cimientos (Python/SQL) y la motivación es alta, lo cual es positivo. Sin embargo, el match es &#x27;stretch&#x27; por excelencia. El principal obstáculo no es la capacidad teórica, sino la brecha de experiencia profesional (el gap de 3.7 años) y la falta de la herramienta clave (Power BI) requerida en la oferta. La coherencia de la trayectoria es baja, lo que eleva el riesgo para el empleador. Solo se debe aplicar si la empresa está dispuesta a contratar un perfil de reconversión con un alto componente de formación interna y si el candidato puede demostrar, en la entrevista, que sus habilidades de gestión y proceso son tan valiosas como sus habilidades técnicas, mitigando así el impacto del gap y la falta de Power BI. Es una apuesta, no una contratación segura.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(240)">
+    <span class="num">9</span>
+    <div class="info">
+      <div class="ti">Consultor/a en análisis de datos y evaluación</div>
+      <div class="meta">HOGAR SI &middot; Madrid &middot; <strong>data_scientist</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>40</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-240">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-240">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">12/30</td></tr>
+          <tr><td>Experience match</td><td class="r">10/20</td></tr>
+          <tr><td>Education match</td><td class="r">8/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">35/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">7/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">6/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">15/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> El principal problema no es la incoherencia de la trayectoria (el pivot de mecánica a data science es comprensible), sino la severa falta de nivel de seniority. La oferta es de &#x27;Consultor&#x27; (nivel experto/senior), pero el candidato solo reporta habilidades &#x27;básicas&#x27; en las herramientas clave (SQL, ML, Pandas). Esto crea un desajuste de nivel crítico que anula la coherencia percibida.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>40</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 35 + 15 - 10 = 40 → clamp(0,100) = 40</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>La clasificación &#x27;stretch&#x27; es correcta debido al desajuste crítico entre el nivel de senioridad requerido (Consultor/Arquitecto de Datos) y el nivel de habilidades reportado por el candidato (Básico/Junior).</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">El pivot de carrera es claro y está respaldado por la formación en Data Science Bootcamp.</span> <span class="kv">Los proyectos de ML/Forecasting demuestran la capacidad de aplicar el conocimiento teórico a problemas de negocio reales.</span> <span class="kv">La experiencia previa en roles técnicos y de supervisión demuestra habilidades transferibles de resolución de problemas, gestión y atención al detalle.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel &#x27;básico&#x27; en habilidades técnicas para un puesto de &#x27;Consultor&#x27; es una bandera roja enorme.</span> <span class="kv">El gap laboral de 3.7 años sin una explicación profesional clara en el CV.</span> <span class="kv">La oferta es de alto nivel estratégico (Gobierno de Datos, Arquitectura) y el perfil actual es demasiado junior para asumir esa responsabilidad.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años es significativo para un rol de consultoría de alto nivel.</span> <span class="kv">El nivel de habilidades técnicas reportado (&#x27;básico&#x27;) es insuficiente para las responsabilidades de diseño de arquitectura de datos y gobierno de datos requeridas en la oferta.</span> <span class="kv">La transición de roles (Mecánico -&gt; Supervisor -&gt; Data Scientist) requiere una narrativa muy fuerte para justificar la estabilidad y el compromiso profesional.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar una narrativa de &#x27;re-entry&#x27; muy sólida que vincule la disciplina de la ingeniería (resolución de problemas complejos) con la necesidad de la data science. No hablar de &#x27;básico&#x27;, sino de &#x27;fundamentos sólidos y aplicables&#x27;.</span> <span class="kv">Estudiar a fondo los conceptos de Data Governance, Data Architecture y el ciclo de vida del dato (Data Lifecycle) para demostrar conocimiento conceptual de nivel senior, incluso si la experiencia práctica es limitada.</span> <span class="kv">Anticipar preguntas sobre el gap de empleo y tener una respuesta concisa, profesional y orientada al futuro (ej. &#x27;Tiempo dedicado a la formación intensiva y la aplicación práctica en proyectos personales&#x27;).</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este es un perfil de &#x27;stretch&#x27; muy alto. El candidato tiene la motivación y la base educativa correcta para el sector, pero el desajuste entre el nivel de habilidades (básico) y el nivel de la oferta (Consultor Senior) es demasiado grande. El gap de empleo agrava esta brecha. Si el candidato insiste, debe enfocar su aplicación no como un &#x27;Consultor&#x27;, sino como un &#x27;Analista de Datos Junior/Mid-Level&#x27; que está listo para aprender la gobernanza de datos en un entorno estructurado. Si la empresa es muy exigente con el nivel de consultoría, el CV será descartado en el primer filtro por el mismatch de seniority. Es una apuesta de alto riesgo que solo vale la pena si la empresa está dispuesta a contratar talento con potencial, pero con un nivel de entrada más bajo de lo que el título sugiere.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(239)">
+    <span class="num">10</span>
+    <div class="info">
+      <div class="ti">Analista de Datos Junior - Sector Automoción</div>
+      <div class="meta">Talent Search People &middot; Barcelona &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>39</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-239">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-239">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">6/30</td></tr>
+          <tr><td>Experience match</td><td class="r">12/20</td></tr>
+          <tr><td>Education match</td><td class="r">10/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">33/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">7/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">5/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">14/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-8</span> / 25 &middot; <span class="kv"><b>motivo:</b> Gap laboral de 3.7 años sin experiencia directa en el sector o herramientas específicas (PowerBI, MES, SAP) requeridas para la oferta. La transición de roles es muy amplia (Supervisor -&gt; Operador -&gt; Técnico -&gt; Data Science).</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>39</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 33 + 14 - 8 = 39 → clamp(0,100) = 39</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>La clasificación &#x27;stretch&#x27; es correcta, ya que el rol de Analista de Datos se alinea con su formación, pero la especialización industrial (PowerBI, OEE, MES-SAP) crea una brecha significativa.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Formación académica reciente y muy relevante (Data Science Bootcamp).</span> <span class="kv">Habilidades transferibles sólidas: Liderazgo (Supervisor), Atención al detalle y procesos (Técnico/Operador).</span> <span class="kv">Base técnica fundamental (Python, SQL, ML) y capacidad de aprendizaje demostrada en proyectos.</span> <span class="kv">Idiomas avanzados (Inglés).</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El gap de empleo de 3.7 años.</span> <span class="kv">El perfil es demasiado &#x27;básico&#x27; en herramientas clave (PowerBI, OEE, MES, SAP) para una oferta que requiere soporte inmediato a la toma de decisiones de planta.</span> <span class="kv">La experiencia laboral previa no está directamente alineada con el análisis de datos de producción, sino con roles operativos y de supervisión.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años es significativo y requiere una explicación sólida y convincente.</span> <span class="kv">La falta de experiencia práctica con herramientas clave de la industria (PowerBI, MES, SAP) es un riesgo alto para un rol de &#x27;Analista de Datos&#x27; que requiere soporte inmediato a decisiones de planta.</span> <span class="kv">La transición de roles es muy marcada, lo que podría generar dudas sobre la estabilidad o el enfoque profesional del candidato.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar al candidato para que cuente una narrativa coherente sobre el gap de empleo, enfocándose en el aprendizaje autodirigido y la reconversión profesional.</span> <span class="kv">En la entrevista, pedirle que explique cómo aplicaría sus conocimientos de SQL y Python para resolver un problema de OEE (Overall Equipment Effectiveness) o de trazabilidad de datos de producción, simulando el entorno de la oferta.</span> <span class="kv">Preguntar sobre su proceso de aprendizaje de PowerBI y si ha realizado algún proyecto personal que simule la creación de dashboards de KPIs industriales.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El candidato es un perfil de &#x27;stretch&#x27; con un potencial académico muy alto, pero un match técnico y de experiencia muy bajo para esta oferta específica. La oferta requiere un conocimiento operativo y de herramientas industriales (PowerBI, MES, SAP) que el CV no demuestra. El gap de 3.7 años es el principal obstáculo. No lo descartaría inmediatamente porque el nivel &#x27;junior&#x27; de la oferta es indulgente, pero sí lo consideraría un riesgo alto. Solo avanzaría si la empresa está dispuesta a invertir en formación intensiva en herramientas industriales y si el candidato puede demostrar, en la entrevista, una comprensión conceptual profunda de los procesos de manufactura y la métrica OEE, más allá de la teoría de ML. Es una apuesta de alto riesgo/alta recompensa.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(232)">
+    <span class="num">11</span>
+    <div class="info">
+      <div class="ti">Analista de Datos RR.HH.</div>
+      <div class="meta">Barceló Hotel Group &middot; Palma de Mallorca &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>38</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-232">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-232">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">8/30</td></tr>
+          <tr><td>Experience match</td><td class="r">12/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">32/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">7/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">6/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">16/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> El principal problema no es la incoherencia, sino la brecha de nivel (seniority mismatch). El candidato está aplicando a un rol de &#x27;Liderazgo&#x27; y &#x27;Gobierno de Datos&#x27; (Data Governance) que requiere experiencia profesional demostrable en ETL/ELT, Snowflake y gestión de datos corporativos. El perfil, por su parte, es de nivel &#x27;Junior&#x27; (bootcamp). Esto genera una penalización alta por la desproporción entre la expectativa del puesto y la experiencia demostrada.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>38</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 32 + 16 - 10 = 38 → clamp(0,100) = 38</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        
+        <br><em>Aunque el nivel de seniority es un desajuste crítico, el área funcional (Data Analyst) es directamente relevante para el perfil de reconversión del candidato.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Excelente capacidad de pivotaje: Demuestra proactividad al pasar de la mecánica/operaciones a la Data Science, lo que indica fuerte capacidad de aprendizaje y resolución de problemas.</span> <span class="kv">Experiencia transversal: La mezcla de roles (Técnico, Operador, Supervisor) le da una visión 360º del negocio, crucial para un rol de analista de RRHH que debe entender procesos de negocio.</span> <span class="kv">Proyectos sólidos: Los proyectos de energía y agua demuestran la aplicación práctica de ML y análisis de datos en contextos de alto impacto, superando la mera teoría del bootcamp.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel de habilidades reportado como &#x27;básico&#x27; es un riesgo enorme para un rol de &#x27;liderazgo&#x27; y &#x27;gobierno de datos&#x27;.</span> <span class="kv">La falta de experiencia profesional en el ciclo de vida completo de los datos (ETL/ELT, Data Governance) es crítica para esta oferta.</span> <span class="kv">El gap laboral de 3.7 años debe ser explicado con mucha claridad y convicción.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años es significativo para un rol de alta exigencia técnica y liderazgo.</span> <span class="kv">El nivel de habilidades reportado como &#x27;básico&#x27; choca frontalmente con las responsabilidades de &#x27;liderar&#x27; y &#x27;definir estructuras de datos&#x27; a nivel corporativo.</span> <span class="kv">La motivación (TDAH, necesidad de estructura) debe ser manejada con cuidado para asegurar que el ritmo de aprendizaje sea sostenible en un entorno de alta presión.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar ejemplos de cómo aplicó la metodología de &#x27;liderar&#x27; o &#x27;definir estructuras&#x27; en sus proyectos académicos o en sus roles anteriores (ej. &#x27;Como supervisor, definí un proceso de...&#x27;).</span> <span class="kv">Estudiar a fondo los conceptos de Data Governance, Data Quality y los flujos de trabajo ETL/ELT, y estar listo para hablar de ellos con terminología de nivel avanzado, aunque no los haya implementado profesionalmente.</span> <span class="kv">Anticipar la pregunta sobre el gap laboral y tener una narrativa concisa y positiva (ej. &#x27;Periodo dedicado a la formación intensiva y la aplicación práctica de mis conocimientos en Data Science&#x27;).</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este es un perfil de alto potencial, pero con un desajuste de nivel (seniority mismatch) muy grande para la oferta. El candidato es un excelente *Junior* Data Analyst, pero la empresa busca un *Senior/Lead* Data Governance Specialist. La trayectoria es coherente en el sentido de que el candidato es un solucionador de problemas con visión de negocio, pero la experiencia técnica profesional en el ámbito de datos es inexistente. 
+
+**Recomendación:** No aplicar directamente. Si se debe aplicar, debe ser con la expectativa de que la empresa lo considere un &#x27;stretch role&#x27; y que el proceso de selección se centre en evaluar su *capacidad de aprendizaje* y su *visión de negocio*, más que su conocimiento técnico inmediato. El gap y el nivel básico son penalizadores muy fuertes para este puesto específico. Si la empresa está dispuesta a contratar un perfil de reconversión, debe estar preparada para invertir en formación intensiva y gestionar las expectativas de que el rol inicial será de soporte y ejecución, no de liderazgo inmediato.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(241)">
+    <span class="num">12</span>
+    <div class="info">
+      <div class="ti">Analista de Datos Ecommerce</div>
+      <div class="meta">SOFTTEK &middot; A Coruña &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>38</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-241">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-241">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">20/30</td></tr>
+          <tr><td>Experience match</td><td class="r">5/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">37/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">5/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">3/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">3/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">11/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> El gap de empleo de 3.7 años, combinado con la falta de experiencia profesional directa en el sector digital/e-commerce, genera una incoherencia de trayectoria significativa para un rol de Analista de Datos. Aunque el candidato ha realizado un bootcamp, la brecha entre su experiencia laboral pasada (mecánica/operativa) y el rol de Data Analyst es demasiado grande para ser ignorada.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>38</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 37 + 11 - 10 = 38 → clamp(0,100) = 38</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">confirmed</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>La oferta es altamente especializada en el dominio e-commerce (GA4, comportamiento de usuario), lo cual excede el conocimiento general de Data Science del candidato.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Ha completado un bootcamp de Data Science, demostrando iniciativa y la capacidad de adquirir habilidades técnicas de forma autodidacta.</span> <span class="kv">Posee una base técnica sólida (Python, SQL, ML básico) que es el requisito mínimo para el rol.</span> <span class="kv">Los proyectos de portafolio (Optimización de mercado energético, modelado de consumo de agua) demuestran la aplicación práctica de ML y análisis de datos a problemas de negocio reales.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El gap de empleo de 3.7 años es el riesgo más grande y debe ser abordado inmediatamente.</span> <span class="kv">La experiencia laboral previa (mecánica/operativa) no aporta valor directo al análisis de datos de e-commerce.</span> <span class="kv">El nivel de habilidades técnicas se describe como &#x27;básico&#x27;, lo cual es un riesgo en un rol que requiere análisis de comportamiento de usuario avanzado (GA4, etc.).</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de empleo de 3.7 años es considerable y requiere una explicación sólida y convincente.</span> <span class="kv">La experiencia laboral previa es muy alejada del sector tecnológico/digital, lo que obliga al reclutador a cuestionar la capacidad de transición y la motivación real.</span> <span class="kv">El perfil es &#x27;bootcamp-driven&#x27; y carece de la profundidad de experiencia práctica en el dominio (e-commerce) que la oferta requiere.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar al candidato para explicar el gap de empleo de 3.7 años de manera concisa, profesional y que demuestre crecimiento personal o profesional durante ese tiempo.</span> <span class="kv">Enfocarse en los proyectos de portafolio, no en la experiencia laboral pasada. Debe demostrar cómo aplicó el análisis de datos para resolver problemas de negocio, simulando el entorno e-commerce.</span> <span class="kv">Estudiar a fondo los conceptos de métricas de e-commerce (CAC, LTV, tasa de rebote, embudo de conversión) para demostrar que ha investigado el dominio de la oferta.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El candidato es un perfil de transición de carrera con potencial técnico, pero su perfil es de riesgo medio-alto. La oferta de Analista de Datos E-commerce es muy específica y requiere conocimiento de dominio (GA4, comportamiento de usuario) que el CV no demuestra. El gap de empleo es un factor de penalización importante. No es un &#x27;no&#x27; rotundo, pero tampoco es un &#x27;sí&#x27;. Solo se debe avanzar si la empresa está dispuesta a contratar perfiles junior con un alto potencial de aprendizaje y si el proceso de entrevista se centra en la motivación y la capacidad de aprendizaje, más que en la experiencia directa. Se debe gestionar la expectativa de que el rol será de nivel inicial y que el salario debe reflejar esta curva de aprendizaje.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(236)">
+    <span class="num">13</span>
+    <div class="info">
+      <div class="ti">Data analyst</div>
+      <div class="meta">Embragues Pedreño, s.l. &middot; Las Torres de Cotillas &middot; <strong>data_scientist</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>37</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-236">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-236">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">18/30</td></tr>
+          <tr><td>Experience match</td><td class="r">12/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">44/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">4/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">3/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">1/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">8/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-15</span> / 25 &middot; <span class="kv"><b>motivo:</b> El candidato presenta un desajuste crítico entre el nivel de habilidades reportado (básico) y el nivel de experiencia requerido por la oferta (avanzado/experto en múltiples herramientas de nivel empresarial como MS SQL Server, QlikView/Sense, DAX, etc.). Además, el gap de 3.7 años en un sector completamente diferente (mecánica/operaciones) sin experiencia profesional reciente en el ámbito de datos, es un riesgo alto para un puesto tan técnico y exigente.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>37</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 44 + 8 - 15 = 37 → clamp(0,100) = 37</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>La oferta es extremadamente avanzada y requiere un dominio de un stack de herramientas empresariales muy específico (MS SQL Server, Qlik, DAX, etc.), lo que excede el nivel &#x27;básico&#x27; reportado por el candidato.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Motivación y compromiso demostrados por la finalización de un Bootcamp de Data Science.</span> <span class="kv">Habilidades transferibles de resolución de problemas y atención al detalle adquiridas en roles técnicos (mecánica/operaciones).</span> <span class="kv">Experiencia en proyectos de ML y análisis de negocio (Optimización de energía, consumo de agua), lo que demuestra capacidad de aplicación teórica.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel de habilidades técnicas reportado es insuficiente para los requisitos de la oferta (básico vs. experto).</span> <span class="kv">La trayectoria profesional es completamente ajena al sector de datos, lo que genera dudas sobre la capacidad de adaptación rápida a un entorno de alta complejidad técnica.</span> <span class="kv">El gap laboral es demasiado largo para un puesto de nivel de entrada/intermedio que exige un dominio inmediato de herramientas empresariales.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años requiere una explicación sólida y convincente.</span> <span class="kv">El perfil es muy generalista en habilidades técnicas (todo &#x27;básico&#x27;), lo que sugiere falta de profundidad o experiencia real en entornos de producción.</span> <span class="kv">La combinación de TDAH y la preferencia por el silencio debe ser gestionada con cuidado, ya que el puesto requiere alta interacción y soporte a múltiples departamentos (finanzas, compras, ventas, etc.).</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">El candidato debe preparar ejemplos concretos de cómo aplicó SQL avanzado (Stored Procedures, Joins complejos) y Power BI/Qlik en sus proyectos, y no solo mencionar que sabe la teoría.</span> <span class="kv">Debe estar preparado para justificar el gap laboral de 3.7 años con una narrativa coherente y positiva.</span> <span class="kv">Debe demostrar conocimiento práctico de la arquitectura de datos (ETL/ELT) y cómo se integran los modelos de ML en un proceso de negocio real, más allá de solo construir el modelo.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este es un perfil de alto riesgo para esta oferta específica. La empresa busca un perfil de Data Analyst/Scientist con experiencia comprobada en entornos empresariales (ERP/CRM) y dominio avanzado de un stack de herramientas muy específico (MS SQL Server, Qlik, Power BI, etc.). El candidato, aunque motivado y con una base teórica sólida (bootcamp), se queda en un nivel &#x27;básico&#x27; en todas las áreas críticas. Su trayectoria es de reconversión total, y el gap laboral es un factor de preocupación. Solo se debería aplicar si la empresa está dispuesta a considerar un perfil de nivel *Junior* o *Trainee* y si el candidato puede demostrar en la entrevista que su &#x27;básico&#x27; es en realidad un &#x27;funcional&#x27; avanzado, respaldado por proyectos muy detallados. De lo contrario, el riesgo de no cumplir con los requisitos técnicos es demasiado alto.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fff3e0;">
+  <header class="card-h" onclick="toggleCard(238)">
+    <span class="num">14</span>
+    <div class="info">
+      <div class="ti">Técnico/a Analista de Datos - Sector</div>
+      <div class="meta">Grupo Crit: Trabajemos juntos &middot; Madrid &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fff3e0"><b>37</b>/100</span>
+      <span class="rec">Con expectativas bajas</span>
+      
+      <span class="arr" id="ar-238">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-238">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">0/30</td></tr>
+          <tr><td>Experience match</td><td class="r">15/20</td></tr>
+          <tr><td>Education match</td><td class="r">10/10</td></tr>
+          <tr><td>Location match</td><td class="r">1/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">26/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">6/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">8/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">16/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-5</span> / 25 &middot; <span class="kv"><b>motivo:</b> Gap laboral de 3.7 años. Aunque es manejable para un perfil de reconversión, requiere una explicación sólida en la entrevista.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fff3e0;padding:2px 10px;border-radius:12px;"><b>37</b>/100 &middot; Con expectativas bajas</span></h4>
+      <div class="dt-line">A + B - penalty = 26 + 16 - 5 = 37 → clamp(0,100) = 37</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        <br><em>El dominio del sector (infraestructuras energéticas) es un punto fuerte, pero la tecnología requerida (Power Platform/Low-Code) es un desajuste crítico con el perfil de Data Science tradicional (Python/ML).</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>media</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Experiencia industrial previa (Mecánica/Operador) que demuestra aptitud para entornos de procesos y maquinaria compleja.</span> <span class="kv">Habilidades de liderazgo y gestión de equipos (Supervisor), lo que es valioso en roles de soporte funcional.</span> <span class="kv">Proyectos de Data Science concretos que demuestran iniciativa y capacidad de aplicación de conocimientos (Energy Market, Water Consumption).</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">Desajuste técnico masivo: El candidato está preparado para el ecosistema Python/ML tradicional, mientras que la oferta exige un dominio de la suite Microsoft (Power Platform, Fabric, Low-Code/IA Agéntica).</span> <span class="kv">El nivel de habilidades técnicas listadas es &#x27;básico&#x27;, lo que es insuficiente para un rol de &#x27;Analista de Datos&#x27; en una empresa de infraestructura crítica.</span> <span class="kv">El contrato inicial por ETT puede ser un punto de fricción si el candidato busca estabilidad inmediata.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap laboral de 3.7 años requiere una explicación convincente y proactiva.</span> <span class="kv">La transición de un perfil mecánico/operativo a Data Science es un salto muy grande; se debe demostrar la capacidad de autoaprendizaje y la disciplina para el entorno corporativo.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Preparar una narrativa de transición de carrera que conecte la &#x27;optimización de procesos&#x27; de la ingeniería mecánica/supervisión con la &#x27;optimización de procesos de negocio&#x27; (el foco de la oferta).</span> <span class="kv">Estudiar el ecosistema Microsoft Power Platform a fondo. No basta con saber Python; debe demostrar interés y conocimiento teórico de Power Apps, Power Automate y Fabric para mitigar el desajuste técnico.</span> <span class="kv">Anticipar preguntas sobre cómo su experiencia en el sector energético (proyectos) se relaciona con la gestión de activos digitales y la automatización de flujos de negocio.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">El perfil es un &#x27;stretch&#x27; extremo. El candidato tiene la mentalidad y la base académica para la reconversión (Data Science Bootcamp), y su experiencia previa en entornos industriales (mecánica, operación) es un plus para el sector de infraestructura energética. Sin embargo, el desajuste técnico con la oferta es crítico: el candidato es un científico de datos tradicional (Python/ML), y el puesto es un ingeniero de procesos de negocio (Low-Code/Power Platform). No puedo recomendarlo sin que el candidato demuestre un esfuerzo activo y profundo por aprender la tecnología específica de la oferta. Si el candidato está dispuesto a pivotar su enfoque de aprendizaje de Python a la suite Microsoft, vale la pena la inversión. De lo contrario, el CV es irrelevante para este puesto específico.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fce4ec;">
+  <header class="card-h" onclick="toggleCard(237)">
+    <span class="num">15</span>
+    <div class="info">
+      <div class="ti">Data Analyst - Power BI / Reporting</div>
+      <div class="meta">BETWEEN Technology &middot; Sant Cugat del Vallès &middot; <strong>data_analyst</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fce4ec"><b>27</b>/100</span>
+      <span class="rec">No aplicar</span>
+      
+      <span class="arr" id="ar-237">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-237">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">5/30</td></tr>
+          <tr><td>Experience match</td><td class="r">12/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">1/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">27/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">6/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">7/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">15/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-15</span> / 25 &middot; <span class="kv"><b>motivo:</b> El candidato carece de la experiencia demostrable en las herramientas centrales y obligatorias para la oferta (Power BI, DAX, Power Query, Excel avanzado). La oferta requiere un nivel intermedio/avanzado en BI/Reporting, y su perfil se centra en ML/Python básico, creando un desajuste crítico. Además, el gap de 3.7 años, combinado con la falta de experiencia profesional en el sector de BI, es un riesgo para un puesto de nivel intermedio.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fce4ec;padding:2px 10px;border-radius:12px;"><b>27</b>/100 &middot; No aplicar</span></h4>
+      <div class="dt-line">A + B - penalty = 27 + 15 - 15 = 27 → clamp(0,100) = 27</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>Aunque el dominio es analítico, la oferta se centra en herramientas de BI (Power BI/DAX) que son completamente ajenas al perfil del candidato, lo que eleva el nivel de desajuste más allá de &#x27;adjacent&#x27;.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>baja</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Motivación alta y reciente formación en Data Science (Bootcamp).</span> <span class="kv">Posee proyectos de ML/Analytics relevantes que demuestran capacidad de aplicación teórica.</span> <span class="kv">Habilidades de liderazgo y gestión adquiridas en roles anteriores (Supervisor).</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El mismatch de habilidades es el problema más grave: la oferta es 80% Power BI/DAX, y el candidato no lo menciona.</span> <span class="kv">El gap laboral de 3.7 años sin experiencia profesional en el área de datos es un punto débil significativo.</span> <span class="kv">El nivel de conocimiento listado (básico) es insuficiente para un puesto que exige 2-3 años de experiencia.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El gap de 3.7 años es considerable y debe ser explicado con mucha claridad.</span> <span class="kv">La falta de experiencia en las herramientas de BI (Power BI, DAX) es un riesgo de capacitación muy alto para el empleador.</span> <span class="kv">La preferencia de ubicación (Jerez) choca con la ubicación de la oferta (Sant Cugat), lo que añade fricción logística.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Si se le da la oportunidad, debe preparar ejemplos de cómo aplicaría DAX y Power Query en un escenario de negocio, no solo cómo entrenaría un modelo de ML.</span> <span class="kv">Debe estar preparado para justificar el gap de 3.7 años de manera concisa y positiva.</span> <span class="kv">Debe demostrar conocimiento de las mejores prácticas de reporting corporativo, más allá de la teoría de ML.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Desde una perspectiva de filtro inicial, este CV no pasa. La oferta es extremadamente específica y técnica, centrada en el ecosistema de Power BI/DAX/Reporting. El candidato, aunque tiene una base teórica sólida en Data Science (Python/ML), no demuestra el conocimiento práctico ni la experiencia requerida en las herramientas de visualización y modelado de datos que son el núcleo de la posición. El &#x27;básico&#x27; en ML no compensa la ausencia de experiencia en DAX o Power Query. El gap laboral y el desajuste de habilidades son demasiado grandes para un puesto de nivel intermedio. Si quisiera aplicar, debería apuntar a roles de &#x27;Junior Data Analyst&#x27; o &#x27;BI Trainee&#x27; que acepten la curva de aprendizaje en Power BI, y no a un rol que exige 2-3 años de experiencia en estas herramientas específicas.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fce4ec;">
+  <header class="card-h" onclick="toggleCard(234)">
+    <span class="num">16</span>
+    <div class="info">
+      <div class="ti">Ingeniero/a Export Control/Trade Compliance</div>
+      <div class="meta">Indra Sistemas &middot; Alcobendas &middot; <strong>trade_compliance_specialist</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fce4ec"><b>26</b>/100</span>
+      <span class="rec">No aplicar</span>
+      
+      <span class="arr" id="ar-234">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-234">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">4/30</td></tr>
+          <tr><td>Experience match</td><td class="r">10/20</td></tr>
+          <tr><td>Education match</td><td class="r">9/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">28/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">4/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">2/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">2/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">8/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-10</span> / 25 &middot; <span class="kv"><b>motivo:</b> Desajuste de Dominio (Domain Mismatch): El candidato es un perfil de Data Science/Ingeniería, mientras que la oferta es 100% de Compliance Regulatorio y Defensa. El conocimiento requerido es altamente especializado y ajeno a las habilidades de ML/Python. Esto representa una incoherencia grave para este puesto específico.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fce4ec;padding:2px 10px;border-radius:12px;"><b>26</b>/100 &middot; No aplicar</span></h4>
+      <div class="dt-line">A + B - penalty = 28 + 8 - 10 = 26 → clamp(0,100) = 26</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        <br><em>Aunque el candidato cumple con el requisito educativo de ingeniería, el desajuste de dominio entre Data Science y Compliance Regulatorio es demasiado grande para considerarlo un simple &#x27;stretch&#x27;.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>baja</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Base de Ingeniería Técnica (Mecánica) que cumple con el requisito educativo de la oferta.</span> <span class="kv">Habilidades de aprendizaje rápido y auto-motivación demostradas por el bootcamp de Data Science.</span> <span class="kv">Nivel avanzado de inglés, crucial en el sector internacional de defensa.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El perfil es un &#x27;saltador&#x27; de dominios: de mecánica/supervisión -&gt; data science -&gt; compliance de defensa. No hay una narrativa coherente.</span> <span class="kv">El conocimiento de Data Science es completamente irrelevante para las tareas de clasificación de productos y licencias de exportación.</span> <span class="kv">La motivación del candidato (ML en producción o impacto social) no se alinea con el entorno de defensa y cumplimiento normativo.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El candidato está intentando forzar un cambio de carrera (Data Science) hacia un dominio completamente diferente (Compliance/Defensa).</span> <span class="kv">La naturaleza del trabajo (regulación, defensa) requiere un conocimiento de dominio profundo que el candidato no posee.</span> <span class="kv">El gap de 3.7 años, combinado con la falta de experiencia relevante en el sector de defensa, genera dudas sobre la motivación y la capacidad de adaptación a un entorno tan estructurado y regulado.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Si se procede, el candidato debe reencuadrar sus habilidades de Data Science no como un fin, sino como una herramienta para *mejorar* procesos de Compliance (ej. automatización de screening de listas de sanciones, gestión de bases de datos de clasificación).</span> <span class="kv">Debe demostrar un interés genuino y haber estudiado la terminología de Export Control y Trade Compliance (ITAR, EAR, etc.) para mitigar el impacto del desajuste de dominio.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Este es un desajuste de perfil crítico. El candidato es un perfil de Data Scientist con una base de ingeniería, y la oferta es para un Analista de Compliance de Defensa. Los dominios son completamente ortogonales. Aunque el requisito educativo de ingeniería es un &#x27;match&#x27; superficial, el 99% del valor de la oferta reside en el conocimiento regulatorio y de dominio (Trade Compliance) que el candidato no posee. El gap laboral y la incoherencia de la trayectoria se ven magnificados por la enorme distancia entre sus habilidades (Python/ML) y las habilidades requeridas (Regulación/Derecho de Comercio). No se recomienda aplicar, ya que el esfuerzo de la entrevista se basaría en intentar justificar un desajuste demasiado grande. El candidato debería buscar roles de Data Science o Ingeniería de Procesos en sectores que valoren su stack tecnológico, no en Compliance de Defensa.</div>
+    </section>
+  </div>
+</article>
+<article class="card" style="border-left:4px solid #fce4ec;">
+  <header class="card-h" onclick="toggleCard(227)">
+    <span class="num">17</span>
+    <div class="info">
+      <div class="ti">Analista de bases de datos</div>
+      <div class="meta">IZERTIS &middot; Madrid &middot; <strong>data_engineer</strong></div>
+    </div>
+    <div class="tags">
+      <span class="sc" style="background:#fce4ec"><b>12</b>/100</span>
+      <span class="rec">No aplicar</span>
+      
+      <span class="arr" id="ar-227">&#9660;</span>
+    </div>
+  </header>
+  <div class="body" id="b-227">
+    <div class="split">
+      <section>
+        <h4>Bloque A — Técnico (60 pts)</h4>
+        <table class="dt">
+          <tr><td>Skills hard match</td><td class="r">0/30</td></tr>
+          <tr><td>Experience match</td><td class="r">5/20</td></tr>
+          <tr><td>Education match</td><td class="r">8/10</td></tr>
+          <tr><td>Location match</td><td class="r">5/5</td></tr>
+          <tr class="total"><td>Total bloque A</td><td class="r">18/65</td></tr>
+        </table>
+      </section>
+      <section>
+        <h4>Bloque B — HR (40 pts)</h4>
+        <table class="dt">
+          <tr><td>Trajectory coherence</td><td class="r">5/15</td></tr>
+          <tr><td>Recency relevance</td><td class="r">3/15</td></tr>
+          <tr><td>Market competitiveness</td><td class="r">1/5</td></tr>
+          <tr class="total"><td>Total bloque B</td><td class="r">9/35</td></tr>
+        </table>
+      </section>
+    </div>
+    <section>
+      <h4>Penalty</h4>
+      <div class="dt-line"><span class="pv">-15</span> / 25 &middot; <span class="kv"><b>motivo:</b> Desajuste técnico crítico. El candidato está aplicando a una posición de nivel intermedio-senior (3+ años de experiencia, múltiples tecnologías avanzadas: GIS, Java, WSDL, BI avanzado) con un perfil de nivel principiante (bootcamp graduate). La brecha de habilidades es demasiado grande para ser cubierta por la experiencia operativa o de supervisión previa.</span></div>
+    </section>
+    <section>
+      <h4>Score final: <span class="sc" style="background:#fce4ec;padding:2px 10px;border-radius:12px;"><b>12</b>/100 &middot; No aplicar</span></h4>
+      <div class="dt-line">A + B - penalty = 18 + 9 - 15 = 12 → clamp(0,100) = 12</div>
+    </section>
+    <section>
+      <h4>Relevance flag</h4>
+      <div class="dt-line">
+        Original: <span class="fl" style="background:#fff8e1;color:#f57f17;border-color:#f57f17">adjacent</span>
+        &middot; Validación: <span class="rv">corrected</span>
+        → <span class="fl" style="background:#fce4ec;color:#c62828;border-color:#c62828">stretch</span>
+        <br><em>Aunque el título y las funciones tocan el área de datos (SQL/BI), los requisitos de nivel (3+ años) y la especialización en múltiples stacks (Java, GIS, WSDL, BI avanzado) hacen que el match sea un estiramiento excesivo.</em>
+      </div>
+    </section>
+    
+    <section>
+      <h4>Entorno</h4>
+      <div class="dt-line">Compatibilidad: <strong>baja</strong></div>
+    </section>
+    <section>
+      <h4>Strengths</h4>
+      <div class="list"><span class="kv">Motivación y capacidad de aprendizaje demostrada (completar un bootcamp de Data Science).</span> <span class="kv">Base técnica sólida en ingeniería mecánica, lo que sugiere una fuerte capacidad de resolución de problemas físicos y lógicos.</span> <span class="kv">Dominio de inglés avanzado y habilidades de gestión (Supervisor).</span> <span class="kv">Los proyectos de portafolio son relevantes y demuestran aplicación práctica de ML/Data Science.</span></div>
+    </section>
+    <section>
+      <h4>Red flags</h4>
+      <div class="list"><span class="kv">El nivel de habilidades técnicas es &#x27;básico&#x27; y no cumple con los requisitos de &#x27;avanzado&#x27; o &#x27;experiencia demostrable de 2+ años&#x27; de la oferta.</span> <span class="kv">La oferta es extremadamente específica y requiere un conocimiento de múltiples stacks (SQL avanzado, GIS, Java, BI, WSDL) que el candidato no menciona ni demuestra.</span> <span class="kv">El desajuste entre el nivel de la oferta y el nivel del candidato es el factor más descalificante.</span></div>
+    </section>
+    <section>
+      <h4>HR concerns</h4>
+      <div class="list"><span class="kv">El candidato está aplicando a un nivel de seniority y complejidad técnica muy superior a su nivel de habilidades demostradas.</span> <span class="kv">La trayectoria es muy fragmentada (Mecánica -&gt; Operador -&gt; Supervisor -&gt; Data Science), lo que genera dudas sobre la capacidad de mantener el foco profesional en un entorno corporativo exigente.</span> <span class="kv">El gap de 3.7 años, combinado con la falta de experiencia profesional avanzada en el dominio de la oferta, es una bandera roja significativa.</span></div>
+    </section>
+    <section>
+      <h4>Interview prep</h4>
+      <div class="list"><span class="kv">Si se decide avanzar (solo para roles junior), el candidato debe estar preparado para justificar cómo su experiencia mecánica y de supervisión le ha dotado de habilidades de negocio (business acumen) que complementan su conocimiento técnico, en lugar de centrarse solo en las herramientas.</span> <span class="kv">Debe demostrar un conocimiento profundo de los principios de la ingeniería de datos y la arquitectura de sistemas, no solo de la sintaxis de Python/SQL.</span></div>
+    </section>
+    <section>
+      <h4>Veredicto final</h4>
+      <div class="ver">Desde la perspectiva de un recruiter senior, esta aplicación es un desajuste crítico. El candidato ha saltado de un perfil de nivel principiante (bootcamp) a una posición de nivel intermedio-senior altamente especializada (Analista de Bases de Datos con requerimientos de Java, GIS y múltiples herramientas BI). La brecha de habilidades es demasiado grande. No se puede asumir que un conocimiento &#x27;básico&#x27; en SQL o ML se traduce en los 3+ años de experiencia avanzada y la maestría en múltiples tecnologías empresariales que Izertis está buscando. El CV es excelente para un rol de &#x27;Junior Data Analyst&#x27; o &#x27;Data Cleaner&#x27; en un entorno de impacto social, pero es completamente inadecuado para esta oferta específica. Recomendaría rechazar la candidatura en el primer filtro por falta de *match* técnico y de nivel.</div>
+    </section>
+  </div>
+</article>
+
+<script>
+function toggleCard(id) {
+  var b = document.getElementById('b-' + id);
+  var ar = document.getElementById('ar-' + id);
+  if (b.style.display === 'block') {
+    b.style.display = 'none';
+    ar.innerHTML = '&#9660;';
+  } else {
+    b.style.display = 'block';
+    ar.innerHTML = '&#9650;';
+  }
+}
+</script>
+</body>
+</html>
