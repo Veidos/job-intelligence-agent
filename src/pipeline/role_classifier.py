@@ -229,15 +229,8 @@ def classify_offer(
     offer: dict[str, Any],
     catalog: list[str],
     perfil_content: str,
-    *,
-    _call=None,
-    _model=None,
 ) -> dict[str, Any] | None:
     """Classify an offer using gemma4."""
-    if _call is None:
-        _call = ollama_call
-    if _model is None:
-        _model = "gemma4:e4b"
     title = offer.get("title", "")
     description = offer.get("description_clean") or offer.get("description_raw") or ""
     if description:
@@ -254,13 +247,13 @@ def classify_offer(
 
     prompt = _build_prompt(title, description, skills_str, catalog, perfil_content)
     try:
-        result = _call(
-            model=_model,
+        result = ollama_call(
+            model="gemma4:e4b",
             prompt=prompt,
             expect_json=True,
         )
         if result is None:
-            logger.warning(f"LLM returned None for offer {offer.get('id')}")
+            logger.warning(f"gemma4 returned None for offer {offer.get('id')}")
             return None
         if isinstance(result, str):
             try:
@@ -295,8 +288,8 @@ def classify_offer(
                 + "\n\nIMPORTANTE: role_reasoning NO debe mencionar al candidato ni su perfil. Describe solo el puesto."
             )
             try:
-                retry = _call(
-                    model=_model,
+                retry = ollama_call(
+                    model="gemma4:e4b",
                     prompt=retry_prompt,
                     expect_json=True,
                 )
@@ -335,13 +328,8 @@ def classify_offer(
         return None
 
 
-def _run_logic(limit: int | None, backend: str = "ollama") -> None:
+def _run_logic(limit: int | None) -> None:
     """Core logic for classifying offers."""
-    if backend == "openrouter":
-        from src.utils.openrouter_client import ollama_call, MODEL_TECHNICAL
-    else:
-        from src.utils.ollama_client import ollama_call, MODEL_TECHNICAL
-
     logger.info(
         "Starting role classifier (limit=%s)", limit if limit is not None else "all"
     )
@@ -380,7 +368,7 @@ def _run_logic(limit: int | None, backend: str = "ollama") -> None:
             logger.info(
                 f"Processing offer {i}/{len(offers)}: {offer_dict.get('title', 'N/A')[:50]}"
             )
-            result = classify_offer(offer_dict, catalog, perfil_content, _call=ollama_call, _model=MODEL_TECHNICAL)
+            result = classify_offer(offer_dict, catalog, perfil_content)
             if result is None:
                 logger.warning(f"Failed to classify offer {offer_dict['id']}")
                 continue
@@ -428,7 +416,7 @@ def _run_logic(limit: int | None, backend: str = "ollama") -> None:
         conn.close()
 
 
-def run_classifier(limit: int = 0, backend: str = "ollama") -> int:
+def run_classifier(limit: int = 0) -> int:
     """Función exportable para el orquestador. Devuelve número de ofertas clasificadas."""
     import os
     import sqlite3
@@ -443,14 +431,14 @@ def run_classifier(limit: int = 0, backend: str = "ollama") -> int:
     conn.close()
     if count == 0:
         return 0
-    _run_logic(limit if limit > 0 else None, backend=backend)
+    _run_logic(limit if limit > 0 else None)
     return count
 
 
 def main() -> None:
     """Main function to classify unclassified offers."""
     parser = argparse.ArgumentParser(
-        description="Classify unclassified job offers using the configured LLM."
+        description="Classify unclassified job offers using gemma4."
     )
     parser.add_argument(
         "--limit",
@@ -458,14 +446,8 @@ def main() -> None:
         default=None,
         help="Max offers to process per run (default: all pending)",
     )
-    parser.add_argument(
-        "--backend",
-        default="ollama",
-        choices=["ollama", "openrouter"],
-        help="Backend LLM (ollama|openrouter)",
-    )
     args = parser.parse_args()
-    _run_logic(args.limit, backend=args.backend)
+    _run_logic(args.limit)
 
 
 if __name__ == "__main__":

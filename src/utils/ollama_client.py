@@ -3,11 +3,10 @@ Wrapper para llamadas a Ollama con reintentos, backoff y validacion JSON.
 Modelos secuenciales — nunca en paralelo (VRAM limitada).
 """
 
+import json
 import logging
 import time
 from typing import Any
-
-from src.utils.json_utils import _extract_json
 
 import requests
 from tenacity import (
@@ -67,6 +66,30 @@ def _call_ollama_raw(
         raise OllamaError(f"HTTP {e.response.status_code} desde Ollama: {e}") from e
 
 
+def _extract_json(text: str) -> Any:
+    """Extrae JSON de respuesta del modelo, manejando texto extra."""
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    if "```" in text:
+        for block in text.split("```"):
+            cleaned = block.strip().lstrip("json").strip()
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError:
+                continue
+    for sc, ec in [("{", "}"), ("[", "]")]:
+        s, e = text.find(sc), text.rfind(ec)
+        if s != -1 and e != -1 and e > s:
+            try:
+                return json.loads(text[s : e + 1])
+            except json.JSONDecodeError:
+                continue
+    raise OllamaJSONError(f"No se pudo extraer JSON de: {text[:200]}...")
+
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=2, min=2, max=30),
@@ -98,7 +121,7 @@ def ollama_call(
         result = _extract_json(text)
         log.debug("JSON valido de %s en %dms", model, int((time.time() - start) * 1000))
         return result
-    except ValueError:
+    except OllamaJSONError:
         log.warning("Respuesta no-JSON de %s, reintentando...", model)
 
     text_retry = _call_ollama_raw(model, prompt + json_retry_instruction, temperature)
@@ -106,7 +129,7 @@ def ollama_call(
         result = _extract_json(text_retry)
         log.debug("JSON valido de %s en segundo intento", model)
         return result
-    except ValueError as e:
+    except OllamaJSONError as e:
         log.error("No se obtuvo JSON valido de %s tras 2 intentos", model)
         raise OllamaJSONError(f"Modelo {model} no devolvio JSON valido") from e
 

@@ -54,12 +54,7 @@ def setup_logging() -> None:
     root_logger.addHandler(handler)
 
 
-def run_pipeline(
-    skip_fetch: bool = False,
-    dry_run: bool = False,
-    limit: int = 30,
-    backend: str = "ollama",
-) -> None:
+def run_pipeline(skip_fetch: bool = False, dry_run: bool = False, limit: int = 30) -> None:
     setup_logging()
 
     # Configurar consola inmediatamente para que warnings se vean
@@ -144,7 +139,7 @@ def run_pipeline(
     log.info("[2/4] Classify — clasificando roles...")
     from src.pipeline.role_classifier import run_classifier
 
-    classified = run_classifier(backend=backend)
+    classified = run_classifier()
     log.info("[2/4] Classify — %d ofertas clasificadas", classified)
 
     # PAS0 2.5: Enrich companies (optional - degrada gracefully)
@@ -163,10 +158,10 @@ def run_pipeline(
         log.warning("[2.5/4] Enrich — falló (DB necesita migración): %s", e)
 
     # PASO 3: Evaluate
-    log.info("[3/4] Evaluate — puntuando ofertas...")
+    log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
     from src.pipeline.evaluate import run_evaluate
 
-    stats = run_evaluate(limit=limit, backend=backend)
+    stats = run_evaluate(limit=limit)
     log.info("[3/4] Evaluate — %s", stats)
 
     # PASO 4: Send
@@ -212,16 +207,5 @@ if __name__ == "__main__":
         default=30,
         help="Máximo de ofertas a procesar (default: 30)",
     )
-    parser.add_argument(
-        "--backend",
-        default="ollama",
-        choices=["ollama", "openrouter"],
-        help="Backend LLM (ollama|openrouter)",
-    )
     args = parser.parse_args()
-    run_pipeline(
-        skip_fetch=args.skip_fetch,
-        dry_run=args.dry_run,
-        limit=args.limit,
-        backend=args.backend,
-    )
+    run_pipeline(skip_fetch=args.skip_fetch, dry_run=args.dry_run, limit=args.limit)

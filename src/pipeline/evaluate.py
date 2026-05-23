@@ -147,12 +147,8 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
     return [dict(zip(cols, row)) for row in rows]
 
 
-def evaluate_technical(offer: dict, perfil: str, *, _call=None, _model=None) -> dict:
+def evaluate_technical(offer: dict, perfil: str) -> dict:
     """Evalúa bloque técnico (60 pts) con lógica de niveles usando gemma4:e4b."""
-    if _call is None:
-        _call = ollama_call
-    if _model is None:
-        _model = MODEL_TECHNICAL
     skills = offer.get("skills_required") or "[]"
     description = (offer.get("description_clean") or "")[:1500]
 
@@ -226,8 +222,8 @@ EVALÚA y responde SOLO este JSON:
   "nivel_match_reasoning": "<explica cómo evaluaste el nivel de cada skill>",
   "reasoning": "<frase honesta que justifique el score>"
 }}"""
-    result = _call(
-        model=_model,
+    result = ollama_call(
+        model=MODEL_TECHNICAL,
         prompt=prompt,
         expect_json=True,
         temperature=0.1,
@@ -243,15 +239,8 @@ def evaluate_hr(
     employment_gap: float | None = None,
     company_sector: str | None = None,
     company_size: str | None = None,
-    *,
-    _call=None,
-    _model=None,
 ) -> dict:
     """gemma4 evalúa bloque HR (40 pts). Con think=True para razonamiento."""
-    if _call is None:
-        _call = ollama_call
-    if _model is None:
-        _model = MODEL_HR
 
     prompt = f"""Eres un recruiter senior con criterio real. Evalúa honestamente.
 NO suavices la realidad. Evalúa como si tuvieras que defender tu decisión.
@@ -308,8 +297,8 @@ Devuelve SOLO este JSON:
   "apply_signal": "<yes|no|maybe>",
   "verdict": "<párrafo libre honesto>"
 }}"""
-    result = _call(
-        model=_model,
+    result = ollama_call(
+        model=MODEL_HR,
         prompt=prompt,
         expect_json=True,
         temperature=0.0,
@@ -324,14 +313,7 @@ def evaluate_final(
     technical: dict,
     hr: dict,
     raw_score: int,
-    *,
-    _call=None,
-    _model=None,
 ) -> dict:
-    if _call is None:
-        _call = ollama_call
-    if _model is None:
-        _model = MODEL_HR
     """Tercer prompt: valida el relevance_flag del classifier y detecta
     bloqueos reales de aplicación. No altera el score numérico.
 
@@ -401,8 +383,8 @@ Responde SOLO este JSON:
   "verdict": "<síntesis ejecutiva honesta en 2-3 frases>"
 }}"""
 
-    result = _call(
-        model=_model,
+    result = ollama_call(
+        model=MODEL_HR,
         prompt=prompt,
         expect_json=True,
         temperature=0.0,
@@ -487,15 +469,7 @@ def save_evaluation(
     conn.close()
 
 
-def run_evaluate(limit: int = 10, backend: str = "ollama") -> dict:
-    if backend == "openrouter":
-        from src.utils.openrouter_client import ollama_call, MODEL_TECHNICAL, MODEL_HR
-        _or_call = ollama_call
-        _or_tech = MODEL_TECHNICAL
-        _or_hr = MODEL_HR
-    else:
-        _or_call = _or_tech = _or_hr = None
-
+def run_evaluate(limit: int = 10) -> dict:
     perfil = load_perfil()
     offers = get_pending_offers(limit)
     candidate_skills = load_skills_from_perfil(perfil)
@@ -512,12 +486,9 @@ def run_evaluate(limit: int = 10, backend: str = "ollama") -> dict:
         try:
             log.info("Evaluando: %s", offer["title"])
 
-            technical = evaluate_technical(
-                offer, perfil,
-                _call=_or_call, _model=_or_tech,
-            )
+            technical = evaluate_technical(offer, perfil)
             if not technical:
-                log.warning("LLM no devolvió resultado para: %s", offer["title"])
+                log.warning(f"gemma4 no devolvió resultado para: {offer['title']}")
                 stats["errors"] += 1
                 continue
 
@@ -528,11 +499,9 @@ def run_evaluate(limit: int = 10, backend: str = "ollama") -> dict:
                 employment_gap,
                 offer.get("company_sector"),
                 offer.get("company_size"),
-                _call=_or_call,
-                _model=_or_hr,
             )
             if not hr:
-                log.warning("LLM no devolvió resultado para: %s", offer["title"])
+                log.warning("gemma4 no devolvió resultado para: %s", offer["title"])
                 stats["errors"] += 1
                 continue
 
@@ -551,10 +520,7 @@ def run_evaluate(limit: int = 10, backend: str = "ollama") -> dict:
             match_score = max(0, min(100, bloque_a + bloque_b - penalty))
             recommendation = get_rating(match_score)
 
-            final = evaluate_final(
-                offer, perfil, technical, hr, match_score,
-                _call=_or_call, _model=_or_hr,
-            )
+            final = evaluate_final(offer, perfil, technical, hr, match_score)
             if not final:
                 log.warning("Sin resultado final: %s", offer["title"])
                 stats["errors"] += 1
@@ -593,24 +559,8 @@ def run_evaluate(limit: int = 10, backend: str = "ollama") -> dict:
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Evaluar ofertas pendientes")
-    parser.add_argument(
-        "--backend",
-        default="ollama",
-        choices=["ollama", "openrouter"],
-        help="Backend LLM (ollama|openrouter)",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=3,
-        help="Max ofertas a evaluar (default: 3)",
-    )
-    args = parser.parse_args()
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
     )
-    stats = run_evaluate(limit=args.limit, backend=args.backend)
+    stats = run_evaluate(limit=3)
     log.info("Completado: %s", stats)
