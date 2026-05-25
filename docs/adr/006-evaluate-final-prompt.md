@@ -1,102 +1,102 @@
-# ADR-006: evaluate.py — tercer prompt (evaluate_final) y eliminación del pre-filtro
+# ADR-006: evaluate.py — third prompt (evaluate_final) and pre-filter removal
 
-**Fecha:** 2026-05-23
-**Tipo:** `arquitectura`
-**Estado:** `activo`
-**Componente:** `src/pipeline/evaluate.py`
-
----
-
-## Contexto
-
-El pipeline de evaluación ejecutaba dos prompts por oferta (técnico + HR) precedidos
-de un pre-filtro que llamaba a gemma4 para detectar requisitos estructuralmente
-imposibles. Si el pre-filtro descartaba la oferta, se guardaba con `match_score=0`
-y `descarte_tipo="requisito_imposible"`, saltándose la evaluación real.
-
-Esto tenía dos problemas:
-
-1. **Pérdida de información.** Una oferta con bloqueo legal (ej. prácticas universitarias)
-   pero buen match técnico (score ~70) quedaba registrada como score=0, invisible
-   para el análisis de mercado y la validación humana.
-2. **Duplicidad de responsabilidad.** El pre-filtro y la penalty de HR evaluaban
-   conceptos similares (bloqueos de aplicación) desde prompts distintos, con riesgo
-   de incoherencia.
-3. **Sin validación del classifier.** No existía un paso que contrastara el
-   `relevance_flag` asignado por `role_classifier` contra la descripción completa
-   y las evaluaciones.
+**Date:** 2026-05-23
+**Type:** `architecture`
+**Status:** `active`
+**Component:** `src/pipeline/evaluate.py`
 
 ---
 
-## Decisión
+## Context
 
-**Eliminar el pre-filtro temprano (`check_impossible_requirements`) y añadir un
-tercer prompt (`evaluate_final`) que se ejecuta después de technical+HR, con
-temperatura=0.0, para validar el relevance_flag y detectar bloqueos de aplicación
-con toda la información disponible (descripción + evaluaciones + score).**
+The evaluation pipeline ran two prompts per offer (technical + HR) preceded
+by a pre-filter that called gemma4 to detect structurally impossible
+requirements. If the pre-filter discarded the offer, it was saved with `match_score=0`
+and `descarte_tipo="requisito_imposible"`, skipping the real evaluation.
 
-El nuevo flujo por oferta es:
+This had three problems:
 
-1. `evaluate_technical()` — gemma4, temp 0.1 (bloque A, 60 pts)
-2. `evaluate_hr()` — gemma4, temp 0.0 (bloque B + penalty, 40 pts)
-3. Cálculo de `match_score` = `max(0, min(100, bloque_A + bloque_B - penalty))`
-4. `evaluate_final()` — gemma4, temp 0.0 (validación + bloqueos, no altera score)
-5. `save_evaluation()` con las 6 columnas nuevas
-
-Campos añadidos a `offer_evaluations`:
-
-| Columna | Propósito |
-|---------|-----------|
-| `relevance_validation` | `confirmed` o `corrected` — validación del relevance_flag del classifier |
-| `relevance_corrected` | Valor corregido si aplica |
-| `relevance_reasoning` | Explicación breve de la validación |
-| `apply_block` | `requisito_imposible`, `practicas`, `otro` o `null` |
-| `apply_block_reason` | Explicación del bloqueo |
-| `llm_apply_signal` | `yes/maybe/no` del LLM (independiente del rating numérico) |
-
-Lo que **no cambia**:
-- `recommendation` sigue siendo `get_rating(raw_score)` — rating basado en score
-- `apply_recommendation` (columna existente) no se toca — preserva datos históricos
-- `offers.relevance_flag` no se modifica desde evaluate.py — el flag del classifier
-  es la verdad histórica; `relevance_corrected` es una segunda opinión
+1. **Information loss.** An offer with a legal blocker (e.g. university internships)
+   but good technical match (score ~70) was recorded as score=0, invisible
+   to market analysis and human validation.
+2. **Responsibility duplication.** The pre-filter and the HR penalty evaluated
+   similar concepts (application blockers) from different prompts, with risk
+   of inconsistency.
+3. **No classifier validation.** There was no step that contrasted the
+   `relevance_flag` assigned by `role_classifier` against the full description
+   and the evaluations.
 
 ---
 
-## Alternativas descartadas
+## Decision
 
-- **Mantener el pre-filtro como paso temprano.** Descartado porque descartar con
-  score=0 destruye información de mercado. El coste de 2 llamadas extra por oferta
-  descartable (~15-50 ofertas/día) es asumible frente al beneficio de tener el
-  score real de todas las ofertas.
-- **Fusionar evaluate_final con evaluate_hr.** Descartado porque mezclar validación
-  de clasificación con evaluación HR contamina ambos juicios. Separando los prompts
-  cada uno tiene un objetivo claro y temperatura independiente.
-- **Usar el campo `apply_recommendation` existente para el signal del LLM.**
-  Descartado por ruptura semántica con datos históricos. Se crea `llm_apply_signal`.
+**Remove the early pre-filter (`check_impossible_requirements`) and add a
+third prompt (`evaluate_final`) that runs after technical+HR, with
+temperature=0.0, to validate the relevance_flag and detect application blockers
+with all available information (description + evaluations + score).**
+
+The new flow per offer is:
+
+1. `evaluate_technical()` — gemma4, temp 0.1 (block A, 60 pts)
+2. `evaluate_hr()` — gemma4, temp 0.0 (block B + penalty, 40 pts)
+3. Compute `match_score` = `max(0, min(100, block_A + block_B - penalty))`
+4. `evaluate_final()` — gemma4, temp 0.0 (validation + blockers, does not alter score)
+5. `save_evaluation()` with the 6 new columns
+
+Fields added to `offer_evaluations`:
+
+| Column | Purpose |
+|---------|---------|
+| `relevance_validation` | `confirmed` or `corrected` — validation of the classifier's relevance_flag |
+| `relevance_corrected` | Corrected value if applicable |
+| `relevance_reasoning` | Brief explanation of the validation |
+| `apply_block` | `requisito_imposible`, `practicas`, `other` or `null` |
+| `apply_block_reason` | Explanation of the blocker |
+| `llm_apply_signal` | `yes/maybe/no` from the LLM (independent of the numeric rating) |
+
+What **does not change**:
+- `recommendation` remains `get_rating(raw_score)` — rating based on score
+- `apply_recommendation` (existing column) is not touched — preserves historical data
+- `offers.relevance_flag` is not modified from evaluate.py — the classifier's flag
+  is the historical truth; `relevance_corrected` is a second opinion
 
 ---
 
-## Consecuencias
+## Discarded alternatives
 
-- **Toda oferta evaluada tiene score real**, incluso las bloqueadas. Permite
-  validación humana (T-5) y análisis de mercado sobre ofertas con bloqueo.
-- **Tres llamadas a gemma4 por oferta** en lugar de 1-2. Asumible para el volumen
-  diario del pipeline.
-- **Las columnas `descarte_tipo` y `descarte_razon` dejan de escribirse** (no se
-  eliminan físicamente por limitaciones de SQLite). Los datos históricos se
-  preservan.
-- **El relevance_flag del classifier ahora tiene contraste.** `relevance_corrected`
-  permite medir calidad del classifier a posteriori.
-- **Tests actualizados:** 3 tests del pre-filtro eliminados, 5 actualizados para
-  el tercer mock. 171 tests passing.
-- **Nueva columna `llm_apply_signal`** añadida al schema. Cualquier consumidor
-  futuro debe decidir si usa `recommendation` (rating numérico) o `llm_apply_signal`
-  (juicio del LLM).
+- **Keep the pre-filter as an early step.** Discarded because discarding with
+  score=0 destroys market information. The cost of 2 extra calls per
+  discardable offer (~15-50 offers/day) is acceptable compared to the benefit of having
+  the real score for all offers.
+- **Merge evaluate_final with evaluate_hr.** Discarded because mixing classifier
+  validation with HR evaluation contaminates both judgments. By separating the prompts
+  each has a clear objective and independent temperature.
+- **Use the existing `apply_recommendation` field for the LLM signal.**
+  Discarded due to semantic breakage with historical data. `llm_apply_signal` is created instead.
 
 ---
 
-## Referencias
+## Consequences
 
-- PRD 5.2.3 — Evaluación HR con penalización
-- ADR-005 — Separación de ejes en classifier (mismo patrón: el LLM razona,
-  Python decide)
+- **Every evaluated offer has a real score**, even blocked ones. Allows
+  human validation (T-5) and market analysis on offers with blockers.
+- **Three gemma4 calls per offer** instead of 1-2. Acceptable for the daily
+  pipeline volume.
+- **The `descarte_tipo` and `descarte_razon` columns are no longer written** (not
+  physically deleted due to SQLite limitations). Historical data is
+  preserved.
+- **The classifier's relevance_flag now has contrast.** `relevance_corrected`
+  allows measuring classifier quality a posteriori.
+- **Tests updated:** 3 pre-filter tests removed, 5 updated for
+  the third mock. 171 tests passing.
+- **New column `llm_apply_signal`** added to the schema. Any future
+  consumer must decide whether to use `recommendation` (numeric rating) or `llm_apply_signal`
+  (LLM judgment).
+
+---
+
+## References
+
+- PRD 5.2.3 — HR evaluation with penalty
+- ADR-005 — Axis separation in classifier (same pattern: LLM reasons,
+  Python decides)
