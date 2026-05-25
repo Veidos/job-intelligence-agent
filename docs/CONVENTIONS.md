@@ -1,90 +1,96 @@
-# Convenciones de Código
+# Code Conventions
 
 ## Python
 
-- **Versión:** 3.14+
-- **Type hints:** Obligatorios en todas las funciones públicas
-- **Imports:** Absolutos desde `src/`. No imports relativos
+- **Version:** 3.14+
+- **Type hints:** Required on all public functions
+- **Imports:** Absolute from `src/`. No relative imports
 
-## Estilo y Nomenclatura
+## Style and Naming
 
-| Tipo | Convención |
+| Type | Convention |
 |------|------------|
-| Variables, columnas | snake_case |
-| Clases | PascalCase |
-| Constantes | UPPER_CASE |
-| Booleanos | is_*, has_*, enable_* |
+| Variables, columns | snake_case |
+| Classes | PascalCase |
+| Constants | UPPER_CASE |
+| Booleans | is_*, has_*, enable_* |
 
-## Linter y Formato
+## Linter and Formatting
 
 ```bash
 ruff check src/
 ruff format src/
 ```
 
-Ejecutar siempre antes de dar una tarea por terminada.
+Always run before marking a task as complete.
 
 ## Logging
 
-- Usar `logging` estándar de Python
-- No usar `print()` salvo en scripts de onboarding interactivos
-- Incluir contexto en errores (no solo el mensaje)
+- Use Python's standard `logging`
+- Do not use `print()` except in interactive onboarding scripts
+- Include context in errors (not just the message)
 
-## Manejo de Errores
+## Error Handling
 
 ### Ollama
-- Reintentar máximo 3 veces con backoff exponencial
-- Si falla: loguear y continuar con la siguiente oferta
-- Usar excepciones personalizadas: `OllamaError`, `OllamaJSONError`
+- Retry up to 3 times with exponential backoff
+- If it fails: log and continue with the next offer
+- Use custom exceptions: `OllamaError`, `OllamaJSONError`
 
 ### InfoJobs API
-- Loguear error con contexto completo en `search_runs`
-- No abortar el pipeline por error parcial
-- Continuar con las ofertas que pudieron procesarse
+- Log error with full context in `search_runs`
+- Do not abort the pipeline for partial errors
+- Continue with the offers that could be processed
 
-### JSON desde Modelos
-- Validar siempre el schema antes de insertar en DB
-- Si el JSON es inválido, reintentar el prompt una vez con instrucción adicional de formato
-- Usar helpers `json_serialize` / `json_deserialize`
+### JSON from Models
+- Always validate the schema before inserting into DB
+- If JSON is invalid, retry the prompt once with additional format instructions
+- Use helpers `json_serialize` / `json_deserialize`
 
-## Variables de Entorno
+## Environment Variables
 
-- Todas en `.env` (NO commitear)
-- Cargar con `python-dotenv`
-- No hardcodear credenciales nunca
+- All in `.env` (DO NOT commit)
+- Load with `python-dotenv`
+- Never hardcode credentials
 
-## Método Ledger
+## Ledger Method
 
-Este proyecto usa el Método Ledger para seguimiento:
+This project uses the Ledger Method for tracking:
 
-- **PLANS.md:** Mantener actualizado con estado de cada fase, tareas completadas, pendientes y blockers
-- **MEMORIES.md:** Registrar aprendizajes no obvios (prompts efectivos, campos fiables, rendimiento de modelos)
+- **PLANS.md:** Keep updated with status of each phase, completed tasks, pending items, and blockers
+- **MEMORIES.md:** Record non-obvious learnings (effective prompts, reliable fields, model performance)
 
-Actualizar ambos al completar cada módulo o tarea significativa.
+Update both after completing each module or significant task.
 
-## Fases de Implementación
+## Implementation Phases
 
 ```
-FASE 1 — Cimientos
-  init_db.py + schema.sql completo
-  ollama_client.py con reintentos y validación JSON
-  Test de conexión Telegram, Ollama, InfoJobs API
+PHASE 1 — Foundation
+  init_db.py + complete schema.sql
+  ollama_client.py with retries and JSON validation
+  Connection test for Telegram, Ollama, InfoJobs API
 
-FASE 2 — Onboarding
-  cv_extractor.py (gemma4 → datos estructurados)
-  interviewer.py (gemma4 → preguntas secuenciales)
-  Generación de PERFIL.md
-  Guardado en candidate_profile (DB)
+PHASE 2 — Onboarding
+  cv_extractor.py (gemma4 → structured data)
+  interviewer.py (gemma4 → sequential questions)
+  Generation of PERFIL.md
+  Save to candidate_profile (DB)
 
-FASE 3 — Pipeline base
+PHASE 3 — Base Pipeline
   fetch.py, evaluate.py, send.py, run.py
   role_classifier.py
 
-FASE 4 — Inteligencia
+PHASE 4 — Intelligence
   role_discovery.py, market_signals.py, strategic_advisor.py
 
-FASE 5 — Automatización
-  Configuración cron, logging y monitorización, tests end-to-end
+PHASE 5 — Automation
+  Cron configuration, logging and monitoring, end-to-end tests
 ```
 
-No avanzar a la siguiente fase sin que la anterior esté testeada y funcionando.
+Do not advance to the next phase without the previous one being tested and working.
+
+## Language
+
+All documentation, ADRs, and code comments are written in English.
+ADR-001 through ADR-008 have been translated for consistency.
+All new ADRs (ADR-009 onwards) must be written in English from the start.
