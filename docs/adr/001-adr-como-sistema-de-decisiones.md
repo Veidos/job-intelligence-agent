@@ -1,22 +1,22 @@
-# 001 — ADR como sistema de documentación de decisiones
+# 001 — ADR as a decision documentation system
 
-**Fecha:** 2026-05-21
-**Tipo:** `arquitectura`
-**Estado:** `activo`
+**Date:** 2026-05-21
+**Type:** `architecture`
+**Status:** `active`
 
-## Contexto
-Las decisiones tomadas durante el desarrollo no quedaban registradas de forma
-estructurada. MEMORIES.md acumulaba hechos técnicos pero no el razonamiento
-detrás de cada decisión.
+## Context
+Decisions made during development were not recorded in a structured way.
+MEMORIES.md accumulated technical facts but not the reasoning
+behind each decision.
 
-## Decisión
-Usar ADR clásico: un fichero por decisión en docs/adr/, con formato fijo
-y numeración secuencial.
+## Decision
+Use classic ADR: one file per decision in docs/adr/, with a fixed format
+and sequential numbering.
 
-## Alternativas descartadas
-DECISIONS.md monolítico: peor para indexación por agentes, no escala,
-git blame menos útil.
+## Discarded alternatives
+Monolithic DECISIONS.md: worse for agent indexing, does not scale,
+git blame less useful.
 
-## Consecuencias
-El agente crea un nuevo fichero ADR al final de cada sesión donde se tome
-una decisión no trivial. El índice en docs/adr/README.md se actualiza siempre.
+## Consequences
+The agent creates a new ADR file at the end of each session where a non-trivial
+decision is made. The index in docs/adr/README.md is always updated.
