@@ -28,9 +28,9 @@ Mapping:
 
 | `role_level_label` | Inferred level |
 |---|---|
-| junior | básico (ord=1) |
-| mid | intermedio (ord=2) |
-| senior | avanzado (ord=3) |
+| junior | basic (ord=1) |
+| mid | intermediate (ord=2) |
+| senior | advanced (ord=3) |
 
 Individual multiplier:
 
@@ -71,10 +71,10 @@ considering culture, location, work mode, and personal profile.
 
 | Score | Label |
 |-------|-------|
-| 0.75 ≤ S ≤ 1.00 | Prioritario |
-| 0.55 ≤ S < 0.75 | Aplicar |
-| 0.35 ≤ S < 0.55 | Con expectativas bajas |
-| 0.00 ≤ S < 0.35 | No aplicar |
+| 0.75 ≤ S ≤ 1.00 | Priority |
+| 0.55 ≤ S < 0.75 | Apply |
+| 0.35 ≤ S < 0.55 | Low expectations |
+| 0.00 ≤ S < 0.35 | Skip |
 
 ## Notes
 
