@@ -51,23 +51,23 @@ class TestClamp:
 
 
 class TestGetRating:
-    """Tests para get_rating(score)."""
+    """Tests para get_rating(score) con float 0.0-1.0."""
 
     @pytest.mark.parametrize(
         "score,expected",
         [
-            (80, "Prioritario"),
-            (75, "Prioritario"),
-            (100, "Prioritario"),
-            (60, "Aplicar"),
-            (55, "Aplicar"),
-            (74, "Aplicar"),
-            (40, "Con expectativas bajas"),
-            (35, "Con expectativas bajas"),
-            (54, "Con expectativas bajas"),
-            (30, "No aplicar"),
-            (0, "No aplicar"),
-            (34, "No aplicar"),
+            (0.80, "Prioritario"),
+            (0.75, "Prioritario"),
+            (1.00, "Prioritario"),
+            (0.60, "Aplicar"),
+            (0.55, "Aplicar"),
+            (0.65, "Aplicar"),
+            (0.40, "Con expectativas bajas"),
+            (0.35, "Con expectativas bajas"),
+            (0.50, "Con expectativas bajas"),
+            (0.30, "No aplicar"),
+            (0.00, "No aplicar"),
+            (0.34, "No aplicar"),
         ],
     )
     def test_rating_labels(self, score, expected):

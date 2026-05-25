@@ -1,6 +1,16 @@
 {
   "description_clean": "Buscamos Junior Data Analyst para equipo de Analytics. Responsabilidades: análisis de datos con Python y SQL, creación de dashboards, soporte en reportes semanales. Se valorará conocimiento de Pandas y herramientas de visualización. Contrato indefinido, horario flexible, remote days disponibles.",
-  "skills_required": ["Python", "SQL", "Pandas", "Excel", "Power BI (valorable)"],
+  "skills_required": {
+    "core": [
+      {"name": "Python", "level_required": "basico"},
+      {"name": "SQL", "level_required": "basico"},
+      {"name": "Pandas", "level_required": "basico"}
+    ],
+    "secondary": [
+      {"name": "Excel", "level_required": null},
+      {"name": "Power BI", "level_required": null}
+    ]
+  },
   "experience_min": 0,
   "education_level": "Grado o similar en STEM",
   "salary_min": 24000,

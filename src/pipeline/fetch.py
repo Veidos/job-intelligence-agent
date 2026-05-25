@@ -128,29 +128,95 @@ def parse_salary(text: str) -> tuple[float | None, float | None]:
     return None, None
 
 
+def parse_skills_required(raw: Any) -> dict:
+    """Normaliza skills_required al schema estructurado.
+
+    Acepta:
+    - dict con keys 'core' y 'secondary' (schema nuevo) → devuelve tal cual
+    - list de strings (schema legacy) → convierte a core sin nivel
+    - string JSON → deserializa y reintenta
+    - None / vacío → devuelve estructura vacía
+
+    Retorna siempre:
+    {
+        "core": [{"name": str, "level_required": str|null}, ...],
+        "secondary": [{"name": str, "level_required": str|null}, ...]
+    }
+    """
+    if raw is None:
+        return {"core": [], "secondary": []}
+
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return {"core": [], "secondary": []}
+
+    if isinstance(raw, dict) and "core" in raw:
+        return raw
+
+    if isinstance(raw, list):
+        return {
+            "core": [
+                {"name": s, "level_required": None} for s in raw if isinstance(s, str)
+            ],
+            "secondary": [],
+        }
+
+    return {"core": [], "secondary": []}
+
+
 def extract_fields_with_llm(item: dict) -> dict[str, Any]:
-    """Usa gemma4:e4b para extraer campos estructurados de una oferta."""
-    prompt = f"""
-Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
-- description_clean: descripción limpia (sin HTML)
-- skills_required: lista de skills técnicas requeridas (array de strings)
+    """Usa gemma4:e4b para extraer campos estructurados de una oferta.
+
+    skills_required se extrae con schema estructurado:
+    {
+      "core": [{"name": "Python", "level_required": "intermedio"}, ...],
+      "secondary": [{"name": "Git", "level_required": null}, ...]
+    }
+
+    Niveles válidos: "basico", "intermedio", "avanzado", null.
+    Core = skills explícitamente marcadas como requisito o mencionadas múltiples veces.
+    Secondary = deseables, valorables o mencionadas una vez sin énfasis.
+    """
+    prompt = f"""Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
+
+- description_clean: descripción limpia sin HTML, máximo 2000 caracteres
+- skills_required: objeto con dos listas:
+    - core: skills explícitamente requeridas o marcadas como imprescindibles.
+      Cada elemento: {{"name": "<nombre>", "level_required": "<basico|intermedio|avanzado|null>"}}
+      level_required es null si la oferta no especifica nivel para esa skill.
+    - secondary: skills deseables, valorables o mencionadas sin énfasis.
+      Mismo formato que core.
 - experience_min: años mínimos de experiencia requeridos (int, 0 si no se menciona)
-- education_level: nivel educativo requerido (string)
+- education_level: nivel educativo requerido (string, null si no se menciona)
 - salary_min: salario mínimo anual en número (float o null)
 - salary_max: salario máximo anual en número (float o null)
 
-Oferta:
-{json.dumps(item, ensure_ascii=False)}
+Reglas para clasificar skills:
+- Si la oferta dice "imprescindible", "requisito", "obligatorio", "must have" → core
+- Si dice "valorable", "deseable", "se valorará", "plus" → secondary
+- Si no hay distinción explícita: las 3-5 skills más mencionadas o más centrales al rol → core, el resto → secondary
+- El nivel se infiere del contexto: "junior" → basico, "senior/experto/lead" → avanzado, sin especificación → null
 
-Responde SOLO con el JSON, sin markdown.
-"""
+Oferta:
+{json.dumps(item, ensure_ascii=False)[:3000]}
+
+Responde SOLO con el JSON, sin markdown."""
+
     try:
         result = ollama_call(
             model="gemma4:e4b",
             prompt=prompt,
             expect_json=True,
+            temperature=0.0,
         )
-        return result if isinstance(result, dict) else {}
+        if isinstance(result, dict):
+            result["skills_required"] = parse_skills_required(
+                result.get("skills_required")
+            )
+            return result
+        return {}
     except Exception as e:
         log.warning("gemma4:e4b falló extrayendo campos: %s", e)
         return {}
@@ -188,7 +254,10 @@ def upsert_offer(item: dict, conn) -> bool:
     description_clean = enriched.get(
         "description_clean", clean_description(description_raw)
     )
-    skills_required = json.dumps(enriched.get("skills_required", []))
+    skills_required = json.dumps(
+        enriched.get("skills_required", {"core": [], "secondary": []}),
+        ensure_ascii=False,
+    )
     experience_min = enriched.get("experience_min", 0)
     education_level = enriched.get("education_level", "")
 

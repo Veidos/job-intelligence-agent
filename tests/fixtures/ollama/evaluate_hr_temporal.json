@@ -1,16 +1,6 @@
 {
-  "trajectory_coherence": 11,
-  "recency_relevance": 3,
-  "market_competitiveness": 2,
-  "penalty": 8,
-  "penalty_breakdown": {
-    "gap_laboral": -5,
-    "trabajo_puente": -3
-  },
+  "context_fit": 0.7,
   "environment_compatibility": "alta",
-  "hr_concerns": [
-    "Trabajo temporal puede no dar estabilidad"
-  ],
   "strengths": [
     "Perfecto para reingresar al mercado laboral",
     "Skills de Excel y SQL se pueden aplicar",
@@ -20,10 +10,14 @@
     "Es temporal",
     "Sin crecimiento profesional"
   ],
+  "hr_concerns": [
+    "Trabajo temporal puede no dar estabilidad"
+  ],
   "interview_prep": [
     "Preparar cómo vender la experiencia previa de manufactura como transferable",
     "Destacar habilidades de precisión y detalle del trabajo anterior"
   ],
+  "gap_severity": "medium",
   "apply_signal": "yes",
   "verdict": "Buena opción como puente. El trabajo es temporal pero permite reingresar al mercado, actualizar CV y generar referencias. Compatible con el perfil y el gap del candidato."
 }

@@ -23,69 +23,72 @@ class TestEvaluateTechnical:
     def test_technical_core_match(
         self, test_db, test_conn, sample_offer, sample_perfil_text
     ):
-        from src.pipeline.evaluate import evaluate_technical
+        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
 
+        candidate_skills_map = {
+            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
+        }
         mock_response = CASSETTES["evaluate_technical_core"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
-            result = evaluate_technical(sample_offer, sample_perfil_text)
+            result = evaluate_technical(sample_offer, candidate_skills_map)
 
-        assert result["skills_hard_match"] == 22
-        assert result["experience_match"] == 15
-        assert result["education_match"] == 7
-        assert result["location_match"] == 5
-        assert "nivel_match_reasoning" in result
+        assert len(result["skills_present"]) == 3
+        assert result["skills_present"][0]["name"] == "Python"
+        assert result["skills_present"][0]["present"] is True
         assert "reasoning" in result
 
     def test_technical_senior_mismatch(self, sample_offer_senior, sample_perfil_text):
-        from src.pipeline.evaluate import evaluate_technical
+        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
 
+        candidate_skills_map = {
+            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
+        }
         mock_response = CASSETTES["evaluate_technical_senior"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
-            result = evaluate_technical(sample_offer_senior, sample_perfil_text)
+            result = evaluate_technical(sample_offer_senior, candidate_skills_map)
 
-        assert result["skills_hard_match"] == 8
-        assert result["experience_match"] == 5
+        assert len(result["skills_present"]) == 5
+        assert result["skills_present"][1]["name"] == "PyTorch"
+        assert result["skills_present"][1]["present"] is False
 
     def test_technical_junior_no_exp_required(
         self, sample_offer_no_exp, sample_perfil_text
     ):
-        from src.pipeline.evaluate import evaluate_technical
+        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
 
+        candidate_skills_map = {
+            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
+        }
         mock_response = CASSETTES["evaluate_technical_junior"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
-            result = evaluate_technical(sample_offer_no_exp, sample_perfil_text)
+            result = evaluate_technical(sample_offer_no_exp, candidate_skills_map)
 
-        assert result["experience_match"] == 18
-        assert result["location_match"] == 5
+        assert len(result["skills_present"]) == 2
+        assert result["skills_present"][0]["present"] is True
+        assert result["skills_present"][1]["present"] is True
 
-    def test_technical_devuelve_dict_no_string(self, sample_offer, sample_perfil_text):
-        from src.pipeline.evaluate import evaluate_technical
+    def test_technical_devuelve_dict_no_string(
+        self, sample_offer, sample_perfil_text
+    ):
+        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
 
+        candidate_skills_map = {
+            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
+        }
         mock_response = CASSETTES["evaluate_technical_core"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
-            result = evaluate_technical(sample_offer, sample_perfil_text)
+            result = evaluate_technical(sample_offer, candidate_skills_map)
 
         assert isinstance(result, dict)
         assert not isinstance(result, str)
-
-    def test_technical_usa_perfil_completo(self, sample_offer):
-        from src.pipeline.evaluate import evaluate_technical
-
-        mock_response = CASSETTES["evaluate_technical_core"]
-
-        with patch("src.pipeline.evaluate.ollama_call") as mock:
-            mock.return_value = mock_response
-            result = evaluate_technical(sample_offer, "")
-
-        assert isinstance(result, dict)
 
 
 class TestEvaluateHR:
@@ -95,63 +98,49 @@ class TestEvaluateHR:
         from src.pipeline.evaluate import evaluate_hr
 
         mock_response = CASSETTES["evaluate_hr_core"]
-        technical = {
-            "skills_hard_match": 22,
-            "experience_match": 15,
-            "education_match": 7,
-            "location_match": 5,
-        }
+        skill_detail = {"core": [], "secondary": []}
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
             result = evaluate_hr(
-                sample_offer, sample_perfil_text, technical, employment_gap=3.7
+                sample_offer, sample_perfil_text, skill_detail,
+                M_core=0.8, M_sec=0.5, F_exp=0.6,
+                employment_gap=3.7, gap_severity="medium",
             )
 
-        assert result["trajectory_coherence"] == 9
-        assert result["recency_relevance"] == 4
-        assert result["market_competitiveness"] == 3
-        assert result["penalty"] == 12
+        assert result["context_fit"] == 0.6
         assert result["apply_signal"] == "maybe"
         assert result["verdict"] is not None
-        assert "gap_laboral_3_7_anios" in result["penalty_breakdown"]
 
     def test_hr_senior_rejected(self, sample_offer_senior, sample_perfil_text):
         from src.pipeline.evaluate import evaluate_hr
 
         mock_response = CASSETTES["evaluate_hr_senior"]
-        technical = {
-            "skills_hard_match": 8,
-            "experience_match": 5,
-            "education_match": 4,
-            "location_match": 2,
-        }
+        skill_detail = {"core": [], "secondary": []}
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
             result = evaluate_hr(
-                sample_offer_senior, sample_perfil_text, technical, employment_gap=3.7
+                sample_offer_senior, sample_perfil_text, skill_detail,
+                M_core=0.2, M_sec=0.1, F_exp=0.1,
+                employment_gap=3.7, gap_severity="medium",
             )
 
         assert result["apply_signal"] == "no"
-        assert result["penalty"] == 20
         assert result["environment_compatibility"] == "baja"
 
     def test_hr_temporal_yes(self, sample_offer_temporal, sample_perfil_text):
         from src.pipeline.evaluate import evaluate_hr
 
         mock_response = CASSETTES["evaluate_hr_temporal"]
-        technical = {
-            "skills_hard_match": 15,
-            "experience_match": 18,
-            "education_match": 8,
-            "location_match": 5,
-        }
+        skill_detail = {"core": [], "secondary": []}
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
             result = evaluate_hr(
-                sample_offer_temporal, sample_perfil_text, technical, employment_gap=3.7
+                sample_offer_temporal, sample_perfil_text, skill_detail,
+                M_core=0.6, M_sec=0.4, F_exp=0.8,
+                employment_gap=3.7, gap_severity="medium",
             )
 
         assert result["apply_signal"] == "yes"
@@ -171,8 +160,8 @@ class TestRunEvaluateWithCassettes:
             INSERT INTO offers (
                 source_id, title, company_name, city, work_mode,
                 description_clean, skills_required, is_evaluated, is_active,
-                relevance_flag
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                relevance_flag, experience_min
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "RUN-EVAL-001",
@@ -185,6 +174,7 @@ class TestRunEvaluateWithCassettes:
                 0,
                 1,
                 "core",
+                1,
             ),
         )
         test_db.execute(
@@ -237,8 +227,8 @@ class TestRunEvaluateWithCassettes:
             INSERT INTO offers (
                 source_id, title, company_name, city, work_mode,
                 description_clean, skills_required, is_evaluated, is_active,
-                relevance_flag
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                relevance_flag, experience_min
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "RUN-SCORE-001",
@@ -251,6 +241,7 @@ class TestRunEvaluateWithCassettes:
                 0,
                 1,
                 "core",
+                1,
             ),
         )
 
@@ -281,6 +272,4 @@ class TestRunEvaluateWithCassettes:
                     stats = run_evaluate(limit=1)
 
         score = stats["scores"][0]
-        expected = (22 + 15 + 7 + 5) + (9 + 4 + 3) - 12
-        assert score == expected
-        assert 35 <= score <= 100
+        assert 0 < score <= 1.0

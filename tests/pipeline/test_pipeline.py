@@ -245,7 +245,7 @@ class TestPipelineEndToEnd:
 
                     stats = run_evaluate(limit=5)
 
-        expected_avg = (stats["scores"][0] + stats["scores"][1]) // 2
+        expected_avg = round((stats["scores"][0] + stats["scores"][1]) / 2, 4)
         assert stats["avg_score"] == expected_avg
 
 

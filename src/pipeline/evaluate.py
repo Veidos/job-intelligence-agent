@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.db.init_db import get_connection  # noqa: E402
+from src.pipeline.fetch import parse_skills_required  # noqa: E402
 from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -103,17 +104,145 @@ def load_gap_from_perfil(perfil: str) -> float | None:
     return None
 
 
-RATING = {
-    (75, 101): "Prioritario",
-    (55, 75): "Aplicar",
-    (35, 55): "Con expectativas bajas",
-    (0, 35): "No aplicar",
+def load_experience_years_from_perfil(perfil: str) -> float:
+    """Extrae años totales de experiencia profesional del candidato desde PERFIL.md.
+
+    Fallback: 0.0 si no se encuentra.
+    """
+    import re
+
+    m = re.search(
+        r"(?:años?.*experiencia|experiencia.*años?).*?([\d.]+)", perfil, re.IGNORECASE
+    )
+    if m:
+        try:
+            return float(m.group(1))
+        except ValueError:
+            pass
+    return 0.0
+
+
+# Tablas deterministas
+LEVEL_ORDINAL: dict[str, int] = {
+    "basico": 1,
+    "básico": 1,
+    "intermedio": 2,
+    "avanzado": 3,
+    "experto": 3,
 }
 
+# G(gap): multiplicador por años de gap laboral — tabla fija, no LLM
+GAP_MULTIPLIER: list[tuple[float, float, float]] = [
+    # (gap_min, gap_max_excl, multiplier)
+    (0.0, 1.0, 1.00),
+    (1.0, 2.0, 0.85),
+    (2.0, 3.0, 0.70),
+    (3.0, 4.0, 0.55),
+    (4.0, float("inf"), 0.40),
+]
 
-def get_rating(score: int) -> str:
-    for (low, high), label in RATING.items():
-        if low <= score < high:
+# Score final 0-1
+RATING = [
+    (0.75, 1.01, "Prioritario"),
+    (0.55, 0.75, "Aplicar"),
+    (0.35, 0.55, "Con expectativas bajas"),
+    (0.00, 0.35, "No aplicar"),
+]
+
+# Pesos del score final  S = W_CORE*M_core + W_SEC*M_sec + W_EXP*F_exp + W_FIT*F_fit
+W_CORE = 0.45
+W_SEC = 0.15
+W_EXP = 0.25
+W_FIT = 0.15
+
+
+def get_gap_multiplier(gap_years: float | None) -> float:
+    if gap_years is None:
+        return 1.0
+    for lo, hi, mult in GAP_MULTIPLIER:
+        if lo <= gap_years < hi:
+            return mult
+    return 0.40
+
+
+def level_multiplier(candidate_level: str | None, required_level: str | None) -> float:
+    """L_i = min(lvl_candidato, lvl_requerido) / lvl_requerido.
+
+    Si required_level es None → 1.0 (cualquier nivel válido).
+    Sobrecualificación capped a 1.0.
+    """
+    if not required_level:
+        return 1.0
+    req = LEVEL_ORDINAL.get(required_level.lower(), 1)
+    cand = LEVEL_ORDINAL.get((candidate_level or "").lower(), 1)
+    return min(cand / req, 1.0)
+
+
+def compute_skill_score(
+    offer_skills: dict,
+    candidate_skills_map: dict[str, str],
+) -> tuple[float, float, dict]:
+    """Calcula M_core y M_sec.
+
+    Returns: (M_core, M_sec, skill_detail)
+    skill_detail tiene los cálculos intermedios para trazabilidad.
+    """
+
+    def _score_list(skill_list: list[dict]) -> tuple[float, list]:
+        if not skill_list:
+            return 0.0, []
+        scores = []
+        detail = []
+        for sk in skill_list:
+            name = (sk.get("name") or "").strip()
+            level_req = sk.get("level_required")
+            cand_level = None
+            name_lower = name.lower()
+            for cand_name, cand_lv in candidate_skills_map.items():
+                if name_lower in cand_name or cand_name in name_lower:
+                    cand_level = cand_lv
+                    break
+            present = cand_level is not None
+            L = level_multiplier(cand_level, level_req) if present else 0.0
+            scores.append(L)
+            detail.append(
+                {
+                    "skill": name,
+                    "level_required": level_req,
+                    "candidate_level": cand_level,
+                    "present": present,
+                    "L": round(L, 3),
+                }
+            )
+        return sum(scores) / len(scores), detail
+
+    M_core, core_detail = _score_list(offer_skills.get("core") or [])
+    M_sec, sec_detail = _score_list(offer_skills.get("secondary") or [])
+
+    return (
+        round(M_core, 4),
+        round(M_sec, 4),
+        {"core": core_detail, "secondary": sec_detail},
+    )
+
+
+def compute_experience_score(
+    experience_min: int | None,
+    candidate_years: float,
+    gap_years: float | None,
+) -> float:
+    """F_exp = years_match * G(gap).
+
+    Si experience_min == 0 → years_match = 1.0.
+    """
+    req = max(int(experience_min or 0), 0)
+    years_match = 1.0 if req == 0 else min(candidate_years / req, 1.0)
+    return round(years_match * get_gap_multiplier(gap_years), 4)
+
+
+def get_rating(score: float) -> str:
+    for lo, hi, label in RATING:
+        if lo <= score < hi:
             return label
     return "No aplicar"
 
@@ -147,87 +276,68 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
     return [dict(zip(cols, row)) for row in rows]
 
 
-def evaluate_technical(offer: dict, perfil: str) -> dict:
-    """Evalúa bloque técnico (60 pts) con lógica de niveles usando gemma4:e4b."""
-    skills = offer.get("skills_required") or "[]"
-    description = (offer.get("description_clean") or "")[:1500]
+def evaluate_technical(
+    offer: dict,
+    candidate_skills_map: dict[str, str],
+) -> dict:
+    """El LLM solo detecta presencia de skills y nivel del candidato.
 
-    # Cargar skills desde PERFIL.md
-    candidate_skills = load_skills_from_perfil(perfil)
+    No devuelve puntuaciones — eso lo hace Python con compute_skill_score.
+    Retorna:
+    {
+      "skills_present": [
+        {"name": str, "candidate_level": "basico|intermedio|avanzado|null", "present": bool},
+        ...
+      ],
+      "reasoning": str
+    }
+    """
+    skills_raw = offer.get("skills_required") or "{}"
+    offer_skills = parse_skills_required(skills_raw)
 
-    # Formatear skills del candidato con nivel
-    skills_info = (
+    all_skill_names = [s["name"] for s in offer_skills.get("core", [])] + [
+        s["name"] for s in offer_skills.get("secondary", [])
+    ]
+
+    if not all_skill_names:
+        return {"skills_present": [], "reasoning": "sin skills estructuradas en oferta"}
+
+    candidate_skills_formatted = (
         "\n".join(
-            [
-                f"- {s['name']}: {s['level']} ({s.get('evidence', 'sin evidencia')[:80]})"
-                for s in candidate_skills
-            ]
+            f"  - {name}: {level}" for name, level in candidate_skills_map.items()
         )
-        if candidate_skills
-        else "Sin skills registradas en el perfil"
+        or "  (sin skills registradas)"
     )
 
-    prompt = f"""Eres un evaluador técnico de ofertas de trabajo. Analiza el match entre el perfil y la oferta.
+    prompt = f"""Para cada skill de la oferta, indica si el candidato la tiene y a qué nivel.
 
-REGLAS CRÍTICAS (obligatorias):
+SKILLS DEL CANDIDATO:
+{candidate_skills_formatted}
 
-1. EVALUACIÓN DE SKILLS CON NIVEL:
-   - Solo evalúa las skills que la OFERTA explícitamente pide
-   - Las skills del candidato que la oferta NO pide = IGNORAR (no cuentan, no restan)
-   - El nivel importa: si la oferta pide "avanzado" y el candidato tiene "básico" → reducir puntuación
-   - Si la oferta NO especifica nivel → cualquier nivel del candidato es válido (100%)
+SKILLS QUE PIDE LA OFERTA (debes evaluar TODAS):
+{json.dumps(all_skill_names, ensure_ascii=False)}
 
-2. INFERIR NIVEL DESDE LA OFERTA:
-   - "senior", "lead", "experto", "experienced" → nivel avanzado/experto requerido
-   - "junior", "entry", "sin experiencia" → nivel básico es suficiente
-   - Sin especificación → cualquier nivel es válido
+Reglas:
+- present=true solo si la skill (o una equivalente directa) está en el listado del candidato
+- candidate_level: el nivel del candidato para esa skill, o null si no la tiene
+- No inventes skills ni niveles. Si no está, present=false y candidate_level=null.
+- Equivalencias válidas: "machine learning" ↔ "ML", "scikit-learn" ↔ "sklearn", etc.
 
-3. EXPERIENCIA:
-   - Si la oferta NO pide experiencia previa → experience_match = 18-20
-   - Si pide experiencia y el candidato tiene gap de +3 años → evaluar si es relevante
-
-4. LOCATION:
-   - remoto=5, híbrido=3, presencial-otra-ciudad=1, presencial-sin-posibilidad-remoto=0
-
-CANDIDATO SKILLS (con nivel):
-{skills_info}
-
-PERFIL:
-{perfil[:2500]}
-
-CLASIFICACIÓN DE LA OFERTA: {offer["relevance_flag"]}
-- core: el rol encaja directamente con el perfil del candidato
-- adjacent: hay transferencia parcial, existe gap real
-- stretch: fuera del área principal del candidato
-Calibra el score acorde: un 14/30 en skills para una oferta "stretch"
-es resultado razonable. El mismo score en "core" indica desajuste real.
-
-OFERTA:
-Título: {offer["title"]}
-Empresa: {offer["company_name"]}
-Skills requeridas: {skills}
-Descripción: {description}
-
-NIVEL REQUERIDO DE LA OFERTA: (inferir desde el título y descripción)
-- Si dice "senior/experto/lead" → nivel requerido: avanzado
-- Si dice "junior/básico/sin experiencia" → nivel requerido: básico
-- Si no especifica → nivel requerido: cualquiera
-
-EVALÚA y responde SOLO este JSON:
+Responde SOLO este JSON:
 {{
-  "skills_hard_match": <int 0-30>,
-  "experience_match": <int 0-20>,
-  "education_match": <int 0-10>,
-  "location_match": <int 0-5>,
-  "nivel_match_reasoning": "<explica cómo evaluaste el nivel de cada skill>",
-  "reasoning": "<frase honesta que justifique el score>"
+  "skills_present": [
+    {{"name": "<skill>", "present": <true|false>, "candidate_level": "<basico|intermedio|avanzado|null>"}},
+    ...
+  ],
+  "reasoning": "<una frase sobre el match global>"
 }}"""
+
     result = ollama_call(
         model=MODEL_TECHNICAL,
         prompt=prompt,
         expect_json=True,
-        temperature=0.1,
-        think=True,
+        temperature=0.0,
+        think=False,
     )
     return result if isinstance(result, dict) else {}
 
@@ -235,68 +345,62 @@ EVALÚA y responde SOLO este JSON:
 def evaluate_hr(
     offer: dict,
     perfil: str,
-    technical: dict,
+    skill_detail: dict,
+    M_core: float,
+    M_sec: float,
+    F_exp: float,
     employment_gap: float | None = None,
+    gap_severity: str = "low",
     company_sector: str | None = None,
     company_size: str | None = None,
 ) -> dict:
-    """gemma4 evalúa bloque HR (40 pts). Con think=True para razonamiento."""
+    """Evalúa fit de contexto (F_fit) y genera análisis cualitativo.
 
-    prompt = f"""Eres un recruiter senior con criterio real. Evalúa honestamente.
-NO suavices la realidad. Evalúa como si tuvieras que defender tu decisión.
+    El único número que devuelve es context_fit (0.0-1.0).
+    gap_severity: low|medium|high — calculado fuera, pasado como contexto.
+    """
+    prompt = f"""Eres un recruiter senior. Tienes ya el análisis técnico de esta candidatura.
+Tu tarea: evaluar el fit de contexto y generar análisis cualitativo honesto.
 
-PERFIL DEL CANDIDATO (resumen):
-{perfil[:2800]}
+SCORES TÉCNICOS (ya calculados, NO los recalcules):
+- Match skills core: {M_core:.0%}
+- Match skills secundarias: {M_sec:.0%}
+- Fit de experiencia: {F_exp:.0%}
+- Gap laboral: {employment_gap or 0:.1f} años (severidad: {gap_severity})
 
-CONTEXTO DE EMPRESA: {company_sector or "desconocido"} | Tamaño: {company_size or "desconocido"}
-Clasificación de la oferta: {offer["relevance_flag"]}
-Gap de empleo del candidato: {employment_gap or "sin gap"} años
-Sobre el gap laboral y coherencia de trayectoria: evalúalos en función
-del tipo de empresa y oferta concreta. No apliques penalizaciones estándar.
-Razona qué peso tendría este historial para este empleador específico.
+DETALLE DE SKILLS:
+{json.dumps(skill_detail, ensure_ascii=False, indent=2)[:1500]}
+
+PERFIL DEL CANDIDATO:
+{perfil[:2500]}
 
 OFERTA:
 Título: {offer["title"]} | Empresa: {offer["company_name"]}
+Sector empresa: {company_sector or "desconocido"} | Tamaño: {company_size or "desconocido"}
 Ubicación: {offer.get("city")} | Modalidad: {offer.get("work_mode")}
-Descripción: {(offer.get("description_clean") or "")[:1500]}
+Descripción: {(offer.get("description_clean") or "")[:1200]}
 
-EVALUACIÓN TÉCNICA PREVIA:
-{json.dumps(technical, ensure_ascii=False)}
+EVALÚA el context_fit (0.0-1.0) considerando SOLO:
+- ¿La cultura/sector de la empresa es compatible con el perfil del candidato?
+- ¿La modalidad y ubicación son viables?
+- ¿El perfil personal (motivación, reconversión, TDAH) encaja con el entorno laboral?
+- ¿La empresa suele contratar perfiles de reconversión para este tipo de rol?
 
-IMPORTANTE: El salario mínimo viable del candidato NO es un factor de
-penalización. No lo incluyas en penalty_breakdown bajo ningún concepto.
-La penalty es SOLO para: gap laboral injustificado, incoherencia grave
-de trayectoria, requisitos obligatorios no cumplidos.
-
-EVALÚA:
-1. ¿El trayecto profesional tiene sentido para este puesto?
-2. ¿El gap laboral es descalificante para esta oferta concreta?
-3. ¿La empresa/cultura presentan factores relevantes?
-   IMPORTANTE: los factores de entorno NO son filtros, son contexto
-   de priorización y preparación para entrevista.
-4. ¿Qué haría un recruiter real con este CV en el primer filtro?
-5. Dado el contexto personal, ¿vale la pena invertir energía aquí?
-
-6. Considerando la edad del candidato y que es un cambio de carrera:
-   ¿La empresa típicamente contrata perfiles de reconversión en esta franja de edad?
-   ¿Es la edad un factor descalificante, neutro o positivo para ESTE puesto concreto?
-   IMPORTANTE: la edad NO es un filtro absoluto, es contexto de probabilidad real.
+NO penalices el gap ni las skills — eso ya está capturado en los scores técnicos.
 
 Devuelve SOLO este JSON:
 {{
-  "trajectory_coherence": <int 0-15>,
-  "recency_relevance": <int 0-15>,
-  "market_competitiveness": <int 0-5>,
-  "penalty": <int 0-25>,
-  "penalty_breakdown": {{"motivo": <puntos>}},
+  "context_fit": <float 0.0-1.0>,
   "environment_compatibility": "<alta|media|baja>",
-  "hr_concerns": ["<string>"],
-  "strengths": ["<string>"],
-  "red_flags": ["<string>"],
-  "interview_prep": ["<consejo concreto>"],
+  "strengths": ["<punto fuerte concreto y específico para esta oferta>"],
+  "red_flags": ["<bandera roja concreta>"],
+  "hr_concerns": ["<preocupación del recruiter>"],
+  "interview_prep": ["<consejo concreto y específico para esta oferta, no genérico>"],
+  "gap_severity": "<low|medium|high>",
   "apply_signal": "<yes|no|maybe>",
-  "verdict": "<párrafo libre honesto>"
+  "verdict": "<síntesis en 2-3 frases, específica para esta oferta, no para el perfil general>"
 }}"""
+
     result = ollama_call(
         model=MODEL_HR,
         prompt=prompt,
@@ -310,67 +414,35 @@ Devuelve SOLO este JSON:
 def evaluate_final(
     offer: dict,
     perfil: str,
-    technical: dict,
+    skill_detail: dict,
     hr: dict,
-    raw_score: int,
+    final_score: float,
 ) -> dict:
-    """Tercer prompt: valida el relevance_flag del classifier y detecta
-    bloqueos reales de aplicación. No altera el score numérico.
-
-    Retorna:
-    {
-      "relevance_validation": "confirmed|corrected",
-      "relevance_corrected": "core|adjacent|stretch|temporal|null",
-      "relevance_reasoning": str,
-      "apply_block": null | "requisito_imposible|practicas|otro",
-      "apply_block_reason": str | null,
-      "apply_recommendation": "yes|maybe|no",
-      "verdict": str
-    }
-    """
-    prompt = f"""Eres un evaluador senior de ofertas de trabajo. Tienes ya la evaluación técnica y HR de esta oferta.
+    """Tercer prompt: valida relevance_flag y detecta bloqueos reales."""
+    prompt = f"""Eres un evaluador senior. Tienes el análisis completo de esta candidatura.
 
 PERFIL DEL CANDIDATO:
-{perfil[:2500]}
+{perfil[:2000]}
 
 OFERTA:
 Título: {offer["title"]}
-Empresa: {offer.get("company_name", "")} | Sector: {offer.get("company_sector") or "desconocido"} | Tamaño: {offer.get("company_size") or "desconocido"}
+Empresa: {offer.get("company_name", "")} | Sector: {offer.get("company_sector") or "desconocido"}
 Ciudad: {offer.get("city", "")} | Modalidad: {offer.get("work_mode", "")}
-Descripción: {(offer.get("description_clean") or "")[:2000]}
+Descripción: {(offer.get("description_clean") or "")[:1800]}
 
-CLASIFICACIÓN PREVIA (role_classifier):
-relevance_flag: {offer.get("relevance_flag")}
-role_normalized: {offer.get("role_normalized")}
+CLASIFICACIÓN PREVIA: relevance_flag={offer.get("relevance_flag")} | role={offer.get("role_normalized")}
+SCORE FINAL: {final_score:.2f} / 1.0
+DETALLE SKILLS: {json.dumps(skill_detail, ensure_ascii=False)[:800]}
+VEREDICTO HR: {hr.get("verdict", "")}
 
-EVALUACIÓN TÉCNICA:
-{json.dumps(technical, ensure_ascii=False)}
+TAREA 1 — VALIDAR relevance_flag:
+¿El classifier asignó correctamente "{offer.get("relevance_flag")}"?
+Ahora tienes la descripción completa. Confirma o corrige.
 
-EVALUACIÓN HR:
-{json.dumps(hr, ensure_ascii=False)}
-
-SCORE CALCULADO: {raw_score}/100
-
----
-
-TU TAREA TIENE DOS PARTES INDEPENDIENTES:
-
-PARTE 1 — VALIDAR EL RELEVANCE_FLAG:
-El classifier asignó "{offer.get("relevance_flag")}" a esta oferta basándose
-en el título y skills. Tú tienes ahora la descripción completa y las evaluaciones.
-¿Confirmas esa clasificación o la corriges? Razona brevemente.
-- "confirmed": la clasificación es correcta
-- "corrected": propón una corrección (core/adjacent/stretch/temporal) y explica por qué
-
-PARTE 2 — DETECTAR BLOQUEOS DE APLICACIÓN:
-Evalúa si la oferta tiene algún requisito que haga inviable la candidatura
-independientemente del score. Razona desde la descripción completa, no desde reglas.
-Ejemplos de bloqueo real: convenio de prácticas universitarias, certificado de
-discapacidad obligatorio, requisito legal de nacionalidad.
+TAREA 2 — DETECTAR BLOQUEOS REALES:
+Bloqueo real = requisito que hace inviable la candidatura independientemente del score.
+Ejemplos: convenio prácticas universitarias, certificado discapacidad obligatorio, nacionalidad legal.
 NO son bloqueos: falta de experiencia, skills no dominadas, gap laboral.
-
-Si hay bloqueo: apply_block = "requisito_imposible" | "practicas" | "otro"
-Si no hay bloqueo: apply_block = null
 
 Responde SOLO este JSON:
 {{
@@ -380,7 +452,7 @@ Responde SOLO este JSON:
   "apply_block": <"requisito_imposible"|"practicas"|"otro"|null>,
   "apply_block_reason": <"<texto>"|null>,
   "apply_recommendation": "<yes|maybe|no>",
-  "verdict": "<síntesis ejecutiva honesta en 2-3 frases>"
+  "verdict": "<síntesis ejecutiva en 2-3 frases, específica para esta oferta>"
 }}"""
 
     result = ollama_call(
@@ -395,20 +467,22 @@ Responde SOLO este JSON:
 
 def save_evaluation(
     offer_id: int,
-    technical: dict,
+    technical_llm: dict,
     hr: dict,
     final: dict,
-    match_score: int,
+    skill_detail: dict,
+    M_core: float,
+    M_sec: float,
+    F_exp: float,
+    F_fit: float,
+    final_score: float,
     recommendation: str,
     processing_ms: int,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
-    verdict_final = hr.get("verdict", "") if hr else ""
 
-    technical_data = technical if technical else {}
-    hr_data = hr if hr else {}
-    final_data = final if final else {}
+    match_score_int = round(final_score * 100)
 
     cur.execute(
         """
@@ -432,36 +506,51 @@ def save_evaluation(
         (
             offer_id,
             None,
-            technical_data.get("skills_hard_match", 0),
-            technical_data.get("experience_match", 0),
-            technical_data.get("education_match", 0),
-            technical_data.get("location_match", 0),
-            hr_data.get("trajectory_coherence", 0),
-            hr_data.get("recency_relevance", 0),
-            hr_data.get("market_competitiveness", 0),
-            hr_data.get("penalty", 0),
-            json.dumps(hr_data.get("penalty_breakdown", {}), ensure_ascii=False),
-            match_score,
+            round(M_core * 100),  # skills_hard_match: M_core*100 para trazabilidad
+            round(F_exp * 100),  # experience_match: F_exp*100
+            0,  # education_match: no usado en nuevo modelo
+            0,  # location_match: no usado en nuevo modelo
+            0,  # trajectory_coherence: no usado
+            0,  # recency_relevance: no usado
+            round(F_fit * 100),  # market_competitiveness: F_fit*100
+            0,  # penalty: eliminado del modelo
+            json.dumps(
+                {  # penalty_breakdown: detalle completo para trazabilidad
+                    "M_core": round(M_core, 4),
+                    "M_sec": round(M_sec, 4),
+                    "F_exp": round(F_exp, 4),
+                    "F_fit": round(F_fit, 4),
+                    "weights": {
+                        "W_CORE": W_CORE,
+                        "W_SEC": W_SEC,
+                        "W_EXP": W_EXP,
+                        "W_FIT": W_FIT,
+                    },
+                    "skill_detail": skill_detail,
+                },
+                ensure_ascii=False,
+            ),
+            match_score_int,
             recommendation,
-            hr_data.get("environment_compatibility"),
-            json.dumps(hr_data.get("hr_concerns", []), ensure_ascii=False),
-            json.dumps(hr_data.get("strengths", []), ensure_ascii=False),
-            json.dumps(hr_data.get("red_flags", []), ensure_ascii=False),
-            verdict_final,
+            hr.get("environment_compatibility"),
+            json.dumps(hr.get("hr_concerns", []), ensure_ascii=False),
+            json.dumps(hr.get("strengths", []), ensure_ascii=False),
+            json.dumps(hr.get("red_flags", []), ensure_ascii=False),
+            hr.get("verdict", ""),
             recommendation,
             processing_ms,
             MODEL_TECHNICAL,
             MODEL_HR,
-            hr_data.get("company_fit_score"),
-            json.dumps(hr_data.get("company_green_flags", []), ensure_ascii=False),
-            json.dumps(hr_data.get("company_red_flags", []), ensure_ascii=False),
-            json.dumps(hr_data.get("interview_prep", []), ensure_ascii=False),
-            final_data.get("relevance_validation"),
-            final_data.get("relevance_corrected"),
-            final_data.get("relevance_reasoning"),
-            final_data.get("apply_block"),
-            final_data.get("apply_block_reason"),
-            final_data.get("apply_recommendation"),
+            None,
+            json.dumps([], ensure_ascii=False),
+            json.dumps([], ensure_ascii=False),
+            json.dumps(hr.get("interview_prep", []), ensure_ascii=False),
+            final.get("relevance_validation"),
+            final.get("relevance_corrected"),
+            final.get("relevance_reasoning"),
+            final.get("apply_block"),
+            final.get("apply_block_reason"),
+            final.get("apply_recommendation"),
         ),
     )
     cur.execute("UPDATE offers SET is_evaluated=1 WHERE id=?", (offer_id,))
@@ -472,12 +561,20 @@ def save_evaluation(
 def run_evaluate(limit: int = 10) -> dict:
     perfil = load_perfil()
     offers = get_pending_offers(limit)
-    candidate_skills = load_skills_from_perfil(perfil)
+    candidate_skills_map = load_skills_from_perfil(perfil)
     employment_gap = load_gap_from_perfil(perfil)
-    log.info("Ofertas pendientes de evaluar: %d", len(offers))
-    log.info("Skills del candidato cargadas: %d", len(candidate_skills))
-    if employment_gap:
-        log.info("Employment gap: %.1f años", employment_gap)
+    candidate_years = load_experience_years_from_perfil(perfil)
+
+    # Convertir load_skills_from_perfil (list[dict]) a dict[str, str]
+    candidate_skills_map = {s["name"]: s["level"] for s in candidate_skills_map}
+
+    log.info("Ofertas pendientes: %d", len(offers))
+    log.info(
+        "Skills candidato: %d | Gap: %s años | Exp: %.1f años",
+        len(candidate_skills_map),
+        employment_gap,
+        candidate_years,
+    )
 
     stats = {"evaluated": 0, "errors": 0, "scores": []}
 
@@ -486,41 +583,69 @@ def run_evaluate(limit: int = 10) -> dict:
         try:
             log.info("Evaluando: %s", offer["title"])
 
-            technical = evaluate_technical(offer, perfil)
-            if not technical:
-                log.warning(f"gemma4 no devolvió resultado para: {offer['title']}")
-                stats["errors"] += 1
-                continue
+            # Parsear skills de la oferta (backward-compat con legacy flat array)
+            offer_skills = parse_skills_required(offer.get("skills_required"))
 
+            # Paso 1: LLM detecta presencia de skills (sin inventar números)
+            technical_llm = evaluate_technical(offer, candidate_skills_map)
+
+            # Enriquecer map con equivalencias que el LLM detectó
+            enriched_map = dict(candidate_skills_map)
+            for sk in technical_llm.get("skills_present", []):
+                if sk.get("present") and sk.get("candidate_level"):
+                    enriched_map[sk["name"].lower()] = sk["candidate_level"]
+
+            # Paso 2: Python calcula M_core y M_sec
+            M_core, M_sec, skill_detail = compute_skill_score(
+                offer_skills, enriched_map
+            )
+
+            # Paso 3: Python calcula F_exp (determinista)
+            F_exp = compute_experience_score(
+                offer.get("experience_min"),
+                candidate_years,
+                employment_gap,
+            )
+
+            # Severidad del gap para contexto HR
+            G = get_gap_multiplier(employment_gap)
+            gap_severity = "low" if G >= 0.85 else ("medium" if G >= 0.55 else "high")
+
+            # Paso 4: LLM evalúa context_fit (F_fit)
             hr = evaluate_hr(
                 offer,
                 perfil,
-                technical,
+                skill_detail,
+                M_core,
+                M_sec,
+                F_exp,
                 employment_gap,
+                gap_severity,
                 offer.get("company_sector"),
                 offer.get("company_size"),
             )
             if not hr:
-                log.warning("gemma4 no devolvió resultado para: %s", offer["title"])
+                log.warning("Sin resultado HR: %s", offer["title"])
                 stats["errors"] += 1
                 continue
 
-            bloque_a = (
-                _clamp(technical.get("skills_hard_match", 0), 0, 30)
-                + _clamp(technical.get("experience_match", 0), 0, 20)
-                + _clamp(technical.get("education_match", 0), 0, 10)
-                + _clamp(technical.get("location_match", 0), 0, 5)
-            )
-            bloque_b = (
-                _clamp(hr.get("trajectory_coherence", 0), 0, 15)
-                + _clamp(hr.get("recency_relevance", 0), 0, 15)
-                + _clamp(hr.get("market_competitiveness", 0), 0, 5)
-            )
-            penalty = _clamp(hr.get("penalty", 0), 0, 25)
-            match_score = max(0, min(100, bloque_a + bloque_b - penalty))
-            recommendation = get_rating(match_score)
+            F_fit = min(max(float(hr.get("context_fit", 0.5)), 0.0), 1.0)
 
-            final = evaluate_final(offer, perfil, technical, hr, match_score)
+            # Paso 5: Score final determinista
+            final_score = round(
+                min(
+                    max(
+                        W_CORE * M_core + W_SEC * M_sec + W_EXP * F_exp + W_FIT * F_fit,
+                        0.0,
+                    ),
+                    1.0,
+                ),
+                4,
+            )
+            recommendation = get_rating(final_score)
+
+            # Paso 6: Validación final (relevance + bloqueos)
+            final = evaluate_final(offer, perfil, skill_detail, hr, final_score)
             if not final:
                 log.warning("Sin resultado final: %s", offer["title"])
                 stats["errors"] += 1
@@ -529,31 +654,36 @@ def run_evaluate(limit: int = 10) -> dict:
             ms = int((time.monotonic() - t0) * 1000)
             save_evaluation(
                 offer["id"],
-                technical,
+                technical_llm,
                 hr,
                 final,
-                match_score,
+                skill_detail,
+                M_core,
+                M_sec,
+                F_exp,
+                F_fit,
+                final_score,
                 recommendation,
                 ms,
             )
 
             block = final.get("apply_block")
             log.info(
-                "✓ %s → %d/100 (%s)%s",
+                "✓ %s → %.2f (%s)%s",
                 offer["title"],
-                match_score,
+                final_score,
                 recommendation,
                 f" [BLOQUEADO: {block}]" if block else "",
             )
             stats["evaluated"] += 1
-            stats["scores"].append(match_score)
+            stats["scores"].append(final_score)
 
         except Exception as e:
             log.error("Error evaluando %s: %s", offer["title"], e)
             stats["errors"] += 1
 
     if stats["scores"]:
-        stats["avg_score"] = sum(stats["scores"]) // len(stats["scores"])
+        stats["avg_score"] = round(sum(stats["scores"]) / len(stats["scores"]), 4)
 
     return stats
 

@@ -1,8 +1,7 @@
 {
-  "skills_hard_match": 20,
-  "experience_match": 18,
-  "education_match": 8,
-  "location_match": 5,
-  "nivel_match_reasoning": "Oferta no especifica nivel y no pide experiencia previa. Cualquier nivel del candidato es válido. Python (básico) suficiente, SQL (básico) suficiente. Sin requisitos de formación específica.",
-  "reasoning": "Match excelente. La oferta está diseñada para perfiles sin experiencia y el candidato tiene skills básicas de Data Science. Remote matching."
+  "skills_present": [
+    {"name": "Python", "present": true, "candidate_level": "basico"},
+    {"name": "SQL", "present": true, "candidate_level": "basico"}
+  ],
+  "reasoning": "Match excelente. La oferta no pide experiencia y el candidato tiene las skills básicas necesarias para el puesto junior."
 }

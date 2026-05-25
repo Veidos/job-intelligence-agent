@@ -33,13 +33,11 @@ class TestExtractFieldsWithQwen:
             mock.return_value = mock_response
             result = extract_fields_with_llm(item)
 
-        assert result["skills_required"] == [
-            "Python",
-            "SQL",
-            "Pandas",
-            "Excel",
-            "Power BI (valorable)",
-        ]
+        assert "core" in result["skills_required"]
+        assert "secondary" in result["skills_required"]
+        core_names = {s["name"] for s in result["skills_required"]["core"]}
+        assert "Python" in core_names
+        assert "SQL" in core_names
         assert result["experience_min"] == 0
         assert result["education_level"] == "Grado o similar en STEM"
         assert result["salary_min"] == 24000
@@ -63,8 +61,9 @@ class TestExtractFieldsWithQwen:
             result = extract_fields_with_llm(item)
 
         assert result["experience_min"] == 4
-        assert "PyTorch" in result["skills_required"]
-        assert "MLOps" in result["skills_required"]
+        core_names = {s["name"] for s in result["skills_required"]["core"]}
+        assert "PyTorch" in core_names
+        assert "MLOps" in core_names
         assert result["salary_min"] == 50000
         assert result["salary_max"] == 70000
 
@@ -102,7 +101,7 @@ class TestExtractFieldsWithQwen:
 
         assert result == {}
 
-    def test_usa_modelo_qwen_en_llamada(self):
+    def test_usa_modelo_gemma_en_llamada(self):
         from src.pipeline.fetch import extract_fields_with_llm
 
         mock_response = CASSETTES["extract_fields_junior"]
@@ -119,7 +118,7 @@ class TestExtractFieldsWithQwen:
             extract_fields_with_llm(item)
 
         call_args = mock.call_args
-        assert "qwen2.5" in call_args[1]["model"]
+        assert "gemma4" in call_args[1]["model"]
 
     def test_pasa_item_completo_en_prompt(self):
         from src.pipeline.fetch import extract_fields_with_llm
@@ -140,7 +139,6 @@ class TestExtractFieldsWithQwen:
             extract_fields_with_llm(item)
 
         call_args = mock.call_args
-        # ollama_call(model, prompt, ...) → model en args[0], prompt en args[1] o kwargs["prompt"]
         prompt = (
             call_args.kwargs.get("prompt")
             if call_args.kwargs

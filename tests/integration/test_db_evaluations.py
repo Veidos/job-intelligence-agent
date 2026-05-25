@@ -44,28 +44,23 @@ class TestSaveEvaluation:
 
             save_evaluation(
                 offer_id=offer_id,
-                technical={
-                    "skills_hard_match": 20,
-                    "experience_match": 12,
-                    "education_match": 8,
-                    "location_match": 5,
-                },
+                technical_llm={"skills_present": [], "reasoning": "ok"},
                 hr={
-                    "trajectory_coherence": 10,
-                    "recency_relevance": 8,
-                    "market_competitiveness": 3,
-                    "penalty": 5,
-                    "penalty_breakdown": {"gap_laboral": -5},
                     "environment_compatibility": "alta",
                     "hr_concerns": ["Empresa grande"],
                     "strengths": ["Skills técnicas"],
                     "red_flags": [],
+                    "interview_prep": [],
                     "verdict": "Buen match para aplicar",
-                    "apply_recommendation": "Aplicar",
                 },
-                match_score=58,
-                recommendation="Aplicar",
                 final={},
+                skill_detail={"core": [], "secondary": []},
+                M_core=0.8,
+                M_sec=0.5,
+                F_exp=0.6,
+                F_fit=0.7,
+                final_score=0.58,
+                recommendation="Aplicar",
                 processing_ms=1500,
             )
 
@@ -111,28 +106,23 @@ class TestSaveEvaluation:
 
             save_evaluation(
                 offer_id=offer_id,
-                technical={
-                    "skills_hard_match": 15,
-                    "experience_match": 10,
-                    "education_match": 8,
-                    "location_match": 3,
-                },
+                technical_llm={"skills_present": [], "reasoning": "ok"},
                 hr={
-                    "trajectory_coherence": 8,
-                    "recency_relevance": 6,
-                    "market_competitiveness": 2,
-                    "penalty": 10,
-                    "penalty_breakdown": {"gap_laboral": -10, "senior_requerido": -5},
                     "environment_compatibility": "baja",
                     "hr_concerns": ["Gap laboral >3 años"],
                     "strengths": [],
                     "red_flags": ["Requisitos muy avanzados"],
+                    "interview_prep": [],
                     "verdict": "No encaja para este perfil",
-                    "apply_recommendation": "No aplicar",
                 },
-                match_score=42,
-                recommendation="Con expectativas bajas",
                 final={},
+                skill_detail={"core": [], "secondary": []},
+                M_core=0.4,
+                M_sec=0.2,
+                F_exp=0.3,
+                F_fit=0.2,
+                final_score=0.42,
+                recommendation="Con expectativas bajas",
                 processing_ms=2000,
             )
 
@@ -141,7 +131,7 @@ class TestSaveEvaluation:
             (offer_id,),
         ).fetchone()
         breakdown = json.loads(row[0])
-        assert breakdown["gap_laboral"] == -10
+        assert breakdown["M_core"] == 0.4
 
 
 class TestGetTopOffers:

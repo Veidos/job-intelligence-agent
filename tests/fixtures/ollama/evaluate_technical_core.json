@@ -1,8 +1,8 @@
 {
-  "skills_hard_match": 22,
-  "experience_match": 15,
-  "education_match": 7,
-  "location_match": 5,
-  "nivel_match_reasoning": "Candidato tiene Python (básico) y la oferta pide nivel junior. SQL (básico) coincide exactamente. Pandas solicitado y disponible. Nivel básico es suficiente para posición junior.",
-  "reasoning": "Buen match para Data Analyst junior. Candidate tiene las skills pedidas (Python, SQL, Pandas) con nivel suficiente para puesto sin experiencia requerida."
+  "skills_present": [
+    {"name": "Python", "present": true, "candidate_level": "basico"},
+    {"name": "SQL", "present": true, "candidate_level": "basico"},
+    {"name": "Pandas", "present": true, "candidate_level": "basico"}
+  ],
+  "reasoning": "Buen match para Data Analyst junior. El candidato tiene las skills requeridas (Python, SQL, Pandas) con nivel básico, suficiente para puesto sin experiencia requerida."
 }
