@@ -1,32 +1,32 @@
-# 002 — CV freshness check con regeneración interactiva
+# 002 — CV freshness check with interactive regeneration
 
-**Fecha:** 2026-05-21
-**Tipo:** `operativo`
-**Estado:** `activo`
+**Date:** 2026-05-21
+**Type:** `operational`
+**Status:** `active`
 
-## Contexto
-El pipeline ejecutaba `evaluate()` contra `PERFIL.md` incluso cuando el CV
-(`assets/cv.pdf`) estaba desactualizado, generando evaluaciones inconsistentes.
-El usuario debía acordarse de lanzar `onboarding/run.py` manualmente tras cada
-actualización del CV.
+## Context
+The pipeline ran `evaluate()` against `PERFIL.md` even when the CV
+(`assets/cv.pdf`) was outdated, producing inconsistent evaluations.
+The user had to remember to run `onboarding/run.py` manually after each
+CV update.
 
-## Decisión
-`run.py` detecta cambios en `assets/cv.pdf` vía SHA-256, pregunta al usuario
-si quiere regenerar `PERFIL.md` con entrevista completa, y si acepta ejecuta
-onboarding completo antes de continuar el pipeline. En `--dry-run` o ejecución
-headless (cron), solo advierte y se detiene.
+## Decision
+`run.py` detects changes in `assets/cv.pdf` via SHA-256, asks the user
+whether to regenerate `PERFIL.md` with a full interview, and if accepted,
+runs full onboarding before continuing the pipeline. In `--dry-run` or
+headless (cron) execution, it only warns and stops.
 
-## Alternativas descartadas
-- **Regeneración automática sin preguntar:** viola la regla de AGENTS.md
-  (nunca auto-regenerar PERFIL.md sin confirmación explícita).
-- **Solo warning sin opción interactiva:** mala UX para el usuario promedio
-  que no quiere acordarse de comandos manuales.
-- **Watcher continuo en background:** sobreingeniería para el caso de uso real.
+## Discarded alternatives
+- **Automatic regeneration without asking:** violates the AGENTS.md rule
+  (never auto-regenerate PERFIL.md without explicit confirmation).
+- **Warning only without interactive option:** poor UX for the average user
+  who does not want to remember manual commands.
+- **Continuous background watcher:** over-engineering for the real use case.
 
-## Consecuencias
-- `.cv_hash` se crea en la raíz del proyecto (gitignored).
-- El primer `run.py` post-CV ejecuta onboarding completo (extracción +
-  entrevista), alargando el tiempo de ese run.
-- Zero impacto en el flujo normal: CV sin cambios = 0 líneas adicionales.
-- En headless (cron) el pipeline no se ejecuta si hay CV nuevo, evitando
-  evaluaciones inconsistentes.
+## Consequences
+- `.cv_hash` is created at the project root (gitignored).
+- The first `run.py` after a CV update runs full onboarding (extraction +
+  interview), lengthening that run.
+- Zero impact on the normal flow: no CV change = 0 additional lines.
+- In headless (cron) mode the pipeline does not run if there is a new CV,
+  avoiding inconsistent evaluations.
