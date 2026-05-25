@@ -1,40 +1,40 @@
-# 003 — Entrevista ligera con enfoque positivo
+# 003 — Lightweight interview with positive focus
 
-**Fecha:** 2026-05-22
-**Tipo:** `operativo`
-**Estado:** `activo`
+**Date:** 2026-05-22
+**Type:** `operational`
+**Status:** `active`
 
-## Contexto
-La entrevista original tenía 6 preguntas efectivas, incluyendo una sobre
-inseguridades laborales que generaba ansiedad innecesaria. El campo
-`salary_min_viable` existía en PERFIL.md pero nunca se preguntaba.
-Además, `work_mode_preference` y `relocation_conditions` eran preguntas
-separadas cuando podían fusionarse en una sola respuesta abierta.
+## Context
+The original interview had 6 effective questions, including one about
+job insecurities that generated unnecessary anxiety. The field
+`salary_min_viable` existed in PERFIL.md but was never asked.
+Additionally, `work_mode_preference` and `relocation_conditions` were
+separate questions when they could be merged into a single open response.
 
-## Decisión
-Rediseñar la entrevista a 5 preguntas, eliminando la pregunta negativa
-y añadiendo salario opcional y motivación profesional:
+## Decision
+Redesign the interview to 5 questions, removing the negative question
+and adding optional salary and professional motivation:
 
-1. **Modalidad + mudanza** (una sola pregunta abierta, procesada por gemma4)
-2. **Salario mínimo viable** (nueva, opcional — vacío = no filtrar)
-3. **Contexto personal** (todo en un solo input, con ejemplos de qué incluir)
-4. **Motivación profesional** (enfoque positivo, sustituye inseguridades)
-5. **Sectores preferidos / a evitar** (procesado por gemma4 a keywords)
+1. **Mode + relocation** (single open question, processed by gemma4)
+2. **Minimum viable salary** (new, optional — empty = no filter)
+3. **Personal context** (all in one input, with examples of what to include)
+4. **Professional motivation** (positive focus, replaces insecurities)
+5. **Preferred / avoid sectors** (processed by gemma4 into keywords)
 
-Los ejemplos en cada pregunta son genéricos, no hardcodeados al perfil
-del candidato.
+The examples in each question are generic, not hardcoded to the candidate's
+profile.
 
-## Alternativas descartadas
-- **Mantener la pregunta de inseguridades:** contraproducente, genera
-  autodiagnóstico negativo que contamina personal_concerns.
-- **Pregunta 3 dividida en dos inputs (condiciones + entorno):** confuso,
-  el usuario no sabe si debe repetir información o separarla.
-- **Salario obligatorio:** rompe el flujo si no se quiere filtrar por salario.
+## Discarded alternatives
+- **Keep the insecurity question:** counterproductive, generates
+  negative self-diagnosis that contaminates personal_concerns.
+- **Question 3 split into two inputs (conditions + environment):** confusing,
+  the user does not know whether to repeat information or separate it.
+- **Mandatory salary:** breaks the flow if no salary filtering is desired.
 
-## Consecuencias
-- `work_mode_preference`, `location_preference` y `relocation_conditions`
-  se extraen desde una sola respuesta mediante gemma4.
-- `personal_concerns` es texto libre sin estructura forzada.
-- La motivación se almacena como parte de `personal_concerns` para que
-  gemma4 la use como contexto psicológico en evaluaciones.
-- Los ejemplos deben mantenerse genéricos al modificar la entrevista.
+## Consequences
+- `work_mode_preference`, `location_preference` and `relocation_conditions`
+  are extracted from a single response via gemma4.
+- `personal_concerns` is free text with no forced structure.
+- Motivation is stored as part of `personal_concerns` so that
+  gemma4 can use it as psychological context in evaluations.
+- Examples must be kept generic when modifying the interview.
