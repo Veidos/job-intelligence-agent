@@ -1,43 +1,43 @@
-# ADR-008: Scoring determinista 0-1 con multiplicadores de nivel
+# ADR-008: Deterministic 0-1 scoring with level multipliers
 
-**Fecha:** 2026-05-25
-**Tipo:** `arquitectura`
-**Estado:** `activo`
-**Componente:** `src/pipeline/evaluate.py`, `src/pipeline/fetch.py`
-
----
-
-## Contexto
-
-El sistema de scoring anterior delegaba toda la evaluación numérica a gemma4:e4b:
-- `evaluate_technical` devolvía 4 números (skills_hard_match 0-30, experience_match 0-20, education_match 0-10, location_match 0-5) y `evaluate_hr` devolvía 4 números (trajectory_coherence 0-15, recency_relevance 0-15, market_competitiveness 0-5) más una penalty 0-25.
-- Cada prompt pedía al modelo razonar y emitir puntuaciones enteras con rango acotado, y Python las sumaba con pesos implícitos (30+20+10+5 + 15+15+5 - 25 = 100 pts).
-
-Esto tenía problemas:
-1. **Inconsistencia entre ofertas.** Misma skill, mismo nivel, distinto score porque el modelo podía ponderar distinto en diferentes llamadas (temperatura 0.1 en técnica).
-2. **Caja negra.** Sin trazabilidad de por qué una skill puntuó X y no Y. El razonamiento del modelo era narrativo, no replicable.
-3. **Penalización duplicada.** El gap laboral se penalizaba tanto en la penalty de HR como vía experience_match reducido, sin reglas claras.
-4. **Salida no acotada a 0-1.** El score 0-100 se mapeaba a ratings discretos, pero los rangos eran arbitrarios y no calibrados contra el perfil real.
-5. **skills_required legacy.** La DB almacenaba skills_required como JSON flat array  sin nivel asociado, imposibilitando matching por nivel.
+**Date:** 2026-05-25
+**Type:** `architecture`
+**Status:** `active`
+**Component:** `src/pipeline/evaluate.py`, `src/pipeline/fetch.py`
 
 ---
 
-## Decisión
+## Context
 
-**Reemplazar el scoring narrativo del LLM por un modelo determinista 0-1 con multiplicadores de nivel, donde el LLM solo detecta presencia de skills y el contexto cultural, y Python computa el score con reglas fijas.**
+The previous scoring system delegated all numeric evaluation to gemma4:e4b:
+- `evaluate_technical` returned 4 numbers (skills_hard_match 0-30, experience_match 0-20, education_match 0-10, location_match 0-5) and `evaluate_hr` returned 4 numbers (trajectory_coherence 0-15, recency_relevance 0-15, market_competitiveness 0-5) plus a penalty 0-25.
+- Each prompt asked the model to reason and emit integer scores within a bounded range, and Python summed them with implicit weights (30+20+10+5 + 15+15+5 - 25 = 100 pts).
 
-El nuevo flujo por oferta:
+This had problems:
+1. **Inconsistency across offers.** Same skill, same level, different score because the model could weight differently across calls (temperature 0.1 in technical).
+2. **Black box.** No traceability of why a skill scored X and not Y. The model's reasoning was narrative, not replicable.
+3. **Duplicate penalization.** The work gap was penalized both in the HR penalty and via reduced experience_match, with no clear rules.
+4. **Output not bounded to 0-1.** The 0-100 score was mapped to discrete ratings, but the ranges were arbitrary and not calibrated against the real profile.
+5. **skills_required legacy.** The DB stored skills_required as a flat JSON array without an associated level, making level-based matching impossible.
 
-1. `evaluate_technical()` — gemma4 detecta solo presencia/nivel de skills (temp 0.0). No devuelve números.
-2. `compute_skill_score()` — Python calcula `M_core` y `M_sec` con `level_multiplier(candidate_level, required_level) = min(cand/req, 1.0)`. Si `required_level=None` → 1.0.
-3. `compute_experience_score()` — Python calcula `F_exp = years_match * G(gap)`, con `GAP_MULTIPLIER` fijo.
-4. `evaluate_hr()` — gemma4 devuelve solo `context_fit` (0.0-1.0), sin scores numéricos.
-5. Score final: `S = 0.45*M_core + 0.15*M_sec + 0.25*F_exp + 0.15*F_fit`
-6. `evaluate_final()` — igual que antes, valida relevance_flag y bloqueos.
+---
 
-### Esquema de skills_required
+## Decision
 
-Ahora se almacena como JSON estructurado:
+**Replace the LLM's narrative scoring with a deterministic 0-1 model using level multipliers, where the LLM only detects skill presence and cultural context, and Python computes the score with fixed rules.**
+
+The new flow per offer:
+
+1. `evaluate_technical()` — gemma4 detects only skill presence/level (temp 0.0). Returns no numbers.
+2. `compute_skill_score()` — Python computes `M_core` and `M_sec` with `level_multiplier(candidate_level, required_level) = min(cand/req, 1.0)`. If `required_level=None` → 1.0.
+3. `compute_experience_score()` — Python computes `F_exp = years_match * G(gap)`, with fixed `GAP_MULTIPLIER`.
+4. `evaluate_hr()` — gemma4 returns only `context_fit` (0.0-1.0), no numeric scores.
+5. Final score: `S = 0.45*M_core + 0.15*M_sec + 0.25*F_exp + 0.15*F_fit`
+6. `evaluate_final()` — same as before, validates relevance_flag and blockers.
+
+### skills_required schema
+
+Now stored as structured JSON:
 
 ```json
 {
@@ -46,57 +46,57 @@ Ahora se almacena como JSON estructurado:
 }
 ```
 
-`parse_skills_required()` en fetch.py convierte automáticamente arrays legacy y otros formatos al nuevo esquema, garantizando backward compatibility.
+`parse_skills_required()` in fetch.py automatically converts legacy arrays and other formats to the new schema, guaranteeing backward compatibility.
 
-### Tabla GAP_MULTIPLIER
+### GAP_MULTIPLIER table
 
-| Gap (años) | Multiplicador |
-|------------|---------------|
-| 0 - 1      | 1.00          |
-| 1 - 2      | 0.85          |
-| 2 - 3      | 0.70          |
-| 3 - 4      | 0.55          |
-| 4+         | 0.40          |
+| Gap (years) | Multiplier |
+|-------------|------------|
+| 0 - 1       | 1.00       |
+| 1 - 2       | 0.85       |
+| 2 - 3       | 0.70       |
+| 3 - 4       | 0.55       |
+| 4+          | 0.40       |
 
-Sin penalización narrativa del LLM. El gap se aplica como factor multiplicativo sobre `years_match`, no como resta arbitraria.
+No narrative LLM penalty. The gap is applied as a multiplicative factor over `years_match`, not as arbitrary subtraction.
 
-### Niveles
+### Levels
 
-| Nivel | Ordinal |
+| Level | Ordinal |
 |-------|---------|
-| básico | 1 |
-| intermedio | 2 |
-| avanzado / experto | 3 |
+| basic | 1 |
+| intermediate | 2 |
+| advanced / expert | 3 |
 
-`level_multiplier = min(ord(candidato), ord(requerido)) / ord(requerido)`. Sobrecualificación capped a 1.0.
-
----
-
-## Alternativas descartadas
-
-- **Seguir con scoring vía LLM.** Descartado por inconsistencia entre ofertas y falta de trazabilidad. El modelo decidía si penalizar o no según su estado, no según reglas fijas.
-- **Sistema de puntos con tabla de correspondencias (ej. Python básico = 2 pts).** Descartado porque no escala a skills nuevas que el modelo puede inventar. El matching por substring + nivel permite cualquier skill.
-- **Delegar todo a gemma4 con temperatura 0.0.** Descartado en ADR-006+: el LLM sigue siendo necesario para detección semántica de skills (sinónimos, equivalentes) y evaluación de contexto cultural. Pero la puntuación numérica debe ser determinista.
-- **Mantener flat array en skills_required.** Descartado porque sin nivel asociado no se puede computar `level_multiplier`. La migración es automática vía `parse_skills_required`.
+`level_multiplier = min(ord(candidate), ord(required)) / ord(required)`. Overqualification capped at 1.0.
 
 ---
 
-## Consecuencias
+## Discarded alternatives
 
-- **Scoring totalmente determinista y trazable.** `skill_detail` se almacena en `penalty_breakdown` con L_i individual por skill para auditoría.
-- **El LLM ya no puede inventar puntuaciones.** Solo responde presente/ausente y nivel detectado. El peso lo pone Python.
-- **Backward compatibility.** `parse_skills_required` maneja datos legacy (flat array, JSON string, None) sin migración de DB.
-- **`education_match` y `location_match` se fijan a 0.** El modelo anterior ponderaba 10 pts educación y 5 pts ubicación con reglas imprecisas. Estos factores ahora son contexto cualitativo dentro de `context_fit` de HR.
-- **`trajectory_coherence`, `recency_relevance`, `penalty` se fijan a 0.** El gap laboral se aplica como multiplicador determinista, no como resta. La coherencia de trayectoria es contexto cualitativo.
-- **Score final en 0.0-1.0**, no 0-100. `match_score` en DB se almacena como `round(score * 100)` para compatibilidad con queries existentes.
-- **171 tests actualizados y passing.**
-- **Las columnas legacy de `offer_evaluations` se siguen escribiendo** con valores fijos (0 o None) para no romber queries existentes.
+- **Keep scoring via LLM.** Discarded due to inconsistency across offers and lack of traceability. The model decided whether to penalize based on its state, not fixed rules.
+- **Point system with correspondence table (e.g. Python basic = 2 pts).** Discarded because it does not scale to new skills the model might invent. Substring + level matching allows any skill.
+- **Delegate everything to gemma4 with temperature 0.0.** Discarded in ADR-006+: the LLM is still needed for semantic skill detection (synonyms, equivalents) and cultural context evaluation. But numeric scoring must be deterministic.
+- **Keep flat array in skills_required.** Discarded because without an associated level, `level_multiplier` cannot be computed. Migration is automatic via `parse_skills_required`.
 
 ---
 
-## Referencias
+## Consequences
 
-- ADR-006 — evaluate_final y eliminación del pre-filtro
-- ADR-005 — Separación de ejes en classifier (patrón: LLM razona + Python decide)
-- docs/RATING.md — sistema de puntuación (obsoleto, pendiente de actualización)
-- docs/CONVENTIONS.md — fases de implementación (Fase 4 completa)
+- **Fully deterministic and traceable scoring.** `skill_detail` is stored in `penalty_breakdown` with individual L_i per skill for auditing.
+- **The LLM can no longer invent scores.** It only responds present/absent and detected level. Python assigns the weight.
+- **Backward compatibility.** `parse_skills_required` handles legacy data (flat array, JSON string, None) without DB migration.
+- **`education_match` and `location_match` are set to 0.** The previous model weighted 10 pts for education and 5 pts for location with imprecise rules. These factors are now qualitative context within `context_fit` from HR.
+- **`trajectory_coherence`, `recency_relevance`, `penalty` are set to 0.** The work gap is applied as a deterministic multiplier, not as subtraction. Trajectory coherence is qualitative context.
+- **Final score in 0.0-1.0**, not 0-100. `match_score` in DB is stored as `round(score * 100)` for compatibility with existing queries.
+- **171 tests updated and passing.**
+- **Legacy columns in `offer_evaluations` are still written** with fixed values (0 or None) to avoid breaking existing queries.
+
+---
+
+## References
+
+- ADR-006 — evaluate_final and pre-filter removal
+- ADR-005 — Axis separation in classifier (pattern: LLM reasons + Python decides)
+- docs/RATING.md — scoring system (outdated, pending update)
+- docs/CONVENTIONS.md — implementation phases (Phase 4 complete)
