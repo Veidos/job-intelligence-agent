@@ -1,45 +1,47 @@
-# 004 — Aplazar testing T-2 y T-3 por límite de API Apify
+# 004 — Postpone T-2 and T-3 testing due to Apify API limit
 
-**Fecha:** 2026-05-22
-**Tipo:** `operativo`
-**Estado:** `activo`
+**Date:** 2026-05-22
+**Type:** `operational`
+**Status:** `active`
 
-## Contexto
+## Context
 
-El test T-2 (fetch.py con `sinceDate=_24_HOURS` en producción real) requiere
-ejecutar el actor Apify `lRxJmbuhggr0LU3uj`. Al intentarlo se obtuvo el error:
+Test T-2 (fetch.py with `sinceDate=_24_HOURS` in real production) requires
+running the Apify actor `lRxJmbuhggr0LU3uj`. When attempting it, the error:
 
 > `Monthly usage hard limit exceeded`
 
-El plan FREE de Apify tiene 5 USD/mes de crédito. Se agotó durante los
-desarrollos previos (último fetch real: 2026-05-19). Quedan 0.30€ pero el
-límite duro mensual impide cualquier ejecución, incluso con `maxItems=3`.
+was obtained.
 
-**Dependencia adicional detectada (2026-05-22):** T-3 (fetch_company.py)
-también está bloqueado. El campo `employer_id` se captura desde la respuesta
-de Apify en `fetch.py` (`author.id` de InfoJobs). Las 147 ofertas en DB
-tienen `employer_id = NULL`, por lo que `fetch_company.py` no encuentra datos
-que procesar. T-3 comparte la misma raíz que T-2.
+The Apify FREE plan has 5 USD/month credit. It was exhausted during
+previous development (last real fetch: 2026-05-19). 0.30€ remain but the
+monthly hard limit prevents any execution, even with `maxItems=3`.
 
-## Decisión
+**Additional dependency detected (2026-05-22):** T-3 (fetch_company.py)
+is also blocked. The `employer_id` field is captured from the Apify
+response in `fetch.py` (`author.id` from InfoJobs). The 147 offers in DB
+have `employer_id = NULL`, so `fetch_company.py` finds no data
+to process. T-3 shares the same root cause as T-2.
 
-Aplazar T-2 y T-3 hasta el próximo ciclo de facturación de Apify (junio 2026).
-Continuar con T-4 a T-9 usando las 147 ofertas existentes en DB y Ollama local.
+## Decision
 
-## Alternativas descartadas
+Postpone T-2 and T-3 until the next Apify billing cycle (June 2026).
+Continue with T-4 to T-9 using the 147 existing offers in DB and local Ollama.
 
-- **Pagar plan superior:** no justificado para testing del MVP, el FREE
-  cubre el uso normal del pipeline (~2-3 USD/mes).
-- **Cambiar a otra fuente de datos (Indeed, LinkedIn, Jobicy):** requiere
-  desarrollo nuevo de adapter. No es viable para testing de lo ya construido.
-- **Forzar test con otro actor Apify:** el límite es por cuenta, no por actor.
+## Discarded alternatives
 
-## Consecuencias
+- **Pay for a higher tier:** not justified for MVP testing, the FREE
+  plan covers normal pipeline usage (~2-3 USD/month).
+- **Switch to another data source (Indeed, LinkedIn, Jobicy):** requires
+  new adapter development. Not viable for testing what is already built.
+- **Force test with another Apify actor:** the limit is per account, not per actor.
 
-- T-2 y T-3 quedan en estado ⏳ pendiente, no ❌ fallido.
-- El pipeline real no se ha validado end-to-end con fetch real contra InfoJobs.
-- La deduplicación por `source_id` ya se probó con 147 offers en DB.
-- `build_search_urls` y el parámetro `sinceDate` se validan a nivel unit test
-  con cassettes (test_fetch_cassettes.py).
-- `fetch_company.py` no puede probarse sin `employer_id` en las ofertas.
-- En junio 2026 se retoman T-2 y T-3 con prioridad antes de cualquier otro avance.
+## Consequences
+
+- T-2 and T-3 remain in ⏳ pending status, not ❌ failed.
+- The real pipeline has not been validated end-to-end with a real fetch against InfoJobs.
+- Deduplication by `source_id` was already tested with 147 offers in DB.
+- `build_search_urls` and the `sinceDate` parameter are validated at unit test level
+  with cassettes (test_fetch_cassettes.py).
+- `fetch_company.py` cannot be tested without `employer_id` in the offers.
+- In June 2026, T-2 and T-3 will be resumed with priority before any other work.
