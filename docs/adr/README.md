@@ -1,41 +1,41 @@
 # ADR — Architecture Decision Records
 
-Registro de decisiones técnicas, operativas y de arquitectura del proyecto.
-El agente crea un fichero nuevo aquí al final de cada sesión donde se tome
-una decisión no trivial.
+Record of technical, operational, and architectural decisions for the project.
+The agent creates a new file here at the end of each session where a non-trivial
+decision is made.
 
-## Plantilla
+## Template
 
-**Nombre:** docs/adr/NNN-titulo-en-kebab-case.md
+**Name:** docs/adr/NNN-title-in-kebab-case.md
 
 ---
-# NNN — Título corto
+# NNN — Short title
 
-**Fecha:** YYYY-MM-DD
-**Tipo:** `arquitectura` | `operativo` | `dependencia` | `modelo`
-**Estado:** `activo` | `revisable` | `superado`
+**Date:** YYYY-MM-DD
+**Type:** `architecture` | `operational` | `dependency` | `model`
+**Status:** `active` | `reviewable` | `superseded`
 
-## Contexto
-*(qué problema había o qué cambió)*
+## Context
+*(what problem existed or what changed)*
 
-## Decisión
-*(qué se decidió, en una frase)*
+## Decision
+*(what was decided, in one sentence)*
 
-## Alternativas descartadas
-*(qué se rechazó y por qué)*
+## Discarded alternatives
+*(what was rejected and why)*
 
-## Consecuencias
-*(qué implica a futuro)*
+## Consequences
+*(what it implies going forward)*
 ---
 
-## Índice
-| # | Título | Fecha | Estado |
-|---|--------|-------|--------|
-| 001 | ADR como sistema de documentación de decisiones | 2026-05-21 | activo |
-| 002 | CV freshness check con regeneración interactiva | 2026-05-21 | activo |
-| 003 | Entrevista ligera con enfoque positivo | 2026-05-22 | activo |
-| 004 | Aplazar testing T-2 por límite Apify | 2026-05-22 | activo |
-| 005 | Role Classifier — Evolución v1 → v6 y decisiones de diseño | 2026-05-22 | activo |
-| 006 | evaluate.py — tercer prompt (evaluate_final) y eliminación del pre-filtro | 2026-05-23 | activo |
-| 007 | OpenRouter descartado como backend alternativo | 2026-05-23 | activo |
-| 008 | Scoring determinista 0-1 con multiplicadores de nivel | 2026-05-25 | activo |
+## Index
+| # | Title | Date | Status |
+|---|-------|------|--------|
+| 001 | ADR as a decision documentation system | 2026-05-21 | active |
+| 002 | CV freshness check with interactive regeneration | 2026-05-21 | active |
+| 003 | Lightweight interview with positive focus | 2026-05-22 | active |
+| 004 | Postpone T-2 and T-3 testing due to Apify API limit | 2026-05-22 | active |
+| 005 | Role Classifier — Evolution v1 → v6 and design decisions | 2026-05-22 | active |
+| 006 | evaluate.py — third prompt (evaluate_final) and pre-filter removal | 2026-05-23 | active |
+| 007 | OpenRouter discarded as alternative backend | 2026-05-23 | active |
+| 008 | Deterministic 0-1 scoring with level multipliers | 2026-05-25 | active |

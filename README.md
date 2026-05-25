@@ -41,6 +41,165 @@ flowchart TD
 
 ---
 
+## Scoring System
+
+Deterministic 0–1 score composed of four weighted components.
+No LLM generates numeric scores — Python computes everything except `F_fit`.
+
+### Formula
+
+```
+S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
+```
+
+**Score components:**
+- `M_core` — average level match over core skills (Python)
+- `M_sec` — average level match over secondary skills (Python)
+- `F_exp` — experience fit, gap-adjusted (Python)
+- `F_fit` — context fit, only LLM input (gemma4:e4b)
+
+| Weight | Variable | Source | Method |
+|--------|----------|--------|--------|
+| 0.45 | `M_core` | Python | Level multiplier over core skills |
+| 0.15 | `M_sec` | Python | Level multiplier over secondary skills |
+| 0.25 | `F_exp` | Python | years_match · gap_multiplier |
+| 0.15 | `F_fit` | gemma4:e4b | Qualitative context evaluation (only LLM input) |
+
+### Skills: level multiplier
+
+Each skill has a required level. If the offer doesn't specify one per skill,
+it's inferred from the job's seniority:
+
+```
+level_required(i) = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]
+```
+
+| `role_level_label` | Inferred `level_required` |
+|---|---|
+| `junior` | basic (ordinal 1) |
+| `mid` | intermediate (ordinal 2) |
+| `senior` | advanced (ordinal 3) |
+
+Multiplier per skill:
+
+```
+L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
+```
+
+- Candidate lacks the skill → `L_i = 0`
+- Overqualification capped at `1.0`
+- `M_core = avg(L_i)` over core skills, `M_sec = avg(L_i)` over secondary skills
+
+### Experience: gap-adjusted
+
+```
+F_exp = years_match · G(gap)
+
+years_match = 1.0                                  if experience_min = 0
+years_match = min(candidate_years / experience_min, 1.0)  otherwise
+```
+
+| Gap (years) | Multiplier `G` |
+|---|---|
+| < 1 | 1.00 |
+| 1 – 2 | 0.85 |
+| 2 – 3 | 0.70 |
+| 3 – 4 | 0.55 |
+| ≥ 4 | 0.40 |
+
+### Context fit
+
+`F_fit` is the only LLM-driven component. gemma4:e4b (temperature 0.0)
+evaluates `context_fit` (0–1) considering cultural compatibility, location,
+work mode, and personal profile. Skills and gap penalties are **not** part of
+this evaluation — they are already captured by `M_core`, `M_sec`, and `F_exp`.
+
+### Rating
+
+| Score | Label |
+|---|---|
+| 0.75 – 1.00 | Priority |
+| 0.55 – 0.75 | Apply |
+| 0.35 – 0.55 | Low expectations |
+| 0.00 – 0.35 | Skip |
+
+Sends top 3 offers with score ≥ 0.35 daily via Telegram.
+If none qualify: `"No relevant offers today."`.
+
+> Full technical reference in [`docs/RATING.md`](docs/RATING.md).
+
+---
+
+## Role Classification
+
+Before scoring, each offer is classified by its **actual requirements** — not its job title. A "Data Scientist" posting that only requires SQL and Excel is classified as `bi_analyst`. A "Data Analyst" posting requiring PyTorch and MLOps is classified as `ml_engineer`.
+
+The classifier maintains a dynamic catalog of canonical role names (in `snake_case`). New roles are detected deterministically (`role_normalized not in catalog`) and added automatically.
+
+Each offer receives a `relevance_flag` and a `gap_type`:
+
+| Flag | Meaning |
+|---|---|
+| `core` | Requirements match >70% of candidate profile |
+| `adjacent` | 40–70% match, manageable gap (tool/domain) |
+| `stretch` | 20–40% match, significant learning required (seniority) |
+| `temporal` | Viable bridge job while searching |
+
+### Design principles (ADR-005)
+
+The classifier follows four rules established after 6 iterations (v1–v6):
+
+1. **Model reasons, Python decides** — `is_new_role`, `gap_type` resolution, JSON validation live in code, not the prompt
+2. **Atomic prompt changes** — never bundle a parsing fix with a prompt restructure
+3. **Separated decision axes** — PHASE 1 (role objective) vs PHASE 2 (candidate fit) are never mixed
+4. **Traceability always** — every computed field is persisted to DB
+
+See [`docs/adr/005-classifier-evolucion-v1-a-v6.md`](docs/adr/005-classifier-evolucion-v1-a-v6.md) for the full evolution and validation tables.
+
+---
+
+## Feedback System
+
+After each daily Telegram message, you can optionally reply:
+
+```
+/f1 I don't see myself in a marketing company
+/f2 interesting, but it seems like a very large company
+/f3 good offer
+/dia I don't have the energy to apply to anything today
+```
+
+The bot replies `"Noted 📝"` or `"Got it, I'll keep that in mind 🧠"`. Feedback is **never used to filter offers**. Instead, gemma4:e4b uses it to add personalized notes to future evaluations:
+
+> *"I know large companies aren't your thing, but this offer is a great technical match for your profile."*
+
+A weekly process compresses accumulated feedback into a psychological summary (`user_psychology` table), which evolves over time without growing infinitely.
+
+---
+
+## Intelligence Layer (Phase 4)
+
+The system accumulates data over time to surface strategic signals:
+
+- **Role Discovery** — finds reachable roles with skill overlap, even outside initial search queries
+- **Market Signals** — weekly trends: volume, competition, salary, remote %, emerging skills
+- **Strategic Advisor** — auto-triggers advice when patterns are detected (cold market, recurring skill gap, low avg score)
+
+---
+
+## Data Analysis (Planned — Phase 6)
+
+As the SQLite dataset grows, a dedicated analysis layer will provide:
+
+- **EDA notebooks** — exploratory analysis of accumulated offers (salary distributions, skill frequency, remote %, location heatmaps)
+- **Match score evolution** — personal trend over time
+- **Market benchmarking** — compare personal profile gap vs. market demand over weeks
+- **Visualizations** — Plotly/Matplotlib dashboards from the live `jobs.db`
+
+> The database schema is designed with this phase in mind — all fields are stored raw alongside normalized versions to support flexible future analysis.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -124,10 +283,10 @@ job-intelligence-agent/
 │   ├── start_bot.sh       ← Starts Telegram bot
 │   └── stop_bot.sh        ← Stops Telegram bot
 └── tests/
-├── unit/              ← Pure function tests (107)
-├── integration/       ← DB + pipeline logic (64)
-└── fixtures/
-    └── ollama/        ← JSON cassettes for Ollama calls (13)
+    ├── unit/              ← Pure function tests (107)
+    ├── integration/       ← DB + pipeline logic (64)
+    └── fixtures/
+        └── ollama/        ← JSON cassettes for Ollama calls (13)
 ```
 
 ---
@@ -205,159 +364,6 @@ PYTHONPATH=. python src/pipeline/run.py --dry-run
 
 ---
 
-## Scoring System
-
-Deterministic 0–1 score composed of four weighted components.
-No LLM generates numeric scores — Python computes everything except `F_fit`.
-
-### Formula
-
-```
-S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
-```
-
-| Weight | Variable | Source | Method |
-|--------|----------|--------|--------|
-| 0.45 | `M_core` | Python | Level multiplier over core skills |
-| 0.15 | `M_sec` | Python | Level multiplier over secondary skills |
-| 0.25 | `F_exp` | Python | years_match · gap_multiplier |
-| 0.15 | `F_fit` | gemma4:e4b | Qualitative context evaluation (only LLM input) |
-
-### Skills: level multiplier
-
-Each skill has a required level. If the offer doesn't specify one per skill,
-it's inferred from the job's seniority:
-
-```
-level_required(i) = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]
-```
-
-| `role_level_label` | Inferred `level_required` |
-|---|---|
-| `junior` | básico (ordinal 1) |
-| `mid` | intermedio (ordinal 2) |
-| `senior` | avanzado (ordinal 3) |
-
-Multiplier per skill:
-
-```
-L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
-```
-
-- Candidate lacks the skill → `L_i = 0`
-- Overqualification capped at `1.0`
-- `M_core = avg(L_i)` over core skills, `M_sec = avg(L_i)` over secondary skills
-
-### Experience: gap-adjusted
-
-```
-F_exp = years_match · G(gap)
-
-years_match = 1.0                                  if experience_min = 0
-years_match = min(candidate_years / experience_min, 1.0)  otherwise
-```
-
-| Gap (years) | Multiplier `G` |
-|---|---|
-| < 1 | 1.00 |
-| 1 – 2 | 0.85 |
-| 2 – 3 | 0.70 |
-| 3 – 4 | 0.55 |
-| ≥ 4 | 0.40 |
-
-### Context fit
-
-`F_fit` is the only LLM-driven component. gemma4:e4b (temperature 0.0)
-evaluates `context_fit` (0–1) considering cultural compatibility, location,
-work mode, and personal profile. Skills and gap penalties are **not** part of
-this evaluation — they are already captured by `M_core`, `M_sec`, and `F_exp`.
-
-### Rating
-
-| Score | Label |
-|---|---|
-| 0.75 – 1.00 | Prioritario |
-| 0.55 – 0.75 | Aplicar |
-| 0.35 – 0.55 | Con expectativas bajas |
-| 0.00 – 0.35 | No aplicar |
-
-Sends top 3 offers with score ≥ 0.35 daily via Telegram.
-If none qualify: `"Sin ofertas relevantes hoy."`.
-
-> Full technical reference in [`docs/RATING.md`](docs/RATING.md).
-
----
-
-## Role Classification
-
-Before scoring, each offer is classified by its **actual requirements** — not its job title. A "Data Scientist" posting that only requires SQL and Excel is classified as `bi_analyst`. A "Data Analyst" posting requiring PyTorch and MLOps is classified as `ml_engineer`.
-
-The classifier maintains a dynamic catalog of canonical role names (in `snake_case`). New roles are detected deterministically (`role_normalized not in catalog`) and added automatically.
-
-Each offer receives a `relevance_flag` and a `gap_type`:
-
-| Flag | Meaning |
-|---|---|
-| `core` | Requirements match >70% of candidate profile |
-| `adjacent` | 40–70% match, manageable gap (tool/domain) |
-| `stretch` | 20–40% match, significant learning required (seniority) |
-| `temporal` | Viable bridge job while searching |
-
-### Design principles (ADR-005)
-
-The classifier follows four rules established after 6 iterations (v1–v6):
-
-1. **Model reasons, Python decides** — `is_new_role`, `gap_type` resolution, JSON validation live in code, not the prompt
-2. **Atomic prompt changes** — never bundle a parsing fix with a prompt restructure
-3. **Separated decision axes** — FASE 1 (role objective) vs FASE 2 (candidate fit) are never mixed
-4. **Traceability always** — every computed field is persisted to DB
-
-See [`docs/adr/005-classifier-evolucion-v1-a-v6.md`](docs/adr/005-classifier-evolucion-v1-a-v6.md) for the full evolution and validation tables.
-
----
-
-## Feedback System
-
-After each daily Telegram message, you can optionally reply:
-
-```
-/f1 no me veo en una empresa de marketing
-/f2 interesante, pero parece una empresa muy grande
-/f3 buena oferta
-/dia hoy no tengo energía para aplicar a nada
-```
-
-The bot replies `"Anotado 📝"` or `"Entendido, lo tengo en cuenta 🧠"`. Feedback is **never used to filter offers**. Instead, gemma4:e4b uses it to add personalized notes to future evaluations:
-
-> *"Sé que las empresas grandes no son lo tuyo, pero esta oferta encaja técnicamente muy bien con tu perfil."*
-
-A weekly process compresses accumulated feedback into a psychological summary (`user_psychology` table), which evolves over time without growing infinitely.
-
----
-
-## Intelligence Layer (Phase 4)
-
-The system accumulates data over time to surface strategic signals:
-
-- **Role Discovery** — finds reachable roles with skill overlap, even outside initial search queries
-- **Market Signals** — weekly trends: volume, competition, salary, remote %, emerging skills
-- **Strategic Advisor** — auto-triggers advice when patterns are detected (cold market, recurring skill gap, low avg score)
-
----
-
-## Data Analysis (Planned — Phase 6)
-
-As the SQLite dataset grows, a dedicated analysis layer will provide:
-
-- **EDA notebooks** — exploratory analysis of accumulated offers (salary distributions, skill frequency, remote %, location heatmaps)
-- **Match score evolution** — personal trend over time
-- **Market benchmarking** — compare personal profile gap vs. market demand over weeks
-- **Visualizations** — Plotly/Matplotlib dashboards from the live `jobs.db`
-
-> The database schema is designed with this phase in mind — all fields are stored raw alongside normalized versions to support flexible future analysis.
-
----
-
 ## Automation (Phase 5)
 
 ```cron
@@ -395,7 +401,7 @@ Phase 6 — Data Analysis/EDA ⬜ Planned
 
 ## Agent Context
 
-This project uses the **Método Ledger** for AI-assisted development:
+This project uses the **Ledger Method** for AI-assisted development:
 
 | File | Purpose |
 |---|---|
