@@ -1,18 +1,24 @@
 # Job Intelligence Agent
 
+Personal career intelligence system for the Spanish job market.
+Scrapes InfoJobs, scores offers against your CV using a local LLM,
+and delivers ranked recommendations to Telegram — fully offline-first.
+
 ![Python](https://img.shields.io/badge/Python-3.14+-blue?logo=python&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-gemma4:e4b-black?logo=ollama)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL%20mode-003B57?logo=sqlite)
 ![Tests](https://img.shields.io/badge/Tests-171%20passing-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-green)
-
-> Personal career intelligence system. Extracts job offers from InfoJobs, evaluates CV match using a local LLM (Ollama + gemma4:e4b), and delivers daily recommendations via Telegram. Built for the Spanish job market. Fully offline-first — no personal data leaves your machine except the Telegram notification.
+![Cost](https://img.shields.io/badge/Cost-~$2.70%2Fmonth-lightgrey)
 
 ---
 
-## How It Works
+## What it does
 
-The system runs a daily pipeline: scrapes fresh job offers from InfoJobs via Apify, classifies each offer by actual role (based on requirements, not job title), scores them against your CV using a single local model, and sends the top matches to your Telegram. Over time, it learns from your feedback and builds a psychological profile of your preferences.
+1. **Scrape** — Pulls fresh offers from InfoJobs via Apify daily
+2. **Enrich** — Extracts skills, seniority and salary with a local LLM (no cloud)
+3. **Score** — Deterministic formula matches each offer to your CV profile
+4. **Deliver** — Top 3 ranked offers sent to Telegram every morning
 
 ```mermaid
 flowchart TD
@@ -30,101 +36,91 @@ flowchart TD
     M --> N[(user_psychology\nevolutive memory)]
 ```
 
-| Model | Role | Temperature | Output |
-|---|---|---|---|
-| `gemma4:e4b` | Technical + HR evaluator (single model) | `0.1` / `0.0` | Structured JSON + contextual analysis |
-
-> **Two-phase fetch:** `fetch.py` separates persistence from enrichment.
-> `upsert_raw` saves the raw Apify data without calling the LLM; `enrich_pending`
-> runs gemma4:e4b afterwards on offers with `enriched_at IS NULL`. If the LLM fails,
-> the raw offer remains intact and is retried on the next cycle.
+> **⚠️ Architecture note (pending ADR-009):** The `role_classifier` step is
+> a candidate for removal — its `relevance_flag` output is largely redundant
+> with the score produced by `evaluate.py`. Tracked for the next refactor.
 
 ---
 
 ## Scoring System
 
-Deterministic 0–1 score composed of four weighted components.
-No LLM generates numeric scores — Python computes everything except `F_fit`.
+Deterministic 0–1 score. Python computes everything — the LLM contributes
+only one component (`F_fit`, weight 0.15).
 
 ### Formula
 
 ```
-S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
+S = 0.45·M_core + 0.15·M_sec + 0.25·F_exp + 0.15·F_fit
 ```
 
-**Score components:**
-- `M_core` — average level match over core skills (Python)
-- `M_sec` — average level match over secondary skills (Python)
-- `F_exp` — experience fit, gap-adjusted (Python)
-- `F_fit` — context fit, only LLM input (gemma4:e4b)
-
-| Weight | Variable | Source | Method |
-|--------|----------|--------|--------|
-| 0.45 | `M_core` | Python | Level multiplier over core skills |
-| 0.15 | `M_sec` | Python | Level multiplier over secondary skills |
-| 0.25 | `F_exp` | Python | years_match · gap_multiplier |
-| 0.15 | `F_fit` | gemma4:e4b | Qualitative context evaluation (only LLM input) |
+| Weight | Variable | What it measures | Computed by |
+|--------|----------|------------------|-------------|
+| 0.45 | `M_core` | Average level match over core skills | Python |
+| 0.15 | `M_sec` | Average level match over secondary skills | Python |
+| 0.25 | `F_exp` | Years of experience, penalised by employment gap | Python |
+| 0.15 | `F_fit` | Cultural fit, location, work mode | gemma4:e4b |
 
 ### Skills: level multiplier
-
-Each skill has a required level. If the offer doesn't specify one per skill,
-it's inferred from the job's seniority:
-
-```
-level_required(i) = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]
-```
-
-| `role_level_label` | Inferred `level_required` |
-|---|---|
-| `junior` | basic (ordinal 1) |
-| `mid` | intermediate (ordinal 2) |
-| `senior` | advanced (ordinal 3) |
-
-Multiplier per skill:
 
 ```
 L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
 ```
 
+If the offer does not specify a per-skill level, it is inferred from the
+job's seniority label. The ordinal is the numeric rank used in the formula:
+
+| Seniority label | Inferred level | Ordinal |
+|-----------------|----------------|---------|
+| `junior` | basic | 1 |
+| `mid` | intermediate | 2 |
+| `senior` | advanced | 3 |
+
 - Candidate lacks the skill → `L_i = 0`
 - Overqualification capped at `1.0`
-- `M_core = avg(L_i)` over core skills, `M_sec = avg(L_i)` over secondary skills
+- `M_core = avg(L_i)` over core skills · `M_sec = avg(L_i)` over secondary
 
-### Experience: gap-adjusted
+### Experience: gap penalty
 
 ```
-F_exp = years_match · G(gap)
+F_exp = years_match × G(gap)
 
-years_match = 1.0                                  if experience_min = 0
+years_match = 1.0                                       if experience_min = 0
 years_match = min(candidate_years / experience_min, 1.0)  otherwise
 ```
 
-| Gap (years) | Multiplier `G` |
-|---|---|
-| < 1 | 1.00 |
-| 1 – 2 | 0.85 |
-| 2 – 3 | 0.70 |
-| 3 – 4 | 0.55 |
-| ≥ 4 | 0.40 |
+G(gap) is a multiplier that reduces F_exp based on how long the candidate
+has been out of work. It applies on top of years_match — not on the final score:
+
+| Gap (years) | G multiplier | Max F_exp contribution to S |
+|---|---|---|
+| < 1  | 1.00 | 0.25 |
+| 1–2  | 0.85 | 0.21 |
+| 2–3  | 0.70 | 0.18 |
+| 3–4  | 0.55 | 0.14 |
+| ≥ 4  | 0.40 | 0.10 |
+
+> Even with a 4+ year gap, strong skill scores can still produce a result
+> above the 0.35 delivery threshold. The gap penalises `F_exp` only —
+> not the full score.
 
 ### Context fit
 
 `F_fit` is the only LLM-driven component. gemma4:e4b (temperature 0.0)
-evaluates `context_fit` (0–1) considering cultural compatibility, location,
-work mode, and personal profile. Skills and gap penalties are **not** part of
-this evaluation — they are already captured by `M_core`, `M_sec`, and `F_exp`.
+evaluates context fit (0–1) considering cultural compatibility, location,
+work mode, and personal profile. Skills and gap are already captured by
+the other components and must NOT be part of this evaluation.
 
-### Rating
+### Rating thresholds
 
-| Score | Label |
-|---|---|
-| 0.75 – 1.00 | Priority |
-| 0.55 – 0.75 | Apply |
-| 0.35 – 0.55 | Low expectations |
-| 0.00 – 0.35 | Skip |
+| Score | Label | Action |
+|---|---|---|
+| 0.75 – 1.00 | Priority | Apply immediately |
+| 0.55 – 0.75 | Apply | Strong candidate |
+| 0.35 – 0.55 | Low expectations | Sent with note |
+| 0.00 – 0.35 | Skip | Not delivered |
 
-Sends top 3 offers with score ≥ 0.35 daily via Telegram.
-If none qualify: `"No relevant offers today."`.
+Top 3 offers with score ≥ 0.35 delivered daily.
+If none qualify: `"No relevant offers today."`
 
 > Full technical reference in [`docs/RATING.md`](docs/RATING.md).
 
@@ -184,19 +180,6 @@ The system accumulates data over time to surface strategic signals:
 - **Role Discovery** — finds reachable roles with skill overlap, even outside initial search queries
 - **Market Signals** — weekly trends: volume, competition, salary, remote %, emerging skills
 - **Strategic Advisor** — auto-triggers advice when patterns are detected (cold market, recurring skill gap, low avg score)
-
----
-
-## Data Analysis (Planned — Phase 6)
-
-As the SQLite dataset grows, a dedicated analysis layer will provide:
-
-- **EDA notebooks** — exploratory analysis of accumulated offers (salary distributions, skill frequency, remote %, location heatmaps)
-- **Match score evolution** — personal trend over time
-- **Market benchmarking** — compare personal profile gap vs. market demand over weeks
-- **Visualizations** — Plotly/Matplotlib dashboards from the live `jobs.db`
-
-> The database schema is designed with this phase in mind — all fields are stored raw alongside normalized versions to support flexible future analysis.
 
 ---
 
