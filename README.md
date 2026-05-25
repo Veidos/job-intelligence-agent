@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.14+-blue?logo=python&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-gemma4:e4b-black?logo=ollama)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL%20mode-003B57?logo=sqlite)
-![Tests](https://img.shields.io/badge/Tests-167%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-171%20passing-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > Personal career intelligence system. Extracts job offers from InfoJobs, evaluates CV match using a local LLM (Ollama + gemma4:e4b), and delivers daily recommendations via Telegram. Built for the Spanish job market. Fully offline-first — no personal data leaves your machine except the Telegram notification.
@@ -31,8 +31,13 @@ flowchart TD
 ```
 
 | Model | Role | Temperature | Output |
-|---|---|---|---|
-| `gemma4:e4b` | Technical + HR evaluator (single model) | `0.1` | Structured JSON scores + contextual analysis |
+|---|---|---|---|---|
+| `gemma4:e4b` | Technical + HR evaluator (single model) | `0.1` / `0.0` | Structured JSON + contextual analysis |
+
+> **Fetch en dos fases:** `fetch.py` separa persistencia de enriquecimiento.
+> `upsert_raw` guarda el raw de Apify sin LLM; `enrich_pending` ejecuta
+> gemma4:e4b después sobre ofertas con `enriched_at IS NULL`. Si el LLM falla,
+> la oferta raw permanece intacta y se reintenta en el próximo ciclo.
 
 ---
 
@@ -76,7 +81,8 @@ job-intelligence-agent/
 │
 ├── src/
 │   ├── db/
-│   │   ├── init_db.py     ← Schema initializer
+│   │   ├── init_db.py     ← Schema initializer + migration runner
+│   │   ├── migrate.py     ← Column migrations (ALTER TABLE)
 │   │   ├── schema.sql     ← Single source of truth for DB structure
 │   │   └── models.py      ← SQLAlchemy models + helpers
 │   │
@@ -87,7 +93,7 @@ job-intelligence-agent/
 │   │
 │   ├── pipeline/
 │   │   ├── run.py         ← Full pipeline orchestrator + CV freshness check
-│   │   ├── fetch.py       ← InfoJobs via Apify → clean → upsert DB
+│   │   ├── fetch.py       ← Apify → upsert_raw + enrich_pending
 │   │   ├── role_classifier.py ← Classifies offers by real role + relevance
 │   │   ├── fetch_company.py   ← Company data and reviews
 │   │   └── evaluate.py    ← Single-model scoring (gemma4:e4b)
@@ -118,10 +124,10 @@ job-intelligence-agent/
 │   ├── start_bot.sh       ← Starts Telegram bot
 │   └── stop_bot.sh        ← Stops Telegram bot
 └── tests/
-    ├── unit/              ← Pure function tests (107)
-    ├── integration/       ← DB + pipeline logic (60)
-    └── fixtures/
-        └── ollama/        ← JSON cassettes for Ollama calls (13)
+├── unit/              ← Pure function tests (107)
+├── integration/       ← DB + pipeline logic (64)
+└── fixtures/
+    └── ollama/        ← JSON cassettes for Ollama calls (13)
 ```
 
 ---
@@ -201,36 +207,88 @@ PYTHONPATH=. python src/pipeline/run.py --dry-run
 
 ## Scoring System
 
-Match score composed of two independent blocks evaluated by a single model:
+Deterministic 0–1 score composed of four weighted components.
+No LLM generates numeric scores — Python computes everything except `F_fit`.
 
-### Block A — Technical (gemma4:e4b, 60 pts)
+### Formula
 
-| Criterion | Weight |
+$$
+S = W_{\text{core}} \cdot M_{\text{core}} + W_{\text{sec}} \cdot M_{\text{sec}} + W_{\text{exp}} \cdot F_{\text{exp}} + W_{\text{fit}} \cdot F_{\text{fit}}
+$$
+
+| Weight | Variable | Source | Method |
+|--------|----------|--------|--------|
+| 0.45 | `M_core` | Python | Level multiplier over core skills |
+| 0.15 | `M_sec` | Python | Level multiplier over secondary skills |
+| 0.25 | `F_exp` | Python | years_match · gap_multiplier |
+| 0.15 | `F_fit` | gemma4:e4b | Qualitative context evaluation (only LLM input) |
+
+### Skills: level multiplier
+
+Each skill has a required level. If the offer doesn't specify one per skill,
+it's inferred from the job's seniority:
+
+$$
+\text{level\_required}_i = \text{ROLE\_LEVEL\_TO\_SKILL\_LEVEL}[\text{role\_level\_label}]
+$$
+
+| `role_level_label` | Inferred `level_required` |
 |---|---|
-| Hard skills overlap | 0–25 |
-| Experience match | 0–15 |
-| Education level | 0–10 |
-| Location / work mode | 0–10 |
+| `junior` | básico (ordinal 1) |
+| `mid` | intermedio (ordinal 2) |
+| `senior` | avanzado (ordinal 3) |
 
-### Block B — HR Context (gemma4:e4b, 40 pts base)
+Multiplier per skill:
 
-| Criterion | Weight |
+$$
+L_i = \frac{\min(\text{ord}(\text{candidate\_level}), \text{ord}(\text{required\_level}))}{\text{ord}(\text{required\_level})}
+$$
+
+- Candidate lacks the skill → `L_i = 0`
+- Overqualification capped at `1.0`
+- `M_core = avg(L_i)` over core skills, `M_sec = avg(L_i)` over secondary skills
+
+### Experience: gap-adjusted
+
+$$
+F_{\text{exp}} = \text{years\_match} \cdot G(\text{gap})
+$$
+
+$$
+\text{years\_match} = \begin{cases}
+1.0 & \text{if } experience\_min = 0 \\
+\min(\frac{candidate\_years}{experience\_min}, 1.0) & \text{otherwise}
+\end{cases}
+$$
+
+| Gap (years) | Multiplier `G` |
 |---|---|
-| Career trajectory coherence | 0–15 |
-| Recency of relevant experience | 0–15 |
-| Market competitiveness | 0–10 |
-| Penalty (from personal context) | 0–(−30) |
+| < 1 | 1.00 |
+| 1 – 2 | 0.85 |
+| 2 – 3 | 0.70 |
+| 3 – 4 | 0.55 |
+| ≥ 4 | 0.40 |
 
-### Rating labels
+### Context fit
+
+`F_fit` is the only LLM-driven component. gemma4:e4b (temperature 0.0)
+evaluates `context_fit` (0–1) considering cultural compatibility, location,
+work mode, and personal profile. Skills and gap penalties are **not** part of
+this evaluation — they are already captured by `M_core`, `M_sec`, and `F_exp`.
+
+### Rating
 
 | Score | Label |
 |---|---|
-| 75–100 | 🟢 Prioritario |
-| 55–74 | 🟡 Aplicar |
-| 35–54 | 🟠 Con expectativas bajas |
-| 0–34 | 🔴 No aplicar |
+| 0.75 – 1.00 | Prioritario |
+| 0.55 – 0.75 | Aplicar |
+| 0.35 – 0.55 | Con expectativas bajas |
+| 0.00 – 0.35 | No aplicar |
 
-Daily Telegram sends the **top 3 offers with score ≥ 35**, prioritizing highest scores. If none qualify: `"Sin ofertas relevantes hoy."`.
+Sends top 3 offers with score ≥ 0.35 daily via Telegram.
+If none qualify: `"Sin ofertas relevantes hoy."`.
+
+> Full technical reference in [`docs/RATING.md`](docs/RATING.md).
 
 ---
 

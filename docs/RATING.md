@@ -1,86 +1,92 @@
-# Sistema de Rating
+# Sistema de Rating — ADR-008
 
-El rating final combina dos evaluaciones independientes con **gemma4:e4b**:
-- Técnico (bloque A): temperatura 0.1
-- HR (bloque B): temperatura 0.0 (veredicto determinista)
+Score determinista 0–1. Ningún LLM genera puntuaciones numéricas.
 
-## Evaluación Técnica (gemma4:e4b - 60 pts)
+## Fórmula
 
-| Campo | Puntos | Descripción |
-|-------|--------|-------------|
-| `skills_hard_match` | 0-25 | Overlap entre skills requeridas en oferta vs skills del CV |
-| `experience_match` | 0-15 | Años de experiencia requeridos vs años reales del candidato |
-| `education_match` | 0-10 | Nivel educativo requerido vs nivel del candidato |
-| `location_match` | 0-10 | Modalidad (remoto/híbrido/presencial) + ubicación |
+$$
+S = W_{\text{core}} \cdot M_{\text{core}} + W_{\text{sec}} \cdot M_{\text{sec}} + W_{\text{exp}} \cdot F_{\text{exp}} + W_{\text{fit}} \cdot F_{\text{fit}}
+$$
 
-**Reglas de location_match:**
-- Remoto = 5 puntos
-- Híbrido = 3 puntos
-- Presencial en otra ciudad = 1 punto
-- Presencial sin posibilidad de remoto = 0 puntos
+| Peso | Variable | Depende de |
+|------|----------|-----------|
+| 0.45 | `M_core` | Skills core de la oferta vs CV |
+| 0.15 | `M_sec` | Skills secundarias de la oferta vs CV |
+| 0.25 | `F_exp` | Años de experiencia + gap laboral |
+| 0.15 | `F_fit` | gemma4:e4b (única intervención LLM) |
 
-**Regla crítica:** Si la oferta NO pide experiencia previa → experience_match = 18-20 puntos.
+## Skills: nivel por skill
 
-## Evaluación HR (gemma4 - 40 pts)
+Cada skill tiene un nivel requerido inferido:
 
-| Campo | Puntos | Descripción |
-|-------|--------|-------------|
-| `trajectory_coherence` | 0-15 | Coherencia del trayectoria profesional con el puesto |
-| `recency_relevance` | 0-15 | Qué tan reciente es la experiencia relevante |
-| `market_competitiveness` | 0-10 | Cómo compite este perfil en el mercado real |
-| `penalty` | hasta -30 | Por gap laboral injustificado, incoherencia grave, requisitos no cumplidos |
+$$
+\text{level\_required} = \begin{cases}
+\text{sk\_level\_required} & \text{si la skill tiene level\_required explícito} \\
+\text{ROLE\_LEVEL\_TO\_SKILL\_LEVEL[role\_level\_label]} & \text{si no tiene}
+\end{cases}
+$$
 
-**Penalty breakdown (ejemplos):**
-- Gap laboral > 3 años sin justificar: -10
-- Cambio de carrera sin experiencia relevante: -15
-- Requisitos obligatorios no cumplidos: -5 a -20
+Mapping:
 
-**NO incluir en penalty:**
-- Salario mínimo viable del candidato (nunca es factor de penalización)
-- Factores de entorno (ritmo, presencialidad, cultura) — son contexto, no filtro
+| `role_level_label` | Nivel inferido |
+|---|---|
+| junior | básico (ord=1) |
+| mid | intermedio (ord=2) |
+| senior | avanzado (ord=3) |
 
-## Prompt de gemma4 para Evaluación HR
+Multiplicador individual:
 
-El evaluador HR debe ser honesto y profesional. No suavizar la realidad.
+$$
+L_i = \frac{\min(\text{ord}(lvl_{\text{cand}}), \text{ord}(lvl_{\text{req}}))}{\text{ord}(lvl_{\text{req}})}
+$$
 
-```
-Eres un recruiter senior con criterio real. Tu evaluación debe ser
-honesta y profesional. NO suavices la realidad. Evalúa como si tuvieras
-que defender tu decisión ante un comité de selección.
+- Si el candidato no tiene la skill: `L_i = 0`
+- Sobrecualificación: cap a 1.0
+- `M_core = avg(L_i)` para skills core
+- `M_sec = avg(L_i)` para skills secundarias
 
-Consideraciones especiales:
-1. ¿El trayecto profesional tiene sentido para este puesto?
-2. ¿El gap laboral es descalificante para esta oferta concreta?
-3. ¿La empresa y su cultura presentan factores relevantes para este candidato?
-4. ¿Qué haría un recruiter real con este CV en el primer filtro?
-5. Dado el contexto personal declarado (personal_concerns), ¿es prudente invertir energía aquí?
-6. Considerando la edad del candidato y que es un cambio de carrera:
-   ¿La empresa típicamente contrata perfiles de reconversión en esta franja de edad?
-```
+## Experiencia
 
-## Rating Final
+$$
+F_{\text{exp}} = \text{years\_match} \cdot G(\text{gap})
+$$
 
-| Score | Label | Acción |
-|-------|-------|--------|
-| 75-100 | Prioritario | Alta prioridad para aplicar |
-| 55-75 | Aplicar | Vale la pena aplicar |
-| 35-54 | Con expectativas bajas | Aplicar solo si no hay mejores opciones |
-| 0-34 | No aplicar | No recomendar |
+$$
+\text{years\_match} = \begin{cases}
+1.0 & \text{si } experience\_min = 0 \\
+\min(\frac{candidate\_years}{experience\_min}, 1.0) & \text{en otro caso}
+\end{cases}
+$$
 
-## Selección Diaria (Top 3)
+### Gap multiplier
 
-```python
-def select_daily_top3(ofertas: list) -> list:
-    """
-    - score >= 35 mínimo
-    - máximo 3 ofertas
-    - score 35-54: incluir con nota "Incluida por falta de opciones superiores"
-    - Si no hay >= 35: enviar "Sin ofertas relevantes hoy."
-    """
-```
+| Gap (años) | G |
+|------------|---|
+| 0 – <1 | 1.00 |
+| 1 – <2 | 0.85 |
+| 2 – <3 | 0.70 |
+| 3 – <4 | 0.55 |
+| ≥ 4 | 0.40 |
 
-## Coherencia HR/Técnico
+## Contexto
 
-Esta funcionalidad fue eliminada tras unificar a gemma4:e4b como único modelo.
-El score técnico (bloque A) y HR (bloque B) se calculan independientemente y se
-suman directamente para el match_score final.
+`F_fit` = único valor del LLM. gemma4:e4b evalúa `context_fit` (0–1)
+considerando cultura, ubicación, modalidad y perfil personal.
+
+## Rating final
+
+| Score | Label |
+|-------|-------|
+| 0.75 ≤ S ≤ 1.00 | Prioritario |
+| 0.55 ≤ S < 0.75 | Aplicar |
+| 0.35 ≤ S < 0.55 | Con expectativas bajas |
+| 0.00 ≤ S < 0.35 | No aplicar |
+
+## Notas
+
+- La temperatura HR = 0.0 garantiza veredictos deterministas
+- Los skills `level_required` individuales (legacy) siguen siendo válidos
+  si existen en DB; si son `None`, se resuelven automáticamente desde
+  el rol de la oferta
+- ADR-008 documenta la justificación completa del cambio a scoring
+  determinista 0-1

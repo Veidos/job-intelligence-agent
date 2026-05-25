@@ -8,16 +8,35 @@ run.py: fetch → classify → evaluate → send
 
 ## 1. Fetch (fetch.py)
 
-Extrae ofertas de trabajo desde InfoJobs usando Apify.
+Extrae ofertas de InfoJobs vía Apify. Opera en **dos fases separadas**.
 
-**Proceso:**
-1. Lee `search_config` de la base de datos (configuración geográfica y de roles)
-2. Construye URLs de búsqueda con jerarquía geo/rol
-3. Ejecuta actor Apify (`lRxJmbuhggr0LU3uj`) para scrapear ofertas
-4. Qwen2.5 enriquece cada oferta extrayendo: description_clean, skills_required, experience_min, education_level, salary_min/max
-5. Upsert en DB por `source_id` (nunca duplicar ofertas)
+### Fase 1 — `upsert_raw` (sin LLM)
 
-**Clave:** Usar siempre `src/utils/ollama_client.py` para llamadas a modelos. No usar `requests` directamente.
+1. Lee `search_config` de la base de datos
+2. Construye searchUrls con jerarquía geo/rol
+3. Ejecuta actor Apify (`lRxJmbuhggr0LU3uj`)
+4. Persiste cada item con campos estructurales de Apify
+   (`title`, `city`, `companyName`, `link`, `contractType`, `teleworking`,
+   `description`, `salary`, etc.) + `raw_data` (JSON completo del item)
+5. **No llama a ningún LLM** en esta fase
+
+### Fase 2 — `enrich_pending` (con LLM)
+
+1. Selecciona ofertas con `raw_data IS NOT NULL AND enriched_at IS NULL`
+2. Para cada una: deserializa `raw_data`, llama a `extract_fields_with_llm`
+   (gemma4:e4b, temperatura 0.0) para extraer:
+   - `description_clean` — texto plano sin HTML
+   - `role_level` — junior / mid / senior
+   - `skills_required` — core y secondary (solo `name`, sin nivel)
+   - `experience_min`, `education_level`
+   - `salary_min`, `salary_max`
+3. Actualiza la oferta y marca `enriched_at = NOW()`
+
+**Si el LLM falla:** la oferta queda con `enriched_at IS NULL` y se reintenta
+automáticamente en la próxima ejecución. La oferta raw nunca se pierde.
+
+**Salida:** `raw_data` completo, `description_raw`, y campos estructurales
+disponibles desde Fase 1 — incluso si el LLM nunca llega a funcionar.
 
 ## 2. Classify (role_classifier.py)
 
@@ -35,27 +54,30 @@ Clasifica cada oferta según el catálogo de roles.
 
 ## 3. Evaluate (evaluate.py)
 
-Evalúa cada oferta contra el perfil del candidato con dos modelos.
+Evalúa cada oferta contra el perfil del candidato. **Cálculo determinista
+con un solo prompt de contexto.**
 
-### Bloque A — gemma4:e4b (60 puntos, temperatura 0.1)
+### Componentes del score
 
-| Campo | Puntos | Descripción |
-|-------|--------|-------------|
-| skills_hard_match | 0-25 | Overlap entre skills requeridas y CV |
-| experience_match | 0-15 | Años requeridos vs años reales |
-| education_match | 0-10 | Nivel educativo requerido |
-| location_match | 0-10 | Modalidad + ubicación |
+| Componente | Peso | Origen | Método |
+|-----------|------|--------|--------|
+| `M_core` (skills core) | 0.45 | Python | Level multiplier por skill |
+| `M_sec` (skills secundarias) | 0.15 | Python | Level multiplier por skill |
+| `F_exp` (experiencia) | 0.25 | Python | years_match · gap_multiplier |
+| `F_fit` (contexto) | 0.15 | gemma4:e4b | Evaluación cualitativa |
 
-### Bloque B — gemma4 (40 puntos)
+### Reglas clave
 
-| Campo | Puntos | Descripción |
-|-------|--------|-------------|
-| trajectory_coherence | 0-15 | Coherencia del trayectoria profesional |
-| recency_relevance | 0-15 | Qué tan reciente es la experiencia relevante |
-| market_competitiveness | 0-10 | Cómo compite este perfil en el mercado |
-| penalty | hasta -30 | Gap laboral, incoherencia, requisitos no cumplidos |
+- **`level_required` no se persiste por skill.** Se resuelve en tiempo de
+  evaluación desde `role_level_label` de la oferta mediante el mapping
+  `ROLE_LEVEL_TO_SKILL_LEVEL`.
+- **`gap_severity` se calcula en Python** (determinista), no se pide al LLM.
+- **Sobrecualificación no penaliza** — el level multiplier capa a 1.0.
+- **Validación final** (tercer prompt): detecta bloqueos reales
+  (convenio prácticas, certificado discapacidad obligatorio) y valida
+  `relevance_flag`.
 
-**Coherencia HR/Técnico:** Funcionalidad eliminada tras unificar a gemma4:e4b.
+Ver scoring completo en [`docs/RATING.md`](docs/RATING.md).
 
 ## 4. Send (send.py)
 

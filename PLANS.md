@@ -1,7 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Testing T-5 — evaluate.py: requisitos imposibles penalizados.
-> T-2 ⏳ y T-3 ⏳ bloqueados por límite Apify (ADR-004). T-4 ✅ completado (ADR-005).
+> **Próximo paso:** Testing T-6 — send.py: mensaje Telegram correcto.
+> T-2 ⏳ y T-3 ⏳ bloqueados por límite Apify (ADR-004). T-4 ✅, T-5 ✅ completado.
 > Ver docs/TESTING.md para el checklist completo.
 
 ## FASE 1 — Cimientos
@@ -53,7 +53,7 @@
 [x] Ollama cassettes (13 JSON en tests/fixtures/ollama/ + patch-based tests)
 [x] Integration cassettes: test_evaluate_cassettes.py, test_classifier_cassettes.py, test_fetch_cassettes.py (30 tests cassette-based)
 [x] Pipeline tests: test_pipeline.py (10 tests, flujo completo con cassettes)
-[x] 167 tests passing total
+[x] 171 tests passing total
 
 ## BUGS DETECTADOS (TESTS Y REVISIÓN)
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)
@@ -72,7 +72,7 @@ Ver checklist completo en docs/TESTING.md
 - [ ] T-2 — fetch.py con sinceDate=_24_HOURS validado en producción ⏳ (bloqueado: Apify, ADR-004)
 - [ ] T-3 — fetch_company.py sin errores ⏳ (bloqueado: depende de T-2, employer_id en ofertas)
 - [x] T-4 — role_classifier.py coherente con las ofertas (v5/v6 validado, ADR-005 documenta evolución)
-- [ ] T-5 — evaluate.py — requisitos imposibles penalizados
+- [x] T-5 — evaluate.py — requisitos imposibles penalizados + scoring determinista 0-1
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores
 - [ ] T-8 — Feedback bot funcional y natural

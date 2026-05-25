@@ -107,3 +107,19 @@
 - Los cassettes deben ser JSON plano (no envuelto en `{"response": "..."}`)
 - `ollama_call` internamente extrae JSON, los cassettes ya deben contener el dict parsed
 - CASSETTES[name] es directamente el dict con keys del JSON de respuesta
+
+## Fetch en dos fases (refactor mayo 2026)
+
+- `upsert_raw()` reemplazó a `upsert_offer()` para separar persistencia
+  de Apify del enriquecimiento con LLM
+- `raw_data` almacena el JSON completo del item Apify para re-enriquecimiento
+- `enriched_at IS NULL` sirve como flag de reintento automático
+- `role_level_label` almacena el seniority (junior/mid/senior) inferido por el LLM
+- `level_required` por skill ya no se persiste desde fetch — se resuelve en
+  evaluate.py desde `ROLE_LEVEL_TO_SKILL_LEVEL` según `role_level_label`
+- `parse_skills_required` acepta tanto objetos dict como strings planos
+  (backward-compat con datos legacy en DB)
+- `_ensure_skill_obj()` normaliza cualquier formato de skill a
+  `{"name": str, "level_required": str|None}`
+- Las columnas nuevas (`raw_data`, `enriched_at`, `role_level_label`) se
+  añaden vía `src/db/migrate.py`, no con ALTER TABLE ad-hoc
