@@ -1,79 +1,73 @@
-# Sistema de Rating — ADR-008
+# Rating System — ADR-008
 
-Score determinista 0–1. Ningún LLM genera puntuaciones numéricas.
+Deterministic 0–1 score. No LLM generates numeric scores.
 
-## Fórmula
+## Formula
 
-$$
-S = W_{\text{core}} \cdot M_{\text{core}} + W_{\text{sec}} \cdot M_{\text{sec}} + W_{\text{exp}} \cdot F_{\text{exp}} + W_{\text{fit}} \cdot F_{\text{fit}}
-$$
+```
+S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
+```
 
-| Peso | Variable | Depende de |
-|------|----------|-----------|
-| 0.45 | `M_core` | Skills core de la oferta vs CV |
-| 0.15 | `M_sec` | Skills secundarias de la oferta vs CV |
-| 0.25 | `F_exp` | Años de experiencia + gap laboral |
-| 0.15 | `F_fit` | gemma4:e4b (única intervención LLM) |
+| Weight | Variable | Source |
+|--------|----------|--------|
+| 0.45 | `M_core` | Core skills from offer vs CV |
+| 0.15 | `M_sec` | Secondary skills from offer vs CV |
+| 0.25 | `F_exp` | Years of experience + employment gap |
+| 0.15 | `F_fit` | gemma4:e4b (only LLM intervention) |
 
-## Skills: nivel por skill
+## Skills: per-skill level
 
-Cada skill tiene un nivel requerido inferido:
+Each skill has an inferred required level:
 
-$$
-\text{level\_required} = \begin{cases}
-\text{sk\_level\_required} & \text{si la skill tiene level\_required explícito} \\
-\text{ROLE\_LEVEL\_TO\_SKILL\_LEVEL[role\_level\_label]} & \text{si no tiene}
-\end{cases}
-$$
+```
+level_required = sk_level_required                         if skill has explicit level
+level_required = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]   otherwise
+```
 
 Mapping:
 
-| `role_level_label` | Nivel inferido |
+| `role_level_label` | Inferred level |
 |---|---|
 | junior | básico (ord=1) |
 | mid | intermedio (ord=2) |
 | senior | avanzado (ord=3) |
 
-Multiplicador individual:
+Individual multiplier:
 
-$$
-L_i = \frac{\min(\text{ord}(lvl_{\text{cand}}), \text{ord}(lvl_{\text{req}}))}{\text{ord}(lvl_{\text{req}})}
-$$
+```
+L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
+```
 
-- Si el candidato no tiene la skill: `L_i = 0`
-- Sobrecualificación: cap a 1.0
-- `M_core = avg(L_i)` para skills core
-- `M_sec = avg(L_i)` para skills secundarias
+- Candidate lacks the skill → `L_i = 0`
+- Overqualification capped at `1.0`
+- `M_core = avg(L_i)` over core skills
+- `M_sec = avg(L_i)` over secondary skills
 
-## Experiencia
+## Experience
 
-$$
-F_{\text{exp}} = \text{years\_match} \cdot G(\text{gap})
-$$
+```
+F_exp = years_match · G(gap)
 
-$$
-\text{years\_match} = \begin{cases}
-1.0 & \text{si } experience\_min = 0 \\
-\min(\frac{candidate\_years}{experience\_min}, 1.0) & \text{en otro caso}
-\end{cases}
-$$
+years_match = 1.0                                  if experience_min = 0
+years_match = min(candidate_years / experience_min, 1.0)  otherwise
+```
 
 ### Gap multiplier
 
-| Gap (años) | G |
-|------------|---|
+| Gap (years) | G |
+|-------------|---|
 | 0 – <1 | 1.00 |
 | 1 – <2 | 0.85 |
 | 2 – <3 | 0.70 |
 | 3 – <4 | 0.55 |
 | ≥ 4 | 0.40 |
 
-## Contexto
+## Context
 
-`F_fit` = único valor del LLM. gemma4:e4b evalúa `context_fit` (0–1)
-considerando cultura, ubicación, modalidad y perfil personal.
+`F_fit` is the only LLM value. gemma4:e4b evaluates `context_fit` (0–1)
+considering culture, location, work mode, and personal profile.
 
-## Rating final
+## Final rating
 
 | Score | Label |
 |-------|-------|
@@ -82,11 +76,9 @@ considerando cultura, ubicación, modalidad y perfil personal.
 | 0.35 ≤ S < 0.55 | Con expectativas bajas |
 | 0.00 ≤ S < 0.35 | No aplicar |
 
-## Notas
+## Notes
 
-- La temperatura HR = 0.0 garantiza veredictos deterministas
-- Los skills `level_required` individuales (legacy) siguen siendo válidos
-  si existen en DB; si son `None`, se resuelven automáticamente desde
-  el rol de la oferta
-- ADR-008 documenta la justificación completa del cambio a scoring
-  determinista 0-1
+- HR temperature = 0.0 guarantees deterministic verdicts
+- Legacy per-skill `level_required` values are still valid if present in DB;
+  if `None`, they are resolved automatically from the offer's role level
+- ADR-008 documents the full rationale for switching to 0–1 deterministic scoring

@@ -1,6 +1,6 @@
-# Pipeline de Ejecución
+# Pipeline
 
-## Flujo Principal
+## Main Flow
 
 ```
 run.py: fetch → classify → evaluate → send
@@ -8,105 +8,105 @@ run.py: fetch → classify → evaluate → send
 
 ## 1. Fetch (fetch.py)
 
-Extrae ofertas de InfoJobs vía Apify. Opera en **dos fases separadas**.
+Fetches job offers from InfoJobs via Apify. Operates in **two separate phases**.
 
-### Fase 1 — `upsert_raw` (sin LLM)
+### Phase 1 — `upsert_raw` (no LLM)
 
-1. Lee `search_config` de la base de datos
-2. Construye searchUrls con jerarquía geo/rol
-3. Ejecuta actor Apify (`lRxJmbuhggr0LU3uj`)
-4. Persiste cada item con campos estructurales de Apify
+1. Reads `search_config` from the database
+2. Builds search URLs with geo/role hierarchy
+3. Runs Apify actor (`lRxJmbuhggr0LU3uj`)
+4. Persists each item with structural fields from Apify
    (`title`, `city`, `companyName`, `link`, `contractType`, `teleworking`,
-   `description`, `salary`, etc.) + `raw_data` (JSON completo del item)
-5. **No llama a ningún LLM** en esta fase
+   `description`, `salary`, etc.) + `raw_data` (full item JSON)
+5. **Does not call any LLM** in this phase
 
-### Fase 2 — `enrich_pending` (con LLM)
+### Phase 2 — `enrich_pending` (with LLM)
 
-1. Selecciona ofertas con `raw_data IS NOT NULL AND enriched_at IS NULL`
-2. Para cada una: deserializa `raw_data`, llama a `extract_fields_with_llm`
-   (gemma4:e4b, temperatura 0.0) para extraer:
-   - `description_clean` — texto plano sin HTML
+1. Selects offers with `raw_data IS NOT NULL AND enriched_at IS NULL`
+2. For each offer: deserializes `raw_data`, calls `extract_fields_with_llm`
+   (gemma4:e4b, temperature 0.0) to extract:
+   - `description_clean` — plain text without HTML
    - `role_level` — junior / mid / senior
-   - `skills_required` — core y secondary (solo `name`, sin nivel)
+   - `skills_required` — core and secondary (name only, no level)
    - `experience_min`, `education_level`
    - `salary_min`, `salary_max`
-3. Actualiza la oferta y marca `enriched_at = NOW()`
+3. Updates the offer and sets `enriched_at = NOW()`
 
-**Si el LLM falla:** la oferta queda con `enriched_at IS NULL` y se reintenta
-automáticamente en la próxima ejecución. La oferta raw nunca se pierde.
+**If the LLM fails:** the offer remains with `enriched_at IS NULL` and is
+automatically retried on the next run. The raw offer is never lost.
 
-**Salida:** `raw_data` completo, `description_raw`, y campos estructurales
-disponibles desde Fase 1 — incluso si el LLM nunca llega a funcionar.
+**Output:** full `raw_data`, `description_raw`, and structural fields
+available from Phase 1 — even if the LLM never succeeds.
 
 ## 2. Classify (role_classifier.py)
 
-Clasifica cada oferta según el catálogo de roles.
+Classifies each offer according to the role catalog.
 
-**Proceso:**
-1. Gemma4 analiza título + descripción de cada oferta
-2. Asigna `role_normalized` desde el catálogo de roles
-3. Asigna `relevance_flag`:
-   - `core`: requisitos coinciden >70% con el perfil
-   - `adjacent`: coinciden 40-70%
-   - `stretch`: coinciden 20-40%
-   - `temporal`: trabajo puente viable
-4. Actualiza el catálogo si detecta nuevos roles
+**Process:**
+1. Gemma4 analyzes title + description of each offer
+2. Assigns `role_normalized` from the role catalog
+3. Assigns `relevance_flag`:
+   - `core`: requirements match >70% of candidate profile
+   - `adjacent`: 40–70% match
+   - `stretch`: 20–40% match
+   - `temporal`: viable bridge job
+4. Updates the catalog if new roles are detected
 
 ## 3. Evaluate (evaluate.py)
 
-Evalúa cada oferta contra el perfil del candidato. **Cálculo determinista
-con un solo prompt de contexto.**
+Evaluates each offer against the candidate profile. **Deterministic calculation
+with a single context prompt.**
 
-### Componentes del score
+### Score components
 
-| Componente | Peso | Origen | Método |
-|-----------|------|--------|--------|
-| `M_core` (skills core) | 0.45 | Python | Level multiplier por skill |
-| `M_sec` (skills secundarias) | 0.15 | Python | Level multiplier por skill |
-| `F_exp` (experiencia) | 0.25 | Python | years_match · gap_multiplier |
-| `F_fit` (contexto) | 0.15 | gemma4:e4b | Evaluación cualitativa |
+| Component | Weight | Source | Method |
+|-----------|--------|--------|--------|
+| `M_core` (core skills) | 0.45 | Python | Level multiplier per skill |
+| `M_sec` (secondary skills) | 0.15 | Python | Level multiplier per skill |
+| `F_exp` (experience) | 0.25 | Python | years_match · gap_multiplier |
+| `F_fit` (context) | 0.15 | gemma4:e4b | Qualitative evaluation |
 
-### Reglas clave
+### Key rules
 
-- **`level_required` no se persiste por skill.** Se resuelve en tiempo de
-  evaluación desde `role_level_label` de la oferta mediante el mapping
-  `ROLE_LEVEL_TO_SKILL_LEVEL`.
-- **`gap_severity` se calcula en Python** (determinista), no se pide al LLM.
-- **Sobrecualificación no penaliza** — el level multiplier capa a 1.0.
-- **Validación final** (tercer prompt): detecta bloqueos reales
-  (convenio prácticas, certificado discapacidad obligatorio) y valida
+- **`level_required` is not persisted per skill.** It is resolved at
+  evaluation time from the offer's `role_level_label` via the
+  `ROLE_LEVEL_TO_SKILL_LEVEL` mapping.
+- **`gap_severity` is computed in Python** (deterministic), not asked of the LLM.
+- **Overqualification is not penalized** — the level multiplier caps at 1.0.
+- **Final validation** (third prompt): detects real blockers
+  (internship agreements, mandatory disability certificate) and validates
   `relevance_flag`.
 
-Ver scoring completo en [`docs/RATING.md`](docs/RATING.md).
+See full scoring in [`docs/RATING.md`](docs/RATING.md).
 
 ## 4. Send (send.py)
 
-Envía el resumen diario por Telegram.
+Sends the daily summary via Telegram.
 
-**Lógica de selección:**
-- Score mínimo: 35
-- Máximo: 3 ofertas
-- Prioridad: mayor score primero
-- Rango 35-54: añadir nota "Incluida por falta de opciones superiores"
+**Selection logic:**
+- Score minimum: 0.35
+- Maximum: 3 offers
+- Priority: highest score first
+- Range 0.35–0.54: add note "Incluida por falta de opciones superiores"
 
 **Feedback:**
-- `/f1 [texto]` → feedback sobre oferta 1
-- `/f2 [texto]` → feedback sobre oferta 2
-- `/f3 [texto]` → feedback sobre oferta 3
-- `/dia [texto]` → contexto emocional del día
+- `/f1 [text]` → feedback on offer 1
+- `/f2 [text]` → feedback on offer 2
+- `/f3 [text]` → feedback on offer 3
+- `/dia [text]` → daily emotional context
 
-## Módulos de Inteligencia (Pendientes)
+## Intelligence Modules (Pending)
 
-Estos módulos analizan patrones para generar recomendaciones estratégicas:
+These modules analyze patterns to generate strategic recommendations:
 
-| Módulo | Función |
-|--------|---------|
-| `role_discovery.py` | Infiere roles accesibles desde el dataset de ofertas |
-| `market_signals.py` | Calcula señales semanales del mercado |
-| `strategic_advisor.py` | Detecta triggers y genera consejos estratégicos |
+| Module | Function |
+|--------|----------|
+| `role_discovery.py` | Infers reachable roles from the offer dataset |
+| `market_signals.py` | Computes weekly market signals |
+| `strategic_advisor.py` | Detects triggers and generates strategic advice |
 
-**Triggers del Strategic Advisor:**
-- `no_calls_3_weeks`: aplicaciones > 5, llamadas = 0, semanas >= 3
-- `market_cold_2_weeks`: market_temperature = 'frio' >= 2 semanas
-- `skill_gap_detected`: skill en >40% ofertas y no está en CV
-- `role_pivot_signal`: match_score_promedio < 45 >= 4 semanas
+**Strategic Advisor triggers:**
+- `no_calls_3_weeks`: applications > 5, calls = 0, weeks >= 3
+- `market_cold_2_weeks`: market_temperature = 'cold' >= 2 weeks
+- `skill_gap_detected`: skill in >40% offers and not in CV
+- `role_pivot_signal`: avg match_score < 0.45 >= 4 weeks

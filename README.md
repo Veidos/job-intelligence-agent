@@ -31,13 +31,13 @@ flowchart TD
 ```
 
 | Model | Role | Temperature | Output |
-|---|---|---|---|---|
+|---|---|---|---|
 | `gemma4:e4b` | Technical + HR evaluator (single model) | `0.1` / `0.0` | Structured JSON + contextual analysis |
 
-> **Fetch en dos fases:** `fetch.py` separa persistencia de enriquecimiento.
-> `upsert_raw` guarda el raw de Apify sin LLM; `enrich_pending` ejecuta
-> gemma4:e4b después sobre ofertas con `enriched_at IS NULL`. Si el LLM falla,
-> la oferta raw permanece intacta y se reintenta en el próximo ciclo.
+> **Two-phase fetch:** `fetch.py` separates persistence from enrichment.
+> `upsert_raw` saves the raw Apify data without calling the LLM; `enrich_pending`
+> runs gemma4:e4b afterwards on offers with `enriched_at IS NULL`. If the LLM fails,
+> the raw offer remains intact and is retried on the next cycle.
 
 ---
 
@@ -212,9 +212,9 @@ No LLM generates numeric scores — Python computes everything except `F_fit`.
 
 ### Formula
 
-$$
-S = W_{\text{core}} \cdot M_{\text{core}} + W_{\text{sec}} \cdot M_{\text{sec}} + W_{\text{exp}} \cdot F_{\text{exp}} + W_{\text{fit}} \cdot F_{\text{fit}}
-$$
+```
+S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
+```
 
 | Weight | Variable | Source | Method |
 |--------|----------|--------|--------|
@@ -228,9 +228,9 @@ $$
 Each skill has a required level. If the offer doesn't specify one per skill,
 it's inferred from the job's seniority:
 
-$$
-\text{level\_required}_i = \text{ROLE\_LEVEL\_TO\_SKILL\_LEVEL}[\text{role\_level\_label}]
-$$
+```
+level_required(i) = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]
+```
 
 | `role_level_label` | Inferred `level_required` |
 |---|---|
@@ -240,9 +240,9 @@ $$
 
 Multiplier per skill:
 
-$$
-L_i = \frac{\min(\text{ord}(\text{candidate\_level}), \text{ord}(\text{required\_level}))}{\text{ord}(\text{required\_level})}
-$$
+```
+L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
+```
 
 - Candidate lacks the skill → `L_i = 0`
 - Overqualification capped at `1.0`
@@ -250,16 +250,12 @@ $$
 
 ### Experience: gap-adjusted
 
-$$
-F_{\text{exp}} = \text{years\_match} \cdot G(\text{gap})
-$$
+```
+F_exp = years_match · G(gap)
 
-$$
-\text{years\_match} = \begin{cases}
-1.0 & \text{if } experience\_min = 0 \\
-\min(\frac{candidate\_years}{experience\_min}, 1.0) & \text{otherwise}
-\end{cases}
-$$
+years_match = 1.0                                  if experience_min = 0
+years_match = min(candidate_years / experience_min, 1.0)  otherwise
+```
 
 | Gap (years) | Multiplier `G` |
 |---|---|
@@ -303,7 +299,7 @@ Each offer receives a `relevance_flag` and a `gap_type`:
 | Flag | Meaning |
 |---|---|
 | `core` | Requirements match >70% of candidate profile |
-| `adjacent` | 40–70% match, manageable gap (herramienta/dominio) |
+| `adjacent` | 40–70% match, manageable gap (tool/domain) |
 | `stretch` | 20–40% match, significant learning required (seniority) |
 | `temporal` | Viable bridge job while searching |
 
@@ -311,10 +307,10 @@ Each offer receives a `relevance_flag` and a `gap_type`:
 
 The classifier follows four rules established after 6 iterations (v1–v6):
 
-1. **El modelo razona, Python decide** — `is_new_role`, `gap_type` resolution, JSON validation live in code, not the prompt
+1. **Model reasons, Python decides** — `is_new_role`, `gap_type` resolution, JSON validation live in code, not the prompt
 2. **Atomic prompt changes** — never bundle a parsing fix with a prompt restructure
 3. **Separated decision axes** — FASE 1 (role objective) vs FASE 2 (candidate fit) are never mixed
-4. **Trazabilidad siempre** — every computed field is persisted to DB
+4. **Traceability always** — every computed field is persisted to DB
 
 See [`docs/adr/005-classifier-evolucion-v1-a-v6.md`](docs/adr/005-classifier-evolucion-v1-a-v6.md) for the full evolution and validation tables.
 
@@ -382,9 +378,9 @@ Phase 1 — Foundation        ✅ T-0 validated
 Phase 2 — Onboarding        ✅ T-1 validated
 Phase 3 — Base pipeline     🟡 Coded (validation pending)
   ├── fetch.py              🟡 Coded (T-2 ⏳ ADR-004)
-  ├── role_classifier.py    ✅ Validated (v6 estable, ADR-005)
+  ├── role_classifier.py    ✅ Validated (v6 stable, ADR-005)
   ├── fetch_company.py      🟡 Coded (T-3 ⏳ ADR-004)
-  ├── evaluate.py           🟡 Coded (T-5 ← testing actual)
+  ├── evaluate.py           🟡 Coded (T-5 ← tested)
   ├── send.py               🟡 Coded
   └── run.py (pipeline)     🟡 Coded
 Phase 4 — Intelligence      ⬜ Pending
