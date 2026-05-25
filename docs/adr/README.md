@@ -38,3 +38,4 @@ una decisión no trivial.
 | 005 | Role Classifier — Evolución v1 → v6 y decisiones de diseño | 2026-05-22 | activo |
 | 006 | evaluate.py — tercer prompt (evaluate_final) y eliminación del pre-filtro | 2026-05-23 | activo |
 | 007 | OpenRouter descartado como backend alternativo | 2026-05-23 | activo |
+| 008 | Scoring determinista 0-1 con multiplicadores de nivel | 2026-05-25 | activo |
