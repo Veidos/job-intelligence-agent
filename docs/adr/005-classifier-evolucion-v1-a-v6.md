@@ -1,81 +1,81 @@
-# ADR-005: Role Classifier — decisiones de diseño y evolución v1 → v6
+# ADR-005: Role Classifier — design decisions and evolution v1 → v6
 
-**Fecha:** 2026-05-22
-**Tipo:** `arquitectura`
-**Estado:** `activo`
-**Componente:** `src/pipeline/role_classifier.py`
-**Módulo de reporte:** `scripts/reporte_v6.py`
-
----
-
-## Contexto
-
-El clasificador de roles asigna a cada oferta scrapeada un `role_normalized` canónico y un `relevance_flag` (`core / adjacent / stretch / temporal`) con su `gap_type` (`seniority / dominio / herramienta / estructural / none`) que mide la distancia del candidato al rol. Opera con **gemma4:e4b** vía Ollama (prompt único, sin historial entre ofertas).
-
-El desarrollo iterativo v1→v6 reveló tres problemas recurrentes:
-
-1. **El modelo es optimista por defecto.** Sin estructura de decisión explícita, gemma4 clasifica toda oferta como `core` (v1: 16/17 core).
-2. **Cambios acoplados en el prompt producen regresiones.** v4 introdujo un fix de parsing y una reestructuración del prompt en el mismo cambio, provocando un colapso silencioso a `core` que pasó desapercibido una jornada completa.
-3. **El LLM no es fiable para decisiones binarias estructurales.** `is_new_role` devuelto por gemma4 dió un falso negativo en `trade_compliance_specialist`, impidiendo su incorporación al catálogo.
+**Date:** 2026-05-22
+**Type:** `architecture`
+**Status:** `active`
+**Component:** `src/pipeline/role_classifier.py`
+**Report module:** `scripts/reporte_v6.py`
 
 ---
 
-## Decisión
+## Context
 
-**Separar el razonamiento del clasificador en dos ejes independientes (FASE 1: rol objetivo, FASE 2: fit del candidato) y delegar al LLM exclusivamente el juicio semántico, mientras que toda decisión verificable determinísticamente (detección de roles nuevos, jerarquía de gap_types, validación de campos JSON) vive en código Python.**
+The role classifier assigns each scraped offer a canonical `role_normalized` and a `relevance_flag` (`core / adjacent / stretch / temporal`) with its `gap_type` (`seniority / domain / tool / structural / none`) that measures the distance from the candidate to the role. It operates with **gemma4:e4b** via Ollama (single prompt, no history between offers).
 
-Las cuatro reglas de diseño que gobiernan el clasificador desde v5/v6:
+Iterative development v1→v6 revealed three recurring problems:
 
-| Regla | Enunciado |
-|-------|-----------|
-| **El modelo razona, Python decide** | Detección de `is_new_role`, resolución de `gap_type`, validación de JSON → código. El LLM solo clasifica semánticamente. |
-| **Cambios atómicos en el prompt** | Nunca combinar un fix de parsing con una reestructuración del prompt. Un cambio = una variable. |
-| **Separación de ejes** | FASE 1 describe el puesto objetivamente; FASE 2 evalúa al candidato. Mezclarlos contamina ambos juicios. |
-| **Trazabilidad siempre** | `is_new_role` demostró que los campos calculados no persistidos se pierden. Desde v6: si se calcula en el pipeline, se guarda en DB. |
+1. **The model is optimistic by default.** Without an explicit decision structure, gemma4 classifies every offer as `core` (v1: 16/17 core).
+2. **Coupled prompt changes produce regressions.** v4 introduced a parsing fix and a prompt restructure in the same change, causing a silent collapse to `core` that went unnoticed for a full workday.
+3. **The LLM is not reliable for structural binary decisions.** `is_new_role` returned by gemma4 gave a false negative for `trade_compliance_specialist`, preventing its addition to the catalog.
 
 ---
 
-## Alternativas descartadas
+## Decision
 
-- **Prompt monolítico sin fases (v1).** Produce colapso a `core` por optimismo del modelo. Descartado por inviable.
-- **Delegar `is_new_role` al LLM (v1–v5).** Falso negativo en `trade_compliance_specialist`. La fiabilidad del modelo local en decisiones binarias estructurales es inferior a `O(n)` en Python. Descartado.
-- **Delegar `gap_type` entero al LLM (v1–v4).** Produce errores de formato (dicts en vez de strings) e inconsistencias. Descartado; la jerarquía se resuelve en `resolve_gap_type`.
-- **Usar un modelo más grande (qwen2.5-coder:7b).** Probado y descartado durante desarrollo temprano (MEMORIES.md:87): no razonaba bien en contexto amplio. gemma4:e4b es el único modelo del pipeline.
-- **No persistir `is_new_role`.** Cualquier campo calculado que no se guarda en DB se pierde al reprocesar. Descartado por violar trazabilidad.
+**Separate classifier reasoning into two independent axes (PHASE 1: role objective, PHASE 2: candidate fit) and delegate to the LLM exclusively the semantic judgment, while all verifiable deterministic decisions (new role detection, gap_type hierarchy, JSON field validation) live in Python code.**
 
----
+The four design rules governing the classifier since v5/v6:
 
-## Consecuencias
-
-- **La calidad del clasificador está acotada por gemma4:e4b.** Roles frontera (`data_scientist` vs `data_analyst`) y gap `estructural` tienen ruido aceptado como limitación del modelo local. Mejorable con modelo superior.
-- **El catálogo de roles crece dinámicamente.** Cada nuevo `role_normalized` detectado se añade automáticamente. Requiere revisión periódica para evitar roles espurios o duplicados.
-- **La regla "si se calcula, se guarda" es vinculante.** Cualquier nuevo campo derivado en el pipeline debe añadirse al schema y persistirse. Hay que mantener `ensure_columns_exist` y `migrate.py`.
-- **El HTML generator debe preservar el orden por `id` ASC.** Bug detectado en v6 y corregido: los scripts usan `ORDER BY id` explícito.
-- **Próximo paso natural:** mejorar el prompt para que discrimine `estructural` vs `stretch` con fiabilidad, y revisar si `bi_analyst` merece un slot propio en el catálogo.
+| Rule | Statement |
+|------|-----------|
+| **The model reasons, Python decides** | Detection of `is_new_role`, resolution of `gap_type`, JSON validation → code. The LLM only classifies semantically. |
+| **Atomic prompt changes** | Never combine a parsing fix with a prompt restructure. One change = one variable. |
+| **Axis separation** | PHASE 1 describes the position objectively; PHASE 2 evaluates the candidate. Mixing them contaminates both judgments. |
+| **Traceability always** | `is_new_role` proved that non-persisted computed fields are lost. Since v6: if it is computed in the pipeline, it is saved in DB. |
 
 ---
 
-## Anexo A: Historial de versiones
+## Discarded alternatives
 
-| Versión | Cambio | Distribución | Problema |
+- **Monolithic prompt without phases (v1).** Produces collapse to `core` due to model optimism. Discarded as unviable.
+- **Delegating `is_new_role` to the LLM (v1–v5).** False negative in `trade_compliance_specialist`. Reliability of local models for structural binary decisions is lower than `O(n)` in Python. Discarded.
+- **Delegating entire `gap_type` to the LLM (v1–v4).** Produces format errors (dicts instead of strings) and inconsistencies. Discarded; the hierarchy is resolved in `resolve_gap_type`.
+- **Using a larger model (qwen2.5-coder:7b).** Tested and discarded during early development (MEMORIES.md:87): it did not reason well in broad context. gemma4:e4b is the only model in the pipeline.
+- **Not persisting `is_new_role`.** Any computed field that is not saved in DB is lost when reprocessing. Discarded for violating traceability.
+
+---
+
+## Consequences
+
+- **Classifier quality is bounded by gemma4:e4b.** Borderline roles (`data_scientist` vs `data_analyst`) and `structural` gap have accepted noise as a limitation of the local model. Improvable with a superior model.
+- **The role catalog grows dynamically.** Each new detected `role_normalized` is added automatically. Requires periodic review to avoid spurious or duplicate roles.
+- **The "if it is computed, it is saved" rule is binding.** Any new derived field in the pipeline must be added to the schema and persisted. `ensure_columns_exist` and `migrate.py` must be maintained.
+- **The HTML generator must preserve order by `id` ASC.** Bug detected in v6 and fixed: the scripts use explicit `ORDER BY id`.
+- **Next natural step:** improve the prompt to discriminate `structural` vs `stretch` reliably, and review whether `bi_analyst` deserves its own slot in the catalog.
+
+---
+
+## Annex A: Version history
+
+| Version | Change | Distribution | Problem |
 |---------|--------|-------------|----------|
-| v1 | Baseline sin estructura de decisión | core:16 / adjacent:1 | Colapso por optimismo del modelo |
-| v2 | FASE 1 + FASE 2 separadas | adjacent:8 / stretch:9 | gap_types como lista de dicts (error unhashable) |
-| v4 | Fix unhashable + reestructuración prompt | core:16 / stretch:1 | Regresión por cambio acoplado |
-| v5 | Prompt v2 restaurado + fix de parsing limpio | adjacent:8 / stretch:9 | Estable (13/17 correctos en evaluación manual) |
-| v6 | `is_new_role` determinista en Python + columna en DB | adjacent:8 / stretch:9 | Catálogo crece a 18 roles; bug ORDER BY corregido |
+| v1 | Baseline without decision structure | core:16 / adjacent:1 | Collapse due to model optimism |
+| v2 | PHASE 1 + PHASE 2 separated | adjacent:8 / stretch:9 | gap_types as list of dicts (unhashable error) |
+| v4 | Unhashable fix + prompt restructure | core:16 / stretch:1 | Regression from coupled change |
+| v5 | v2 prompt restored + clean parsing fix | adjacent:8 / stretch:9 | Stable (13/17 correct in manual evaluation) |
+| v6 | Deterministic `is_new_role` in Python + DB column | adjacent:8 / stretch:9 | Catalog grows to 18 roles; ORDER BY bug fixed |
 
-## Anexo B: Evaluación de corrección v5/v6 (13/17)
+## Annex B: Correctness evaluation v5/v6 (13/17)
 
-| ID | Oferta | Flag asignado | Flag esperado | Correcto |
-|----|--------|--------------|---------------|:--------:|
-| 226 | Looker Quest Global | stretch / seniority | adjacent / herramienta | ⚠️ |
+| ID | Offer | Assigned flag | Expected flag | Correct |
+|----|-------|--------------|---------------|:-------:|
+| 226 | Looker Quest Global | stretch / seniority | adjacent / tool | ⚠️ |
 | 227 | Izertis BD | stretch / seniority | stretch / seniority | ✅ |
-| 228 | New Tandem | adjacent / dominio | adjacent / herramienta | ⚠️ |
-| 229 | NTT Junior PBI | stretch / seniority | adjacent / herramienta | ⚠️ |
-| 230 | EY Internship | adjacent / dominio | adjacent / dominio | ✅ |
-| 231–233, 235–242 | Resto | — | — | ✅ |
+| 228 | New Tandem | adjacent / domain | adjacent / tool | ⚠️ |
+| 229 | NTT Junior PBI | stretch / seniority | adjacent / tool | ⚠️ |
+| 230 | EY Internship | adjacent / domain | adjacent / domain | ✅ |
+| 231–233, 235–242 | Others | — | — | ✅ |
 
-## Anexo C: Catálogo actual (18 roles)
+## Annex C: Current catalog (18 roles)
 
-`data_analyst`, `data_scientist`, `ml_engineer`, `bi_analyst`, `data_engineer`, `operations_analyst`, `quality_analyst`, `process_engineer`, `technical_support`, `temporal`, `real_estate_consultant`, `martech_consultant`, `erp_consultant`, `it_consultant`, `recruitment_specialist`, `b2b_sales_representative`, `market_research_analyst`, **`trade_compliance_specialist`** (nuevo en v6).
+`data_analyst`, `data_scientist`, `ml_engineer`, `bi_analyst`, `data_engineer`, `operations_analyst`, `quality_analyst`, `process_engineer`, `technical_support`, `temporal`, `real_estate_consultant`, `martech_consultant`, `erp_consultant`, `it_consultant`, `recruitment_specialist`, `b2b_sales_representative`, `market_research_analyst`, **`trade_compliance_specialist`** (new in v6).
