@@ -1,8 +1,7 @@
 # Job Intelligence Agent
 
-Personal career intelligence system for the Spanish job market.
-Scrapes InfoJobs, scores offers against your CV using a local LLM,
-and delivers ranked recommendations to Telegram — fully offline-first.
+> Personal career intelligence system for the Spanish job market.  
+> Scrapes InfoJobs, scores offers against your CV using a local LLM, and delivers ranked recommendations to Telegram — fully offline-first.
 
 ![Python](https://img.shields.io/badge/Python-3.14+-blue?logo=python&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-gemma4:e4b-black?logo=ollama)
@@ -15,10 +14,12 @@ and delivers ranked recommendations to Telegram — fully offline-first.
 
 ## What it does
 
-1. **Scrape** — Pulls fresh offers from InfoJobs via Apify daily
-2. **Enrich** — Extracts skills, seniority and salary with a local LLM (no cloud)
-3. **Score** — Deterministic formula matches each offer to your CV profile
-4. **Deliver** — Top 3 ranked offers sent to Telegram every morning
+| Step | Module | Description |
+|------|--------|-------------|
+| **1. Scrape** | `fetch.py` | Pulls fresh offers from InfoJobs via Apify daily |
+| **2. Enrich** | `fetch.py` | Extracts skills, seniority and salary with a local LLM (no cloud) |
+| **3. Score** | `evaluate.py` | Deterministic formula matches each offer to your CV profile |
+| **4. Deliver** | `send.py` | Top 3 ranked offers sent to Telegram every morning |
 
 ```mermaid
 flowchart TD
@@ -36,16 +37,13 @@ flowchart TD
     M --> N[(user_psychology\nevolutive memory)]
 ```
 
-> **⚠️ Architecture note (pending ADR-009):** The `role_classifier` step is
-> a candidate for removal — its `relevance_flag` output is largely redundant
-> with the score produced by `evaluate.py`. Tracked for the next refactor.
+> **⚠️ Architecture note (pending ADR-009):** The `role_classifier` step is a candidate for removal — its `relevance_flag` output is largely redundant with the score produced by `evaluate.py`. Tracked for the next refactor.
 
 ---
 
 ## Scoring System
 
-Deterministic 0–1 score. Python computes everything — the LLM contributes
-only one component (`F_fit`, weight 0.15).
+Deterministic 0–1 score. Python computes everything — the LLM contributes only one component (`F_fit`, weight 0.15).
 
 ### Formula
 
@@ -60,14 +58,17 @@ S = 0.45·M_core + 0.15·M_sec + 0.25·F_exp + 0.15·F_fit
 | 0.25 | `F_exp` | Years of experience, penalised by employment gap | Python |
 | 0.15 | `F_fit` | Cultural fit, location, work mode | gemma4:e4b |
 
+---
+
 ### Skills: level multiplier
+
+For each skill in the offer, a multiplier `L_i` is computed:
 
 ```
 L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
 ```
 
-If the offer does not specify a per-skill level, it is inferred from the
-job's seniority label. The ordinal is the numeric rank used in the formula:
+If the offer does not specify a per-skill level, it is inferred from the job's seniority label. The ordinal is the numeric rank used in the formula:
 
 | Seniority label | Inferred level | Ordinal |
 |-----------------|----------------|---------|
@@ -77,7 +78,9 @@ job's seniority label. The ordinal is the numeric rank used in the formula:
 
 - Candidate lacks the skill → `L_i = 0`
 - Overqualification capped at `1.0`
-- `M_core = avg(L_i)` over core skills · `M_sec = avg(L_i)` over secondary
+- `M_core = avg(L_i)` over core skills · `M_sec = avg(L_i)` over secondary skills
+
+---
 
 ### Experience: gap penalty
 
@@ -88,39 +91,36 @@ years_match = 1.0                                       if experience_min = 0
 years_match = min(candidate_years / experience_min, 1.0)  otherwise
 ```
 
-G(gap) is a multiplier that reduces F_exp based on how long the candidate
-has been out of work. It applies on top of years_match — not on the final score:
+`G(gap)` is a multiplier that reduces `F_exp` based on how long the candidate has been out of work. It applies on top of `years_match` — not on the final score:
 
 | Gap (years) | G multiplier | Max F_exp contribution to S |
-|---|---|---|
-| < 1  | 1.00 | 0.25 |
-| 1–2  | 0.85 | 0.21 |
-| 2–3  | 0.70 | 0.18 |
-| 3–4  | 0.55 | 0.14 |
-| ≥ 4  | 0.40 | 0.10 |
+|-------------|--------------|------------------------------|
+| < 1 | 1.00 | 0.25 |
+| 1 – 2 | 0.85 | 0.21 |
+| 2 – 3 | 0.70 | 0.18 |
+| 3 – 4 | 0.55 | 0.14 |
+| ≥ 4 | 0.40 | 0.10 |
 
-> Even with a 4+ year gap, strong skill scores can still produce a result
-> above the 0.35 delivery threshold. The gap penalises `F_exp` only —
-> not the full score.
+> Even with a 4+ year gap, strong skill scores can still produce a result above the 0.35 delivery threshold. The gap penalises `F_exp` only — not the full score.
+
+---
 
 ### Context fit
 
-`F_fit` is the only LLM-driven component. gemma4:e4b (temperature 0.0)
-evaluates context fit (0–1) considering cultural compatibility, location,
-work mode, and personal profile. Skills and gap are already captured by
-the other components and must NOT be part of this evaluation.
+`F_fit` is the only LLM-driven component. gemma4:e4b (temperature 0.0) evaluates context fit (0–1) considering cultural compatibility, location, work mode, and personal profile. Skills and gap are already captured by the other components and must **not** be part of this evaluation.
+
+---
 
 ### Rating thresholds
 
 | Score | Label | Action |
-|---|---|---|
-| 0.75 – 1.00 | Priority | Apply immediately |
-| 0.55 – 0.75 | Apply | Strong candidate |
-| 0.35 – 0.55 | Low expectations | Sent with note |
-| 0.00 – 0.35 | Skip | Not delivered |
+|-------|-------|--------|
+| 0.75 – 1.00 | **Priority** | Apply immediately |
+| 0.55 – 0.75 | **Apply** | Strong candidate |
+| 0.35 – 0.55 | **Low expectations** | Sent with note |
+| 0.00 – 0.35 | **Skip** | Not delivered |
 
-Top 3 offers with score ≥ 0.35 delivered daily.
-If none qualify: `"No relevant offers today."`
+Top 3 offers with score ≥ 0.35 delivered daily. If none qualify: `"No relevant offers today."`
 
 > Full technical reference in [`docs/RATING.md`](docs/RATING.md).
 
@@ -135,7 +135,7 @@ The classifier maintains a dynamic catalog of canonical role names (in `snake_ca
 Each offer receives a `relevance_flag` and a `gap_type`:
 
 | Flag | Meaning |
-|---|---|
+|------|---------|
 | `core` | Requirements match >70% of candidate profile |
 | `adjacent` | 40–70% match, manageable gap (tool/domain) |
 | `stretch` | 20–40% match, significant learning required (seniority) |
@@ -186,7 +186,7 @@ The system accumulates data over time to surface strategic signals:
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
+|-------|------------|
 | Language | Python 3.14+ |
 | Database | SQLite (WAL mode) |
 | ORM | SQLAlchemy 2.0 |
@@ -338,7 +338,7 @@ PYTHONPATH=. python src/pipeline/run.py --dry-run
 ## Cost
 
 | Operation | Cost | Frequency |
-|---|---|---|
+|-----------|------|-----------|
 | Apify actor start | ~$0.09 | Once per day |
 | Ollama inference | $0.00 | Local, unlimited |
 | Telegram | $0.00 | Free |
@@ -387,7 +387,7 @@ Phase 6 — Data Analysis/EDA ⬜ Planned
 This project uses the **Ledger Method** for AI-assisted development:
 
 | File | Purpose |
-|---|---|
+|------|---------|
 | `AGENTS.md` | Full context for OpenCode / AI agents — read this first |
 | `PLANS.md` | Live project state with task checklist |
 | `MEMORIES.md` | Accumulated non-obvious learnings (prompts, field behavior, model quirks) |
