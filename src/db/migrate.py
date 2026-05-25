@@ -86,6 +86,9 @@ SCHEMA_DEFINITIONS = {
         ("gap_type", "TEXT"),
         ("role_reasoning", "TEXT"),
         ("is_new_role", "INTEGER DEFAULT 0"),
+        ("raw_data", "TEXT"),
+        ("enriched_at", "TEXT"),
+        ("role_level_label", "TEXT"),
     ],
     "offer_evaluations": [
         ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),

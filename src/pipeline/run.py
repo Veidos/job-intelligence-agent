@@ -54,7 +54,9 @@ def setup_logging() -> None:
     root_logger.addHandler(handler)
 
 
-def run_pipeline(skip_fetch: bool = False, dry_run: bool = False, limit: int = 30) -> None:
+def run_pipeline(
+    skip_fetch: bool = False, dry_run: bool = False, limit: int = 30
+) -> None:
     setup_logging()
 
     # Configurar consola inmediatamente para que warnings se vean
@@ -69,6 +71,7 @@ def run_pipeline(skip_fetch: bool = False, dry_run: bool = False, limit: int = 3
 
     log.info("[Migrate] Verificando schema...")
     from src.db.migrate import run_migration
+
     run_migration()
 
     # ── CV freshness check ────────────────────────────────────────
@@ -93,9 +96,7 @@ def run_pipeline(skip_fetch: bool = False, dry_run: bool = False, limit: int = 3
                 cv_data = extract_cv_data(CV_PATH)
                 interview_data = run_interview(cv_data)
                 profile = {**cv_data, **interview_data}
-                PERFIL_PATH.write_text(
-                    generate_perfil_md(profile), encoding="utf-8"
-                )
+                PERFIL_PATH.write_text(generate_perfil_md(profile), encoding="utf-8")
                 log.info("[CV] PERFIL.md regenerado → continuando pipeline")
             else:
                 log.warning("[CV] PERFIL.md no actualizado → pipeline detenido")

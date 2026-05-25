@@ -131,6 +131,12 @@ LEVEL_ORDINAL: dict[str, int] = {
     "experto": 3,
 }
 
+ROLE_LEVEL_TO_SKILL_LEVEL: dict[str, str | None] = {
+    "junior": "basico",
+    "mid": "intermedio",
+    "senior": "avanzado",
+}
+
 # G(gap): multiplicador por años de gap laboral — tabla fija, no LLM
 GAP_MULTIPLIER: list[tuple[float, float, float]] = [
     # (gap_min, gap_max_excl, multiplier)
@@ -181,12 +187,18 @@ def level_multiplier(candidate_level: str | None, required_level: str | None) ->
 def compute_skill_score(
     offer_skills: dict,
     candidate_skills_map: dict[str, str],
+    role_level_label: str | None = None,
 ) -> tuple[float, float, dict]:
     """Calcula M_core y M_sec.
+
+    Si una skill no tiene level_required, se resuelve desde
+    ROLE_LEVEL_TO_SKILL_LEVEL según role_level_label de la oferta.
 
     Returns: (M_core, M_sec, skill_detail)
     skill_detail tiene los cálculos intermedios para trazabilidad.
     """
+
+    default_level = ROLE_LEVEL_TO_SKILL_LEVEL.get((role_level_label or "").lower())
 
     def _score_list(skill_list: list[dict]) -> tuple[float, list]:
         if not skill_list:
@@ -195,7 +207,7 @@ def compute_skill_score(
         detail = []
         for sk in skill_list:
             name = (sk.get("name") or "").strip()
-            level_req = sk.get("level_required")
+            level_req = sk.get("level_required") or default_level
             cand_level = None
             name_lower = name.lower()
             for cand_name, cand_lv in candidate_skills_map.items():
@@ -260,6 +272,7 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
         SELECT o.id, o.title, o.company_name, o.city, o.work_mode,
                o.description_clean, o.skills_required,
                o.relevance_flag, o.role_normalized,
+               o.role_level_label,
                o.salary_min, o.salary_max, o.published_at,
                c.sector AS company_sector, c.size_range AS company_size
         FROM offers o
@@ -597,7 +610,9 @@ def run_evaluate(limit: int = 10) -> dict:
 
             # Paso 2: Python calcula M_core y M_sec
             M_core, M_sec, skill_detail = compute_skill_score(
-                offer_skills, enriched_map
+                offer_skills,
+                enriched_map,
+                role_level_label=offer.get("role_level_label"),
             )
 
             # Paso 3: Python calcula F_exp (determinista)

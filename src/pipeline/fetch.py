@@ -128,20 +128,27 @@ def parse_salary(text: str) -> tuple[float | None, float | None]:
     return None, None
 
 
+def _ensure_skill_obj(s: Any) -> dict:
+    """Asegura que una skill sea dict con name; level_required opcional."""
+    if isinstance(s, dict):
+        return {
+            "name": s.get("name", str(s)),
+            "level_required": s.get("level_required"),
+        }
+    return {"name": str(s), "level_required": None}
+
+
 def parse_skills_required(raw: Any) -> dict:
-    """Normaliza skills_required al schema estructurado.
+    """Normaliza skills_required al schema {core: [{name, level_required}], secondary: [...]}.
 
     Acepta:
-    - dict con keys 'core' y 'secondary' (schema nuevo) → devuelve tal cual
-    - list de strings (schema legacy) → convierte a core sin nivel
-    - string JSON → deserializa y reintenta
-    - None / vacío → devuelve estructura vacía
+    - dict con keys 'core' y 'secondary' (objetos con/sin level_required)
+    - list de strings (schema legacy) -> convierte a objetos sin nivel
+    - string JSON -> deserializa y reintenta
+    - None / vacío -> estructura vacía
 
-    Retorna siempre:
-    {
-        "core": [{"name": str, "level_required": str|null}, ...],
-        "secondary": [{"name": str, "level_required": str|null}, ...]
-    }
+    level_required se resuelve en evaluate.py desde role_level_label,
+    no se persiste por skill desde fetch.
     """
     if raw is None:
         return {"core": [], "secondary": []}
@@ -153,13 +160,13 @@ def parse_skills_required(raw: Any) -> dict:
             return {"core": [], "secondary": []}
 
     if isinstance(raw, dict) and "core" in raw:
-        return raw
+        core = [_ensure_skill_obj(s) for s in raw.get("core", []) if s]
+        secondary = [_ensure_skill_obj(s) for s in raw.get("secondary", []) if s]
+        return {"core": core, "secondary": secondary}
 
     if isinstance(raw, list):
         return {
-            "core": [
-                {"name": s, "level_required": None} for s in raw if isinstance(s, str)
-            ],
+            "core": [_ensure_skill_obj(s) for s in raw if isinstance(s, str)],
             "secondary": [],
         }
 
@@ -182,10 +189,11 @@ def extract_fields_with_llm(item: dict) -> dict[str, Any]:
     prompt = f"""Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
 
 - description_clean: descripción limpia sin HTML, máximo 2000 caracteres
-- skills_required: objeto con dos listas:
-    - core: skills explícitamente requeridas o marcadas como imprescindibles.
-      Cada elemento: {{"name": "<nombre>", "level_required": "<basico|intermedio|avanzado|null>"}}
-      level_required es null si la oferta no especifica nivel para esa skill.
+- role_level: nivel de seniority del puesto. Valores: "junior", "mid", "senior", null si no se puede inferir.
+  Inferir de: título del puesto, años de experiencia pedidos, lenguaje de la descripción.
+- skills_required: objeto con dos listas de objetos:
+    - core: skills sin las que no se puede optar al puesto.
+      Cada elemento: {{"name": "<nombre>"}}
     - secondary: skills deseables, valorables o mencionadas sin énfasis.
       Mismo formato que core.
 - experience_min: años mínimos de experiencia requeridos (int, 0 si no se menciona)
@@ -194,10 +202,9 @@ def extract_fields_with_llm(item: dict) -> dict[str, Any]:
 - salary_max: salario máximo anual en número (float o null)
 
 Reglas para clasificar skills:
-- Si la oferta dice "imprescindible", "requisito", "obligatorio", "must have" → core
-- Si dice "valorable", "deseable", "se valorará", "plus" → secondary
-- Si no hay distinción explícita: las 3-5 skills más mencionadas o más centrales al rol → core, el resto → secondary
-- El nivel se infiere del contexto: "junior" → basico, "senior/experto/lead" → avanzado, sin especificación → null
+- "imprescindible", "requisito", "obligatorio", "must have" → core
+- "valorable", "deseable", "se valorará", "plus" → secondary
+- Sin distinción explícita: las 3-5 skills más centrales al rol → core, el resto → secondary
 
 Oferta:
 {json.dumps(item, ensure_ascii=False)[:3000]}
@@ -222,8 +229,11 @@ Responde SOLO con el JSON, sin markdown."""
         return {}
 
 
-def upsert_offer(item: dict, conn) -> bool:
-    """Inserta o actualiza una oferta en la base de datos.
+def upsert_raw(item: dict, conn) -> bool:
+    """Fase 1: persiste raw de Apify sin llamar a Ollama.
+
+    Guarda raw_data completo + campos estructurales directos de Apify.
+    Los campos que requieren LLM se rellenan en enrich_pending().
 
     Returns:
         True si fue inserción nueva, False si fue actualización.
@@ -248,45 +258,24 @@ def upsert_offer(item: dict, conn) -> bool:
     work_mode_raw = offer_data.get("teleworking")
     published_at = offer_data.get("publishedAt")
     description_raw = offer_data.get("description", "")
-
-    # Enriquecer con gemma4:e4b usando el item completo
-    enriched = extract_fields_with_llm(item)
-    description_clean = enriched.get(
-        "description_clean", clean_description(description_raw)
-    )
-    skills_required = json.dumps(
-        enriched.get("skills_required", {"core": [], "secondary": []}),
-        ensure_ascii=False,
-    )
-    experience_min = enriched.get("experience_min", 0)
-    education_level = enriched.get("education_level", "")
-
-    # Parsear salario
-    salary_min = enriched.get("salary_min")
-    salary_max = enriched.get("salary_max")
-    salary_text = enriched.get("salary_text", "")
-    if (salary_min is None or salary_max is None) and salary_text:
-        salary_min, salary_max = parse_salary(salary_text)
-
     work_mode = work_mode_raw or "Presencial"
     fetched_at = item.get("scrapedAt") or datetime.now().isoformat()
+    raw_data = json.dumps(item, ensure_ascii=False)
+
+    salary_min, salary_max = parse_salary(offer_data.get("salary", "") or "")
 
     cursor = conn.cursor()
-
-    # 1. Comprobar si source_id ya existe
     cursor.execute("SELECT COUNT(*) FROM offers WHERE source_id = ?", (source_id,))
     count = cursor.fetchone()[0]
 
     if count == 0:
-        # No existe → INSERT completo
         cursor.execute(
             """
             INSERT INTO offers (
                 source_id, title, city, company_name, employer_id, url, contract_type,
-                work_mode, published_at, description_raw, description_clean,
-                skills_required, experience_min, education_level,
-                salary_min, salary_max, fetched_at, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                work_mode, published_at, description_raw, salary_min, salary_max,
+                fetched_at, is_active, raw_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 source_id,
@@ -299,64 +288,141 @@ def upsert_offer(item: dict, conn) -> bool:
                 work_mode,
                 published_at,
                 description_raw,
-                description_clean,
-                skills_required,
-                experience_min,
-                education_level,
                 salary_min,
                 salary_max,
                 fetched_at,
                 True,
+                raw_data,
             ),
         )
         conn.commit()
         log.debug("Inserción nueva oferta %s: %s", source_id, title)
         return True
-    else:
-        # Ya existe → UPDATE sin tocar fetched_at ni source_id
+
+    cursor.execute(
+        """
+        UPDATE offers SET
+            title=?, city=?, company_name=?, employer_id=?, url=?,
+            contract_type=?, work_mode=?, published_at=?, description_raw=?,
+            salary_min=?, salary_max=?, raw_data=?,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE source_id=?
+        """,
+        (
+            title,
+            city,
+            company_name,
+            employer_id,
+            url,
+            contract_type,
+            work_mode,
+            published_at,
+            description_raw,
+            salary_min,
+            salary_max,
+            raw_data,
+            source_id,
+        ),
+    )
+    conn.commit()
+    log.debug("Actualización oferta %s: %s", source_id, title)
+    return False
+
+
+def enrich_pending(conn, limit: int = 0) -> int:
+    """Fase 2: enriquece con LLM ofertas con raw_data pero sin enriched_at.
+
+    Llama a extract_fields_with_llm() para cada oferta pendiente y actualiza
+    description_clean, skills_required, experience_min, education_level,
+    role_level_label, salary_min/max y enriched_at.
+
+    Si el LLM falla -> enriched_at queda NULL -> reintento automático.
+    """
+    query = """
+        SELECT id, source_id, raw_data
+        FROM offers
+        WHERE raw_data IS NOT NULL AND enriched_at IS NULL
+    """
+    params: tuple = ()
+    if limit > 0:
+        query += " LIMIT ?"
+        params = (limit,)
+
+    cursor = conn.cursor()
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    if not rows:
+        log.info("No hay ofertas pendientes de enriquecimiento")
+        return 0
+
+    log.info("Enriqueciendo %d ofertas con LLM...", len(rows))
+    enriched_count = 0
+
+    for offer_id, source_id, raw_data_str in rows:
+        try:
+            item = json.loads(raw_data_str)
+        except (json.JSONDecodeError, TypeError):
+            log.warning("raw_data inválido para oferta %s, saltando", source_id)
+            continue
+
+        enriched = extract_fields_with_llm(item)
+        if not enriched:
+            log.warning(
+                "LLM no devolvió datos para oferta %s, se reintentará", source_id
+            )
+            continue
+
+        description_clean = enriched.get(
+            "description_clean",
+            clean_description(item.get("offer", {}).get("description", "")),
+        )
+        skills_raw = enriched.get("skills_required", {"core": [], "secondary": []})
+        skills_required = json.dumps(
+            parse_skills_required(skills_raw), ensure_ascii=False
+        )
+        experience_min = enriched.get("experience_min", 0)
+        education_level = enriched.get("education_level", "")
+        role_level = enriched.get("role_level")
+
+        salary_min = enriched.get("salary_min")
+        salary_max = enriched.get("salary_max")
+        if salary_min is None and salary_max is None:
+            salary_text = enriched.get("salary_text", "")
+            if salary_text:
+                salary_min, salary_max = parse_salary(salary_text)
+
         cursor.execute(
             """
             UPDATE offers SET
-                title=?,
-                city=?,
-                company_name=?,
-                employer_id=?,
-                url=?,
-                contract_type=?,
-                work_mode=?,
-                published_at=?,
-                description_raw=?,
-                description_clean=?,
-                skills_required=?,
-                experience_min=?,
-                education_level=?,
-                salary_min=?,
-                salary_max=?,
-                updated_at=CURRENT_TIMESTAMP
-            WHERE source_id=?
+                description_clean = ?,
+                skills_required   = ?,
+                experience_min    = ?,
+                education_level   = ?,
+                role_level_label  = ?,
+                salary_min        = COALESCE(?, salary_min),
+                salary_max        = COALESCE(?, salary_max),
+                enriched_at       = datetime('now'),
+                updated_at        = CURRENT_TIMESTAMP
+            WHERE id = ?
             """,
             (
-                title,
-                city,
-                company_name,
-                employer_id,
-                url,
-                contract_type,
-                work_mode,
-                published_at,
-                description_raw,
                 description_clean,
                 skills_required,
                 experience_min,
                 education_level,
+                role_level,
                 salary_min,
                 salary_max,
-                source_id,
+                offer_id,
             ),
         )
         conn.commit()
-        log.debug("Actualización oferta %s: %s", source_id, title)
-        return False
+        enriched_count += 1
+        log.debug("Oferta %s enriquecida correctamente", source_id)
+
+    log.info("Enriquecimiento completado: %d/%d ofertas", enriched_count, len(rows))
+    return enriched_count
 
 
 def run_fetch(
@@ -413,11 +479,15 @@ def run_fetch(
     new_count = 0
     for item in items:
         try:
-            is_new = upsert_offer(item, conn)
+            is_new = upsert_raw(item, conn)
             if is_new:
                 new_count += 1
         except Exception as e:
-            log.warning("Error procesando oferta: %s", e)
+            log.warning("Error persistiendo oferta raw: %s", e)
+
+    # Fase 2: enriquecer con LLM (separado del raw)
+    enriched = enrich_pending(conn)
+    log.info("Ofertas enriquecidas en este run: %d", enriched)
 
     conn.close()
     log.info(
