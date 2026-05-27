@@ -25,8 +25,6 @@ from src.utils.cleaner import clean_description
 
 log = logging.getLogger(__name__)
 
-APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
-
 MAX_RETRIES = 3
 
 
@@ -229,8 +227,40 @@ Responde SOLO con el JSON, sin markdown."""
         return {}
 
 
-def upsert_raw(item: dict, conn) -> bool:
-    """Fase 1: persiste raw de Apify sin llamar a Ollama.
+def persist_raw_responses(run_id: str, items: list, conn) -> int:
+    """Persiste cada item de Apify de forma inmutable antes de cualquier procesado.
+
+    append-only: el payload nunca se modifica tras la inserción.
+    Si el source_id ya existe para este run_id, se salta (idempotente).
+
+    Returns:
+        Número de items guardados.
+    """
+    cursor = conn.cursor()
+    saved = 0
+    for idx, item in enumerate(items):
+        source_id = (item.get("offer") or {}).get("code")
+        try:
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO apify_raw_responses
+                    (run_id, item_index, source_id, payload, processed)
+                VALUES (?, ?, ?, ?, 0)
+                """,
+                (run_id, idx, source_id, json.dumps(item, ensure_ascii=False)),
+            )
+            saved += cursor.rowcount
+        except Exception as e:
+            log.warning(
+                "Error persistiendo raw item %d (run_id=%s): %s", idx, run_id, e
+            )
+    conn.commit()
+    log.info("Raw responses persistidas: %d/%d (run_id=%s)", saved, len(items), run_id)
+    return saved
+
+
+def _upsert_offer(item: dict, conn) -> bool:
+    """Persiste raw de Apify sin llamar a Ollama.
 
     Guarda raw_data completo + campos estructurales directos de Apify.
     Los campos que requieren LLM se rellenan en enrich_pending().
@@ -327,6 +357,55 @@ def upsert_raw(item: dict, conn) -> bool:
     conn.commit()
     log.debug("Actualización oferta %s: %s", source_id, title)
     return False
+
+
+def upsert_from_raw(run_id: str, conn) -> int:
+    """Lee apify_raw_responses no procesadas de este run y hace upsert en offers.
+
+    Marca cada raw como processed=1 si el upsert fue exitoso,
+    o guarda el error en la columna error si falló.
+
+    Returns:
+        Número de ofertas nuevas insertadas.
+    """
+    cursor = conn.cursor()
+    rows = cursor.execute(
+        """
+        SELECT id, source_id, payload
+        FROM apify_raw_responses
+        WHERE run_id = ? AND processed = 0
+        """,
+        (run_id,),
+    ).fetchall()
+
+    if not rows:
+        log.info("No hay raw responses pendientes para run_id=%s", run_id)
+        return 0
+
+    new_count = 0
+    for raw_id, source_id, payload_str in rows:
+        try:
+            item = json.loads(payload_str)
+            is_new = _upsert_offer(item, conn)
+            if is_new:
+                new_count += 1
+            cursor.execute(
+                "UPDATE apify_raw_responses SET processed=1 WHERE id=?",
+                (raw_id,),
+            )
+        except Exception as e:
+            cursor.execute(
+                "UPDATE apify_raw_responses SET error=? WHERE id=?",
+                (str(e), raw_id),
+            )
+            log.warning(
+                "Error procesando raw_id=%d (source_id=%s): %s",
+                raw_id,
+                source_id,
+                e,
+            )
+    conn.commit()
+    return new_count
 
 
 def enrich_pending(conn, limit: int = 0) -> int:
@@ -432,7 +511,8 @@ def run_fetch(
     max_items: int = 30,
 ) -> int:
     """Ejecuta el fetch completo desde Apify y guarda en DB."""
-    if not APIFY_TOKEN:
+    token = os.getenv("APIFY_TOKEN", "")
+    if not token:
         log.error("APIFY_TOKEN no configurado")
         return 0
 
@@ -446,7 +526,7 @@ def run_fetch(
     if not profile:
         profile = {}
 
-    client = ApifyClient(APIFY_TOKEN)
+    client = ApifyClient(token)
     search_urls = build_search_urls(search_config, profile, since_date)
 
     if not search_urls:
@@ -471,29 +551,28 @@ def run_fetch(
         log.error("Apify no devolvió dataset válido")
         return 0
 
-    dataset = client.dataset(run_result["defaultDatasetId"])
-    items = list(dataset.iterate_items())
-    log.info("Apify devolvió %d items", len(items))
+    run_id = run_result["defaultDatasetId"]
+    items = list(client.dataset(run_id).iterate_items())
+    log.info("Apify run_id=%s devolvió %d items", run_id, len(items))
 
     conn = get_connection()
-    new_count = 0
-    for item in items:
-        try:
-            is_new = upsert_raw(item, conn)
-            if is_new:
-                new_count += 1
-        except Exception as e:
-            log.warning("Error persistiendo oferta raw: %s", e)
 
-    # Fase 2: enriquecer con LLM (separado del raw)
+    # Fase 1: persistir raw — inmutable, antes de cualquier procesado
+    persist_raw_responses(run_id, items, conn)
+
+    # Fase 2: upsert en offers desde raw
+    new_count = upsert_from_raw(run_id, conn)
+
+    # Fase 3: enriquecer con LLM
     enriched = enrich_pending(conn)
     log.info("Ofertas enriquecidas en este run: %d", enriched)
 
     conn.close()
     log.info(
-        "Fetch completado: %d ofertas nuevas guardadas (de %d total)",
+        "Fetch completado: %d ofertas nuevas (de %d items, run_id=%s)",
         new_count,
         len(items),
+        run_id,
     )
     return new_count
 
