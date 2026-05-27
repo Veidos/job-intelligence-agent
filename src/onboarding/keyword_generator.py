@@ -29,28 +29,24 @@ from src.utils.ollama_client import ollama_call
 log = logging.getLogger(__name__)
 
 PERFIL_PATH = Path(__file__).resolve().parent.parent.parent / "PERFIL.md"
-MAX_KEYWORDS = 6
+MAX_KEYWORDS = 8
 
 SYSTEM_PROMPT = """Eres un recruiter senior con 10 años de experiencia publicando
 ofertas en InfoJobs España. Conoces exactamente qué títulos de puesto usan las
 empresas españolas en sus búsquedas reales."""
 
-USER_PROMPT_TEMPLATE = """{system}
-
-Analiza este perfil profesional y genera los títulos de
+USER_PROMPT_TEMPLATE = """Analiza este perfil profesional y genera los títulos de
 puesto que una empresa española publicaría en InfoJobs para contratar a este candidato.
-
 PERFIL:
 {perfil}
-
 Reglas estrictas:
-- Máximo {max_kw} títulos, ordenados de MÁS a MENOS relevante para el perfil
-- Usa el vocabulario real de InfoJobs (como lo escribe la empresa, no el candidato)
-- Mezcla inglés y español según cómo aparecen realmente en InfoJobs España
-- Sé específico: "Python Backend Developer" > "Programador"
-- Incluye variantes de seniority si el perfil lo justifica
-- NO incluyas: "técnico informático", "programador", "desarrollador" sin especialización
-
+- Exactamente {max_kw} títulos únicos, sin variantes del mismo rol
+- Sin indicadores de seniority (nada de Junior, Senior, Trainee, Mid)
+- Incluye versiones en inglés Y en español de los roles principales, son búsquedas distintas en InfoJobs
+- Cubre áreas distintas del perfil — no repitas el mismo concepto en el mismo idioma
+- Ordena de MÁS a MENOS volumen de ofertas reales en InfoJobs España
+- Usa el nombre base del rol, sin adjetivos ni especializaciones innecesarias
+- Usa únicamente títulos que existan realmente en InfoJobs España — no inventes traducciones literales
 Devuelve SOLO este JSON, sin texto extra, sin markdown:
 {{"keywords": ["título 1", "título 2", "título 3"]}}"""
 
@@ -64,7 +60,6 @@ def load_perfil(path: Path = PERFIL_PATH) -> str:
 def generate_keywords(perfil_text: str) -> list[str]:
     """Llama al LLM y devuelve lista de keywords ordenada por relevancia."""
     prompt = USER_PROMPT_TEMPLATE.format(
-        system=SYSTEM_PROMPT,
         perfil=perfil_text[:4000],
         max_kw=MAX_KEYWORDS,
     )
@@ -75,6 +70,7 @@ def generate_keywords(perfil_text: str) -> list[str]:
             prompt=prompt,
             expect_json=True,
             temperature=0.1,
+            think=True,
         )
     except Exception as e:
         log.error("LLM falló generando keywords: %s", e)
@@ -176,11 +172,70 @@ def run(dry_run: bool = False) -> list[str]:
     return keywords
 
 
+def manage_keywords() -> None:
+    """Muestra las keywords actuales y permite eliminar por número."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, role_hierarchy FROM search_config ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        if not row:
+            print("No hay keywords guardadas en search_config.")
+            return
+        config_id, role_hierarchy_json = row
+        keywords = json.loads(role_hierarchy_json)
+        print("\n── Keywords actuales ───────────────────────────────")
+        for i, kw in enumerate(keywords, 1):
+            print(f"  {i}. {kw}")
+        print("────────────────────────────────────────────────────")
+        raw = input("\nNúmeros a conservar (ej: 1 2 4 6 8) o Enter para mantener todas: ").strip()
+        if not raw:
+            print("Sin cambios.")
+            return
+        keep = set()
+        for token in raw.split():
+            if token.isdigit() and 1 <= int(token) <= len(keywords):
+                keep.add(int(token) - 1)
+        if not keep:
+            print("Ningún número válido. Sin cambios.")
+            return
+        updated = [kw for i, kw in enumerate(keywords) if i in keep]
+        cursor.execute(
+            "UPDATE search_config SET role_hierarchy = ?, last_updated = datetime('now') WHERE id = ?",
+            (json.dumps(updated, ensure_ascii=False), config_id),
+        )
+        conn.commit()
+        print(f"\n✓ Conservadas {len(keep)} keywords. Quedan {len(updated)}:")
+        for i, kw in enumerate(updated, 1):
+            print(f"  {i}. {kw}")
+        raw_add = input("\nKeywords a añadir (separadas por comas) o Enter para saltar: ").strip()
+        if raw_add:
+            nuevas = [kw.strip() for kw in raw_add.split(",") if kw.strip()]
+            existing_lower = {k.lower() for k in updated}
+            for kw in nuevas:
+                if kw and kw.lower() not in existing_lower:
+                    updated.append(kw)
+                    existing_lower.add(kw.lower())
+            cursor.execute(
+                "UPDATE search_config SET role_hierarchy = ?, last_updated = datetime('now') WHERE id = ?",
+                (json.dumps(updated, ensure_ascii=False), config_id),
+            )
+            conn.commit()
+            print(f"\n✓ Añadidas {len(nuevas)} keywords. Total: {len(updated)}:")
+            for i, kw in enumerate(updated, 1):
+                print(f"  {i}. {kw}")
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    dry = "--dry-run" in sys.argv
-    run(dry_run=dry)
+    if "--manage" in sys.argv:
+        manage_keywords()
+    else:
+        dry = "--dry-run" in sys.argv
+        run(dry_run=dry)

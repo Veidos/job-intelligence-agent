@@ -57,7 +57,10 @@ def _call_ollama_raw(
             f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=OLLAMA_TIMEOUT
         )
         response.raise_for_status()
-        return response.json().get("response", "").strip()
+        data = response.json()
+        if think and "think" in data:
+            log.info("Razonamiento de %s:\n%s", model, data["think"].strip())
+        return data.get("response", "").strip()
     except requests.exceptions.ConnectionError as e:
         raise OllamaError(f"Ollama no disponible en {OLLAMA_BASE_URL}: {e}") from e
     except requests.exceptions.Timeout:
