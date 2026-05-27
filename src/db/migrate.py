@@ -49,6 +49,15 @@ SCHEMA_DEFINITIONS = {
         ("content_parsed", "TEXT"),
         ("is_active", "INTEGER NOT NULL DEFAULT 1"),
     ],
+    "apify_raw_responses": [
+        ("run_id",      "TEXT NOT NULL"),
+        ("item_index",  "INTEGER NOT NULL"),
+        ("source_id",   "TEXT"),
+        ("fetched_at",  "DATETIME NOT NULL DEFAULT (datetime('now'))"),
+        ("payload",     "TEXT NOT NULL"),
+        ("processed",   "INTEGER NOT NULL DEFAULT 0"),
+        ("error",       "TEXT"),
+    ],
     "offers": [
         ("source_id", "TEXT NOT NULL UNIQUE"),
         ("source", "TEXT NOT NULL DEFAULT 'infojobs'"),
@@ -192,6 +201,25 @@ def run_migration() -> dict:
 
     conn = get_connection()
     total_added = 0
+
+    # Crear tablas nuevas que no existían en versiones anteriores de la DB
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS apify_raw_responses (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id       TEXT NOT NULL,
+            item_index   INTEGER NOT NULL,
+            source_id    TEXT,
+            fetched_at   DATETIME NOT NULL DEFAULT (datetime('now')),
+            payload      TEXT NOT NULL,
+            processed    INTEGER NOT NULL DEFAULT 0,
+            error        TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_apify_raw_run_id    ON apify_raw_responses(run_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_apify_raw_source_id ON apify_raw_responses(source_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_apify_raw_processed ON apify_raw_responses(processed)")
+    conn.commit()
+    log.info("Tabla apify_raw_responses verificada")
 
     for table_name, columns in SCHEMA_DEFINITIONS.items():
         try:
