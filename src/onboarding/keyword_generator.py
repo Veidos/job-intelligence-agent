@@ -208,7 +208,7 @@ def manage_keywords() -> None:
         print(f"\n✓ Conservadas {len(keep)} keywords. Quedan {len(updated)}:")
         for i, kw in enumerate(updated, 1):
             print(f"  {i}. {kw}")
-        raw_add = input("\nKeywords a añadir (separadas por comas) o Enter para saltar: ").strip()
+        raw_add = input("\nKeywords a añadir (separadas por comas si son varias, o una sola) o Enter para saltar: ").strip()
         if raw_add:
             nuevas = [kw.strip() for kw in raw_add.split(",") if kw.strip()]
             existing_lower = {k.lower() for k in updated}
