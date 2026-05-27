@@ -31,6 +31,7 @@
 [x] Integrar fetch_company en pipeline (entre classify y evaluate)
 [x] Añadir columna employer_id a offers en schema.sql
 [x] Capturar author.id de API InfoJobs en fetch.py
+[x] apify_raw_responses — registro inmutable de raw data Apify (ADR pendiente)
 
 ## FASE 4 — Inteligencia
   [ ] role_discovery.py
@@ -62,6 +63,7 @@
   [x] Reportes HTML: `<title>` de v5 y v6 copiado de v4 sin actualizar ("T-4 v4" en la pestaña del navegador)
   [x] Reportes HTML: falta `ORDER BY id ASC` en queries SQL — IDs 241/242 invertidos en las cards
   [x] Navegación entre reportes: v3–v5 no tenían enlaces a versiones posteriores (imposible volver a v6 desde v5)
+  [x] APIFY_TOKEN leído en module-level: movido a dentro de run_fetch()
 
 ## Testing pendiente — Pipeline completo
 
