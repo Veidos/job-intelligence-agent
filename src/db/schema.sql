@@ -33,6 +33,22 @@ CREATE TABLE IF NOT EXISTS cv_versions (
     is_active INTEGER NOT NULL DEFAULT 1
 );
 
+-- Registro inmutable de cada item devuelto por Apify
+-- append-only: el payload nunca se modifica tras la inserción
+CREATE TABLE IF NOT EXISTS apify_raw_responses (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id       TEXT NOT NULL,
+    item_index   INTEGER NOT NULL,
+    source_id    TEXT,
+    fetched_at   DATETIME NOT NULL DEFAULT (datetime('now')),
+    payload      TEXT NOT NULL,
+    processed    INTEGER NOT NULL DEFAULT 0,
+    error        TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_apify_raw_run_id    ON apify_raw_responses(run_id);
+CREATE INDEX IF NOT EXISTS idx_apify_raw_source_id ON apify_raw_responses(source_id);
+CREATE INDEX IF NOT EXISTS idx_apify_raw_processed ON apify_raw_responses(processed);
+
 CREATE TABLE IF NOT EXISTS offers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_id TEXT NOT NULL UNIQUE,
