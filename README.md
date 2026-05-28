@@ -16,25 +16,25 @@
 
 | Step | Module | Description |
 |------|--------|-------------|
-| **0. Keywords** | `keyword_generator` | Generates search titles from `PERFIL.md` via gemma4:e4b (run once) |
-| **1. Fetch** | `fetch.py` | Scrapes InfoJobs via Apify + enriches skills/salary with LLM |
-| **2. Score** | `evaluate.py` | Deterministic formula matches each offer to your CV profile |
-| **3. Deliver** | `send.py` | Top 3 ranked offers sent to Telegram every morning |
+| **1. Scrape** | `fetch.py` | Persists raw Apify items in `apify_raw_responses` (immutable, append-only) |
+| **2. Upsert** | `fetch.py` | Reads raw items, upserts structured fields into `offers` table. No LLM. |
+| **3. Enrich** | `fetch.py` | Extracts skills, seniority and salary with gemma4:e4b. Retried automatically if LLM fails. |
+| **4. Classify** | `role_classifier.py` | Classifies each offer by real requirements, assigns `relevance_flag` |
+| **5. Enrich company** | `fetch_company.py` | Adds company data and reviews to each offer |
+| **6. Score** | `evaluate.py` | Deterministic formula matches each offer to your CV profile |
+| **7. Deliver** | `send.py` | Top 3 ranked offers (score ≥ 0.35) sent to Telegram every morning |
 
 ```mermaid
-flowchart TD
-    A[InfoJobs via Apify] --> B[fetch.py]
+flowchart LR
+    A([CV / PERFIL.md]) --> B[fetch.py]
     B --> C[(SQLite\noffers)]
     C --> D[role_classifier.py]
-    D --> E[evaluate.py]
-    E --> F[gemma4:e4b\nTechnical + HR]
-    F --> G[match_score]
-    G --> H[send.py]
-    H --> I[📱 Telegram]
-    K[fetch_company.py] --> L[(SQLite\ncompanies)]
-    L --> E
-    I --> M[💬 User Feedback\n/f1 /f2 /f3 /dia]
-    M --> N[(user_psychology\nevolutive memory)]
+    D --> E[fetch_company.py]
+    E --> F[evaluate.py\ngemma4:e4b]
+    F --> G[send.py]
+    G --> H([📱 Telegram])
+    H --> I([💬 Feedback\n/f1 /f2 /f3])
+    I --> C
 ```
 
 ---
