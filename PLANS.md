@@ -31,7 +31,8 @@
 [x] Integrar fetch_company en pipeline (entre classify y evaluate)
 [x] Añadir columna employer_id a offers en schema.sql
 [x] Capturar author.id de API InfoJobs en fetch.py
-[x] apify_raw_responses — registro inmutable de raw data Apify (ADR pendiente)
+  [x] apify_raw_responses — registro inmutable de raw data Apify
+  [x] keyword_generator.py — generación y gestión de keywords desde PERFIL.md
 
 ## FASE 4 — Inteligencia
   [ ] role_discovery.py

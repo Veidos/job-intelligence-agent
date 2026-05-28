@@ -123,3 +123,33 @@
   `{"name": str, "level_required": str|None}`
 - Las columnas nuevas (`raw_data`, `enriched_at`, `role_level_label`) se
   añaden vía `src/db/migrate.py`, no con ALTER TABLE ad-hoc
+
+## Fetch en tres fases + apify_raw_responses (mayo 2026)
+
+- `fetch.py` ahora opera en 3 fases secuenciales:
+  1. `persist_raw_responses()` — guarda cada item Apify en `apify_raw_responses` (append-only, inmutable)
+  2. `upsert_from_raw()` — lee raw responses pendientes, llama a `_upsert_offer()` (antes `upsert_raw`)
+  3. `enrich_pending()` — sin cambios
+- `apify_raw_responses` es tabla append-only: nunca se actualiza un payload, solo se marca `processed=1`
+- `_upsert_offer()` es privada (underscore), solo llamada desde `upsert_from_raw()`
+- `APIFY_TOKEN` se lee dentro de `run_fetch()` vía `os.getenv()`, no en module-level
+
+## Keyword generator (keyword_generator.py)
+
+- Flujo: `PERFIL.md` → `generate_keywords()` [gemma4:e4b] → `save_to_search_config()` → `search_config.role_hierarchy`
+- `ollama_call()` no acepta parámetro `system` — el system prompt se incrusta en el user prompt
+- `--manage` permite conservar keywords por número y añadir nuevas manualmente, sin tocar el LLM
+- `think=True` se envía en el payload pero gemma4:e4b no siempre devuelve el campo `think` en la respuesta
+- El prompt para generar keywords debe usar reglas de comportamiento (no hardcode de títulos):
+  - Sin indicadores de seniority
+  - Versiones en inglés y español de los mismos roles
+  - Solo títulos que existan realmente en InfoJobs España
+  - Exactamente `MAX_KEYWORDS` títulos únicos (sin duplicados garantizado por dedup en Python)
+
+## Triada de documentación (ADR-009)
+
+- `MEMORIES.md`: aprendizajes permanentes (ciclo de vida: infinito)
+- `PLANS.md`: checklist de fases y tests (ciclo de vida: por fase)
+- `HANDOFF.md`: estado de sesión, próximo paso, blockers (ciclo de vida: por sesión — se sobreescribe)
+- `AGENTS.md` instruye: "Actualizar HANDOFF.md al final de la sesión" + "Leer HANDOFF.md al inicio"
+- La documentación se actualiza en la misma sesión que el código, no después

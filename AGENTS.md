@@ -21,6 +21,7 @@ y envía un resumen diario por Telegram.
 
 | Archivo | Descripción |
 |---------|-------------|
+| `HANDOFF.md` | Estado de sesión — LEER PRIMERO |
 | `docs/SETUP.md` | Instalación, comandos, cron |
 | `docs/PIPELINE.md` | Flujo completo fetch→classify→evaluate→send |
 | `docs/DATABASE.md` | Tablas, reglas, schema SQL |
@@ -35,6 +36,11 @@ y envía un resumen diario por Telegram.
 ```bash
 # Onboarding (primera vez)
 python src/onboarding/run.py --cv assets/cv.pdf
+
+# Keywords de búsqueda (post-onboarding)
+python src/onboarding/keyword_generator              # Generar desde PERFIL.md
+python src/onboarding/keyword_generator --dry-run     # Vista previa sin guardar
+python src/onboarding/keyword_generator --manage      # Gestionar manualmente
 
 # Pipeline completo
 python src/pipeline/run.py
@@ -89,9 +95,10 @@ Al inicio de cada sesión, leer en orden:
 
 1. `AGENTS.md` — contexto técnico y reglas
 2. `PLANS.md` — estado actual del proyecto
-3. `MEMORIES.md` — aprendizajes acumulados
-4. `PERFIL.md` — perfil del candidato
-5. `src/db/schema.sql` — fuente de verdad de la DB
+3. `HANDOFF.md` — estado de sesión y próximo paso
+4. `MEMORIES.md` — aprendizajes acumulados
+5. `PERFIL.md` — perfil del candidato
+6. `src/db/schema.sql` — fuente de verdad de la DB
 
 ---
 
@@ -99,11 +106,13 @@ Al inicio de cada sesión, leer en orden:
 
 Al finalizar cualquier sesión de trabajo:
 
-```bash
-git add -A
-git commit -m "descripción breve"
-git push
-```
+1. Actualizar `HANDOFF.md` con el estado actual
+2. Actualizar `PLANS.md` y `MEMORIES.md` si aplica
+3. ```bash
+   git add -A
+   git commit -m "descripción breve"
+   git push
+   ```
 
 **Obligatorio.** No terminar sesión sin pushear.
 

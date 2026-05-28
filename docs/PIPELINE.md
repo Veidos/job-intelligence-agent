@@ -1,5 +1,17 @@
 # Pipeline
 
+## Prerequisites
+
+Before the pipeline can fetch offers, `search_config` must contain a valid
+`role_hierarchy`. This is populated by the keyword generator:
+
+```bash
+python -m src.onboarding.keyword_generator
+```
+
+See `src/onboarding/keyword_generator.py` for details. Run once after onboarding,
+or whenever `PERFIL.md` changes significantly.
+
 ## Main Flow
 
 ```
@@ -8,19 +20,32 @@ run.py: fetch → classify → evaluate → send
 
 ## 1. Fetch (fetch.py)
 
-Fetches job offers from InfoJobs via Apify. Operates in **two separate phases**.
+Fetches job offers from InfoJobs via Apify. Operates in **three sequential phases**.
 
-### Phase 1 — `upsert_raw` (no LLM)
+### Phase 1 — `persist_raw_responses` (append-only)
 
-1. Reads `search_config` from the database
-2. Builds search URLs with geo/role hierarchy
-3. Runs Apify actor (`lRxJmbuhggr0LU3uj`)
-4. Persists each item with structural fields from Apify
-   (`title`, `city`, `companyName`, `link`, `contractType`, `teleworking`,
-   `description`, `salary`, etc.) + `raw_data` (full item JSON)
-5. **Does not call any LLM** in this phase
+1. Reads `APIFY_TOKEN` from environment (inside `run_fetch()`, not module-level)
+2. Reads `search_config` from the database
+3. Builds search URLs with geo/role hierarchy from `search_config.role_hierarchy`
+4. Runs Apify actor (`lRxJmbuhggr0LU3uj`)
+5. Persists **each item** in `apify_raw_responses` table (append-only, immutable)
+   - `run_id`, `item_index`, `source_id`, `payload` (full item JSON), `processed=0`
+   - `INSERT OR IGNORE` — idempotent per (run_id, item_index)
+6. **Does not call any LLM** in this phase
 
-### Phase 2 — `enrich_pending` (with LLM)
+### Phase 2 — `upsert_from_raw` (upsert in offers)
+
+1. Reads `apify_raw_responses` where `run_id = current_run AND processed = 0`
+2. For each raw row: deserializes `payload`, calls `_upsert_offer()` (previously `upsert_raw`)
+3. On success: marks `processed = 1`
+4. On failure: saves error message in `error` column, does not block the batch
+
+`_upsert_offer()` extracts structural fields directly from Apify
+(`title`, `city`, `companyName`, `link`, `contractType`, `teleworking`,
+`description`, `salary`, etc.) + saves `raw_data` (full item JSON).
+**No LLM call.**
+
+### Phase 3 — `enrich_pending` (with LLM)
 
 1. Selects offers with `raw_data IS NOT NULL AND enriched_at IS NULL`
 2. For each offer: deserializes `raw_data`, calls `extract_fields_with_llm`
@@ -37,6 +62,14 @@ automatically retried on the next run. The raw offer is never lost.
 
 **Output:** full `raw_data`, `description_raw`, and structural fields
 available from Phase 1 — even if the LLM never succeeds.
+
+### Key changes from the previous 2-phase design
+
+| Before | After |
+|--------|-------|
+| `upsert_raw()` (single function) | `persist_raw_responses()` → `upsert_from_raw()` → `enrich_pending()` |
+| Raw items persisted directly in `offers` | Raw items persisted first in `apify_raw_responses` (immutable), then upserted in `offers` |
+| `APIFY_TOKEN` at module level | `APIFY_TOKEN` read inside `run_fetch()` |
 
 ## 2. Classify (role_classifier.py)
 

@@ -39,3 +39,4 @@ decision is made.
 | 006 | evaluate.py — third prompt (evaluate_final) and pre-filter removal | 2026-05-23 | active |
 | 007 | OpenRouter discarded as alternative backend | 2026-05-23 | active |
 | 008 | Deterministic 0-1 scoring with level multipliers | 2026-05-25 | active |
+| 009 | Documentation and Session Handoff System | 2026-05-27 | active |

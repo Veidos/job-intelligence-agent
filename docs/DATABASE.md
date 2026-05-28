@@ -10,10 +10,10 @@
 
 | Tabla | Descripción |
 |-------|-------------|
+| `apify_raw_responses` | Registro inmutable de items Apify (append-only) |
 | `offers` | Ofertas crudas de InfoJobs (source_id UNIQUE) |
 | `companies` | Datos e inteligencia de empresa |
 | `offer_evaluations` | Scoring técnico + HR (ambos gemma4:e4b, temperaturas 0.1 y 0.0) |
-| `candidate_profile` | Perfil estructurado (generado desde PERFIL.md) |
 | `cv_versions` | Historial de versiones del CV |
 | `search_runs` | Historial de ejecuciones del pipeline |
 | `market_signals` | Señales semanales del mercado |
@@ -30,10 +30,10 @@
 - Usar `is_active = False` para desactivar (no borrar)
 - `fetched_at` no se actualiza en updates (solo en insert)
 
-### Candidate Profile
-- `personal_concerns` es TEXT libre — nunca normalizar ni parsear
-- Solo un perfil activo a la vez (`is_active = 1`)
-- Skills, educación, experiencia: JSON serializado
+### Apify Raw Responses
+- **Append-only:** nunca se actualiza un payload, solo se marca `processed=1`
+- `INSERT OR IGNORE` por (run_id, item_index) — idempotente
+- `error` registra fallos de procesado sin bloquear el batch
 
 ### Campos JSON
 - Almacenados como TEXT serializado
@@ -47,9 +47,13 @@
 idx_offers_source_id ON offers(source_id)
 idx_offers_fetched_at ON offers(fetched_at)
 idx_offers_is_active ON offers(is_active)
+idx_offers_employer_id ON offers(employer_id)
 idx_evaluations_offer_id ON offer_evaluations(offer_id)
 idx_evaluations_match_score ON offer_evaluations(match_score)
 idx_companies_name ON companies(name)
+idx_apify_raw_run_id ON apify_raw_responses(run_id)
+idx_apify_raw_source_id ON apify_raw_responses(source_id)
+idx_apify_raw_processed ON apify_raw_responses(processed)
 ```
 
 ## Schema
