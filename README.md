@@ -25,8 +25,8 @@
 | **7. Deliver** | `send.py` | Top 3 ranked offers (score ≥ 0.35) sent to Telegram every morning |
 
 ```mermaid
-flowchart LR
-    A([CV / PERFIL.md]) --> B[fetch.py]
+flowchart TD
+    A[InfoJobs via Apify] --> B[fetch.py]
     B --> C[(SQLite\noffers)]
     C --> D[role_classifier.py]
     D --> E[fetch_company.py]
@@ -35,6 +35,7 @@ flowchart LR
     G --> H([📱 Telegram])
     H --> I([💬 Feedback\n/f1 /f2 /f3])
     I --> C
+    J([CV / PERFIL.md]) -.-> F
 ```
 
 ---
