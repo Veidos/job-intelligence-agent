@@ -1,4 +1,4 @@
-# ADR-009: Documentation and Session Handoff System
+# ADR-010: Documentation and Session Handoff System
 
 **Date:** 2026-05-27
 **Type:** `operational`
