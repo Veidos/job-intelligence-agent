@@ -16,10 +16,10 @@
 
 | Step | Module | Description |
 |------|--------|-------------|
-| **1. Scrape** | `fetch.py` | Pulls fresh offers from InfoJobs via Apify daily |
-| **2. Enrich** | `fetch.py` | Extracts skills, seniority and salary with a local LLM (no cloud) |
-| **3. Score** | `evaluate.py` | Deterministic formula matches each offer to your CV profile |
-| **4. Deliver** | `send.py` | Top 3 ranked offers sent to Telegram every morning |
+| **0. Keywords** | `keyword_generator` | Generates search titles from `PERFIL.md` via gemma4:e4b (run once) |
+| **1. Fetch** | `fetch.py` | Scrapes InfoJobs via Apify + enriches skills/salary with LLM |
+| **2. Score** | `evaluate.py` | Deterministic formula matches each offer to your CV profile |
+| **3. Deliver** | `send.py` | Top 3 ranked offers sent to Telegram every morning |
 
 ```mermaid
 flowchart TD
@@ -140,6 +140,13 @@ PYTHONPATH=. python src/onboarding/run.py --cv assets/cv.pdf
 # Generates PERFIL.md — review and confirm before continuing
 ```
 
+### Generate search keywords (once, or when profile changes)
+
+```bash
+PYTHONPATH=. python -m src.onboarding.keyword_generator    # Generate from PERFIL.md
+PYTHONPATH=. python -m src.onboarding.keyword_generator --manage  # Manual curation
+```
+
 ### Run the pipeline
 
 ```bash
@@ -151,6 +158,9 @@ PYTHONPATH=. python src/pipeline/fetch.py
 PYTHONPATH=. python src/pipeline/role_classifier.py
 PYTHONPATH=. python src/pipeline/evaluate.py
 PYTHONPATH=. python src/telegram/send.py --mode daily
+
+# Keyword management
+PYTHONPATH=. python -m src.onboarding.keyword_generator --manage
 
 # Dry run (no Apify, no Telegram)
 PYTHONPATH=. python src/pipeline/run.py --dry-run
