@@ -137,6 +137,20 @@ def parse_salary(salary_data: Any) -> tuple[float | None, float | None]:
     return None, None
 
 
+def _extract_employer_id(offer_data: dict) -> str | None:
+    """Extrae employer_id del companyLink de InfoJobs."""
+    link = offer_data.get("companyLink")
+    if not link:
+        return None
+    m = re.search(r"/em-i([a-zA-Z0-9_]+)", link)
+    if m:
+        return m.group(1)
+    m = re.match(r"https?://([^.]+)\.", link)
+    if m and m.group(1) != "www":
+        return m.group(1)
+    return None
+
+
 def _ensure_skill_obj(s: Any) -> dict:
     """Asegura que una skill sea dict con name; level_required opcional."""
     if isinstance(s, dict):
@@ -294,8 +308,7 @@ def _upsert_offer(item: dict, conn) -> bool:
     title = offer_data.get("title")
     city = offer_data.get("city")
     company_name = offer_data.get("companyName")
-    author_data = offer_data.get("author", {})
-    employer_id = author_data.get("id")
+    employer_id = _extract_employer_id(offer_data)
     url = offer_data.get("link")
     contract_type = offer_data.get("contractType")
     work_mode_raw = offer_data.get("teleworking")

@@ -9,8 +9,10 @@
 - Añadido --enrich-only y --max-items a fetch.py
 - Añadido num_ctx como parámetro configurable en ollama_call
 - docs/PIPELINE.md actualizado con comandos de referencia
-**Próximo paso:** T-3 (fetch_company) o verificación de ofertas enriquecidas, a elección
+- _extract_employer_id(): extrae employer_id de companyLink (em-i hash o subdominio)
+- 92/92 ofertas con employer_id poblado
+**Próximo paso:** T-3 (fetch_company) — próxima sesión
 **Bloqueados:** ninguno
-**Tests:** 171 passing (no se tocaron tests en esta sesión)
+**Tests:** 171 passing
 **ADRs a leer para nueva sesión:** ninguno
 **Decisión pendiente:** ninguna

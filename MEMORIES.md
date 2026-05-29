@@ -169,6 +169,16 @@
 - `--enrich-only`: solo reprocesa `enrich_pending()` sin llamar a Apify.
   Útil para reintentar ofertas con `enriched_at IS NULL` tras corregir parámetros.
 
+## employer_id desde companyLink (mayo 2026)
+
+- API InfoJobs vía Apify ya no devuelve `offer.author.id` para `employer_id`
+- `companyLink` tiene dos formatos:
+  1. `https://www.infojobs.net/{company}/em-i{HASH}` → extraer hash después de `em-i`
+  2. `https://{subdomain}.ofertas-trabajo.infojobs.net` → extraer subdominio (1:1 con empresa)
+- `_extract_employer_id()` implementa ambas estrategias, saltando subdominio `www`
+- 92/92 ofertas tienen `employer_id` poblado tras backfill desde `raw_data`
+- `fetch_company.py` usa `employer_id` como `infojobs_company_id` — compatible con ambos formatos
+
 ## Triada de documentación (ADR-009)
 
 - `MEMORIES.md`: aprendizajes permanentes (ciclo de vida: infinito)
