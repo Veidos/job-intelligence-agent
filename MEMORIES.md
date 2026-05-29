@@ -146,6 +146,29 @@
   - Solo títulos que existan realmente en InfoJobs España
   - Exactamente `MAX_KEYWORDS` títulos únicos (sin duplicados garantizado por dedup en Python)
 
+## Enriquecimiento con think=True y num_ctx (mayo 2026)
+
+- `extract_fields_with_llm` sin `think=True` fallaba en ~30% de ofertas (respuesta no-JSON)
+- Fix: `think=True` + `num_ctx=8192` → **92/92 ofertas enriquecidas, 0 errores**
+- `ollama_call()` ahora acepta `num_ctx` como parámetro (default 4096, backward-compat)
+- `_call_ollama_raw()` pasa `num_ctx` en el payload `options`
+- El progreso de `enrich_pending()` ahora loguea en INFO: `[N/total] source_id — enriquecida`
+
+## parse_salary — formato dict de Apify (mayo 2026)
+
+- Apify actor `easyapi/infojobs-job-scraper` devuelve `salary` como dict estructurado:
+  `{"range": {"min": 30000, "max": 33000}, "period": "YEAR", "currency": "EUR"}`
+- `parse_salary()` acepta ahora ambos formatos: dict estructurado y string legacy
+- Si es dict, extrae `range.min` y `range.max` directamente
+- Si es string, aplica regex legacy
+
+## fetch.py — argumentos CLI (mayo 2026)
+
+- `--max-items 0`: omite `maxItems` del payload Apify → sin límite de resultados
+  Anteriormente siempre enviaba `maxItems: 30` en el payload.
+- `--enrich-only`: solo reprocesa `enrich_pending()` sin llamar a Apify.
+  Útil para reintentar ofertas con `enriched_at IS NULL` tras corregir parámetros.
+
 ## Triada de documentación (ADR-009)
 
 - `MEMORIES.md`: aprendizajes permanentes (ciclo de vida: infinito)

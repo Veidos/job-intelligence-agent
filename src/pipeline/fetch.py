@@ -112,11 +112,22 @@ def build_search_urls(
     return urls
 
 
-def parse_salary(text: str) -> tuple[float | None, float | None]:
-    """Extrae salary_min y salary_max de un texto de salario."""
-    if not text or text in ("No especificado", "No especificada"):
+def parse_salary(salary_data: Any) -> tuple[float | None, float | None]:
+    """Extrae salary_min y salary_max del campo salary de InfoJobs.
+
+    Acepta tanto string legacy ("20.000€ - 25.000€") como el nuevo formato
+    dict estructurado: {"range": {"min": 30000, "max": 33000}, "period": "YEAR"}
+    """
+    if not salary_data:
         return None, None
-    # Buscar patrones como "20.000 - 25.000", "20000€", "20k-25k"
+
+    if isinstance(salary_data, dict):
+        rng = salary_data.get("range") or {}
+        return rng.get("min"), rng.get("max")
+
+    text = str(salary_data)
+    if text in ("No especificado", "No especificada"):
+        return None, None
     text = text.lower().replace(".", "").replace("€", "").replace("k", "000")
     numbers = re.findall(r"\d+", text)
     if len(numbers) >= 2:
@@ -215,6 +226,8 @@ Responde SOLO con el JSON, sin markdown."""
             prompt=prompt,
             expect_json=True,
             temperature=0.0,
+            think=True,
+            num_ctx=8192,
         )
         if isinstance(result, dict):
             result["skills_required"] = parse_skills_required(
@@ -498,7 +511,12 @@ def enrich_pending(conn, limit: int = 0) -> int:
         )
         conn.commit()
         enriched_count += 1
-        log.debug("Oferta %s enriquecida correctamente", source_id)
+        log.info(
+            "  ✓ [%d/%d] %s — enriquecida",
+            enriched_count,
+            len(rows),
+            source_id,
+        )
 
     log.info("Enriquecimiento completado: %d/%d ofertas", enriched_count, len(rows))
     return enriched_count
@@ -535,10 +553,9 @@ def run_fetch(
 
     log.info("Iniciando Apify actor para %d URLs", len(search_urls))
 
-    run_input = {
-        "searchUrls": search_urls,
-        "maxItems": max_items,
-    }
+    run_input: dict[str, Any] = {"searchUrls": search_urls}
+    if max_items > 0:
+        run_input["maxItems"] = max_items
 
     try:
         actor_client = client.actor("lRxJmbuhggr0LU3uj")
@@ -578,12 +595,37 @@ def run_fetch(
 
 
 if __name__ == "__main__":
+    import argparse
+
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
 
+    parser = argparse.ArgumentParser(description="Fetch offers from InfoJobs vía Apify")
+    parser.add_argument(
+        "--max-items",
+        type=int,
+        default=30,
+        help="Máximo de ofertas a obtener. 0 = sin límite (default: 30)",
+    )
+    parser.add_argument(
+        "--enrich-only",
+        action="store_true",
+        help="Solo enriquecer ofertas pendientes con LLM, sin llamar a Apify",
+    )
+    args = parser.parse_args()
+
+    if args.enrich_only:
+        conn = get_connection()
+        enriched = enrich_pending(conn)
+        conn.close()
+        print(f"Ofertas enriquecidas: {enriched}")
+        sys.exit(0)
+
     search_config = None  # lee desde DB via ensure_search_config()
     profile = {}
-    inserted = run_fetch(search_config, profile, since_date=None, max_items=30)
+    inserted = run_fetch(
+        search_config, profile, since_date=None, max_items=args.max_items
+    )
     print(f"Ofertas insertadas: {inserted}")
 
     conn = get_connection()

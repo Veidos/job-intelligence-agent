@@ -128,6 +128,57 @@ Sends the daily summary via Telegram.
 - `/f3 [text]` → feedback on offer 3
 - `/dia [text]` → daily emotional context
 
+## Comandos de referencia
+
+### fetch.py
+
+```bash
+# Fetch completo: llama a Apify + upsert + enriquecimiento
+python src/pipeline/fetch.py
+
+# Fetch sin límite de ofertas (histórico completo)
+python src/pipeline/fetch.py --max-items 0
+
+# Fetch con límite personalizado
+python src/pipeline/fetch.py --max-items 50
+
+# Solo enriquecer ofertas pendientes con LLM (sin llamar a Apify)
+python src/pipeline/fetch.py --enrich-only
+```
+
+`--enrich-only` es útil para reprocesar ofertas cuyo enriquecimiento falló
+en ejecuciones anteriores. Re-intenta todas las ofertas con
+`enriched_at IS NULL` sin coste de API.
+
+### run.py
+
+```bash
+# Pipeline completo: fetch → classify → evaluate → send
+python src/pipeline/run.py
+
+# Sin fetch (solo classify + evaluate + send)
+python src/pipeline/run.py --skip-fetch
+
+# Simulación (no envía a Telegram)
+python src/pipeline/run.py --dry-run
+```
+
+### Otros
+
+```bash
+# Clasificar ofertas pendientes
+python src/pipeline/role_classifier.py
+
+# Evaluar ofertas clasificadas
+python src/pipeline/evaluate.py
+
+# Enviar resumen diario a Telegram
+python src/telegram/send.py --mode daily
+
+# Enriquecer datos de empresas desde ofertas
+python src/pipeline/fetch_company.py
+```
+
 ## Intelligence Modules (Pending)
 
 These modules analyze patterns to generate strategic recommendations:
