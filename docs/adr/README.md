@@ -41,3 +41,4 @@ decision is made.
 | 008 | Deterministic 0-1 scoring with level multipliers | 2026-05-25 | active |
 | 009 | Keyword Generator with Manual Curation | 2026-05-27 | active |
 | 010 | Documentation and Session Handoff System | 2026-05-27 | active |
+| 011 | Employer ID desde companyLink tras cambio de API InfoJobs | 2026-05-28 | active |
