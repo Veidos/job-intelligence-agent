@@ -43,6 +43,18 @@ The new flow per offer is:
 4. `evaluate_final()` — gemma4, temp 0.0 (validation + blockers, does not alter score)
 5. `save_evaluation()` with the 6 new columns
 
+### 2026-05-30 update: blocker examples extended
+
+The T-5 test revealed that the LLM did not classify "Máster Oficial obligatorio" as
+`apply_block: requisito_imposible`. The original prompt listed only three examples:
+"convenio prácticas universitarias, certificado discapacidad obligatorio, nacionalidad legal".
+
+**Change:** Added "titulación académica obligatoria que el candidato no posee" to the
+blocker examples list. This improved detection for offers from AEMET/TRAGSA where a
+specific Master's degree is a legal requirement (verified: ID 338 now detects the
+blocker correctly). Offers where the degree is a domain preference rather than a hard
+requirement (ID 348, observer role) remain unblocked — acceptable behavior.
+
 Fields added to `offer_evaluations`:
 
 | Column | Purpose |

@@ -210,3 +210,47 @@
 - `HANDOFF.md`: estado de sesión, próximo paso, blockers (ciclo de vida: por sesión — se sobreescribe)
 - `AGENTS.md` instruye: "Actualizar HANDOFF.md al final de la sesión" + "Leer HANDOFF.md al inicio"
 - La documentación se actualiza en la misma sesión que el código, no después
+
+## candidate_years como span desde fechas (ADR-012)
+
+- `load_experience_years_from_perfil()` usaba una regex que buscaba "X años de experiencia" textual
+- PERFIL.md no tiene esa frase explícita → siempre devolvía 0.0
+- Fix: añadir fallback que parsea `**Duración:**` en `## Experiencia` y calcula el span
+  (mes más reciente − mes más temprano) / 12
+- El span evita inflar por solapamientos entre empleos
+- Para el perfil actual: May 2018 → Sep 2022 = 4.3 años
+- La sección regex debe evitar coincidir con `###` dentro de `## Experiencia`
+  usando `(?=\n##[^#]|\Z)` en vez de `(?=\n##|\Z)`
+
+## Educación como skills de dominio (ADR-012)
+
+- `load_skills_from_perfil()` ahora también parsea `## Educación` de PERFIL.md
+- Cada título académico se añade al skills_map con nivel "avanzado"
+- Esto permite que el LLM de Step 1 detecte semánticamente competencias de dominio
+  (ej: "Ingeniería Técnica Industrial" → "Ingeniería Industrial")
+- El substring match en compute_skill_score también se beneficia: "ingeniería industrial"
+  está dentro de "ingeniería técnica industrial, especialidad mecánica"
+- Bootcamps también se capturan pero no interfieren porque ningún skill de oferta
+  los referencia
+
+## Partial save + upsert en evaluate.py (ADR-012)
+
+- save_evaluation() ahora hace upsert (SELECT → INSERT/UPDATE) para evitar duplicados
+  si el proceso se re-ejecuta sobre una oferta parcial
+- `partial=True`: guarda Steps 1–5 sin marcar is_evaluated=1
+- `update_evaluation_final()`: UPDATE los campos de Step 6 + marca is_evaluated=1
+- El loop en run_evaluate() ahora guarda parcial tras Step 5 y final tras Step 6
+- Si Step 6 crashea, la evaluación parcial sobrevive en DB para ser retomada
+- Útil combinado con el prompt de requisito_imposible en evaluate_final()
+
+## Prompt de evaluate_final: titulación obligatoria como bloqueo
+
+- El prompt original no incluía "titulación académica obligatoria" como ejemplo
+  de requisito_imposible → el LLM trataba los Máster Oficiales como gap de dominio
+- Fix: añadir "titulación académica obligatoria que el candidato no posee" a los
+  ejemplos de apply_block
+- Resultado: ofertas con requisito académico explícito (AEMET, ID 338) ahora
+  detectan el bloqueo correctamente
+- Ofertas donde el título es contexto de dominio (observador pesquero, ID 348) no
+  se bloquean — el LLM distingue entre requisito legal y preferencia contextual
+- Comportamiento aceptado: el score bajo ya filtra las que no se bloquean

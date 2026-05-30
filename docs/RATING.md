@@ -20,17 +20,31 @@ S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
 Each skill has an inferred required level:
 
 ```
-level_required = sk_level_required                         if skill has explicit level
-level_required = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]   otherwise
+level_required = sk.level_required                           if skill has explicit level
+level_required = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]  otherwise (default)
 ```
 
-Mapping:
+The default resolution uses the offer's seniority:
 
-| `role_level_label` | Inferred level |
+| `role_level_label` | Default `level_required` |
 |---|---|
 | junior | basic (ord=1) |
 | mid | intermediate (ord=2) |
 | senior | advanced (ord=3) |
+
+Note: `sk.level_required` is often NULL in the DB; this is the normal case, not a
+bug. The level is resolved from the role's seniority.
+
+## Education as domain skills (ADR-012)
+
+`load_skills_from_perfil()` also parses `## Educación` from PERFIL.md. Each
+academic title is added to the `candidate_skills_map` with level `"avanzado"`.
+This allows the technical LLM (Step 1) to semantically match education-derived
+competencies against offer skills.
+
+Example: "Ingeniería Técnica Industrial, Especialidad Mecánica" (education)
+matches "Ingeniería Industrial" (offer skill) via both LLM semantic detection
+and Python substring matching.
 
 Individual multiplier:
 
@@ -48,9 +62,17 @@ L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
 ```
 F_exp = years_match · G(gap)
 
-years_match = 1.0                                  if experience_min = 0
+years_match = 1.0                                  if experience_min = 0 or NULL
 years_match = min(candidate_years / experience_min, 1.0)  otherwise
 ```
+
+`candidate_years` is extracted from PERFIL.md via two fallbacks:
+1. Explicit "X años de experiencia" text (regex)
+2. Span from earliest to latest `**Duración:**` date in `## Experiencia` section (default)
+
+The span approach (ADR-012) uses all employment dates to calculate total professional
+experience, avoiding overcounting overlapping employments. For the current profile:
+May 2018 → Sep 2022 = 4.3 years.
 
 ### Gap multiplier
 

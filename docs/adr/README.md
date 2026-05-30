@@ -42,3 +42,4 @@ decision is made.
 | 009 | Keyword Generator with Manual Curation | 2026-05-27 | active |
 | 010 | Documentation and Session Handoff System | 2026-05-27 | active |
 | 011 | Employer ID desde companyLink tras cambio de API InfoJobs | 2026-05-28 | active |
+| 012 | evaluate.py — candidate_years span, education as skills, partial save | 2026-05-30 | active |

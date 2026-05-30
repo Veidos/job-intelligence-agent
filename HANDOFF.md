@@ -1,17 +1,19 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
 **Última actualización:** 2026-05-30
-**Fase activa:** Fase 3 → Fase 4 (T-3 + T-4 completados)
+**Fase activa:** T-5 (evaluate.py) — test en 5 ofertas completado, batch completo pendiente
+
 **Último completado:**
-- Rediseño de fetch_company.py con enriquecimiento via LLM (qwen2.5:7b)
-- 68/68 empresas enriquecidas con sector, tamaño, descripción, green/red flags
-- Nuevo modelo MODEL_COMPANY = "qwen2.5:7b" en ollama_client.py
-- Eliminación de modelos hardcodeados: fetch.py, keyword_generator.py, role_classifier.py ahora usan MODEL_TECHNICAL
-- role_classifier.py: añadido think=True + parámetro model en classify_offer()
-- 92/92 ofertas clasificadas (30 roles únicos, 19 descubiertos)
-- 6 nuevas columnas en companies: llm_description, green_flags, red_flags, llm_confidence, enriched_by_llm_at, llm_model
-**Próximo paso:** T-5 (evaluate.py) — evaluar ofertas clasificadas
-**Bloqueados:** ninguno (T-3 ✅, T-4 ✅)
+- ADR-012: 3 fixes en evaluate.py — candidate_years como span desde fechas, educación como skills, partial save + upsert
+- Prompt evaluate_final(): añadido "titulación académica obligatoria que el candidato no posee" como ejemplo de requisito_imposible
+- Test de 5 ofertas (IDs 348, 338, 336, 333, 313) completado con 0 errores
+- ID 336 (Rioglass core): score subió de 0.34 a 0.49 tras incluir educación en skills_map
+- ID 338 (TRAGSA AEMET): detecta apply_block=requisito_imposible por Máster Oficial
+- ID 348 (TRAGSA falsa core): final LLM corrigió relevance_flag a stretch, score 0.18 filtra
+- Documentación actualizada: ADR-012 creado, ADR-006 actualizado, RATING.md, MEMORIES.md, HANDOFF.md
+
+**Próximo paso:** T-5 (evaluate.py) — ejecutar batch completo de 92 ofertas
+**Bloqueados:** ninguno
 **Tests:** 171 passing
-**ADRs a leer para nueva sesión:** ninguno
+**ADRs a leer para nueva sesión:** ADR-012 (evaluate.py fixes)
 **Decisión pendiente:** ninguna

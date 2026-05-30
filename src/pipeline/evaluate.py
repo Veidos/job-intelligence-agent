@@ -31,49 +31,52 @@ def _clamp(val, lo: int, hi: int) -> int:
 def load_skills_from_perfil(perfil: str) -> list[dict]:
     """Parsea skills con nivel desde PERFIL.md.
 
-    Formato esperado:
-    ## Skills técnicas
-    - **Python (básico)**: Bootcamp IE University 2023
-    - **SQL (intermedio)**: Proyectos freelance
+    Incluye tanto las skills técnicas explícitas como las titulaciones
+    académicas de ## Educación (como skills de nivel "avanzado").
     """
     import re
 
     skills = []
 
-    # Buscar sección de skills técnicas
+    # --- Skills técnicas desde ## Skills técnicas ---
     match = re.search(r"## Skills técnicas\s*\n((?:- .*\n?)+)", perfil, re.IGNORECASE)
-    if not match:
-        return skills
+    if match:
+        skills_block = match.group(1)
+        skill_pattern = re.compile(r"- \*\*([^(]+)\((\w+)\)\*\*:?\s*(.+)?", re.IGNORECASE)
 
-    skills_block = match.group(1)
+        for line in skills_block.strip().split("\n"):
+            line = line.strip()
+            if not line.startswith("-"):
+                continue
+            m = skill_pattern.match(line)
+            if m:
+                name = m.group(1).strip()
+                level = m.group(2).strip().lower()
+                evidence = m.group(3).strip() if m.group(3) else ""
+                skills.append({"name": name, "level": level, "evidence": evidence})
+            else:
+                clean = line.lstrip("- ").strip()
+                if clean:
+                    skills.append(
+                        {
+                            "name": clean,
+                            "level": "básico",
+                            "evidence": "sin información de nivel",
+                        }
+                    )
 
-    # Parsear cada línea de skill
-    # Patrón: - **SkillName (nivel)**: evidencia
-    skill_pattern = re.compile(r"- \*\*([^(]+)\((\w+)\)\*\*:?\s*(.+)?", re.IGNORECASE)
-
-    for line in skills_block.strip().split("\n"):
-        line = line.strip()
-        if not line.startswith("-"):
-            continue
-
-        # Intentar parsear con formato estructurado
-        m = skill_pattern.match(line)
-        if m:
-            name = m.group(1).strip()
-            level = m.group(2).strip().lower()
-            evidence = m.group(3).strip() if m.group(3) else ""
-            skills.append({"name": name, "level": level, "evidence": evidence})
-        else:
-            # Fallback: solo nombre sin nivel
-            clean = line.lstrip("- ").strip()
-            if clean:
-                skills.append(
-                    {
-                        "name": clean,
-                        "level": "básico",
-                        "evidence": "sin información de nivel",
-                    }
-                )
+    # --- Titulaciones académicas desde ## Educación ---
+    edu_sec = re.search(r"## Educación\s*\n(.*?)(?=\n##[^#]|\Z)", perfil, re.DOTALL)
+    if edu_sec:
+        edu_pattern = re.compile(r"- \*\*([^*]+)\*\*")
+        existing_names = {s["name"].lower() for s in skills}
+        for line in edu_sec.group(1).strip().split("\n"):
+            m = edu_pattern.match(line.strip())
+            if m:
+                title = m.group(1).strip()
+                if title.lower() not in existing_names:
+                    skills.append({"name": title, "level": "avanzado", "evidence": "formación académica"})
+                    existing_names.add(title.lower())
 
     return skills
 
@@ -104,13 +107,29 @@ def load_gap_from_perfil(perfil: str) -> float | None:
     return None
 
 
+MONTH_NAMES: dict[str, int] = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
+    "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12,
+}
+
+
+def _month_from_name(name: str) -> int | None:
+    return MONTH_NAMES.get(name.lower().strip()[:3])
+
+
 def load_experience_years_from_perfil(perfil: str) -> float:
     """Extrae años totales de experiencia profesional del candidato desde PERFIL.md.
 
-    Fallback: 0.0 si no se encuentra.
+    Fallback 1: busca mención explícita "X años de experiencia".
+    Fallback 2: parsea fechas en la sección ## Experiencia y calcula el span
+                (desde la fecha más temprana hasta la más reciente).
+    Fallback final: 0.0 si no se encuentra.
     """
     import re
 
+    # Fallback 1 — mención explícita
     m = re.search(
         r"(?:años?.*experiencia|experiencia.*años?).*?([\d.]+)", perfil, re.IGNORECASE
     )
@@ -119,7 +138,33 @@ def load_experience_years_from_perfil(perfil: str) -> float:
             return float(m.group(1))
         except ValueError:
             pass
-    return 0.0
+
+    # Fallback 2 — span desde duraciones en ## Experiencia
+    sec = re.search(r"## Experiencia\s*\n(.*?)(?=\n##[^#]|\Z)", perfil, re.DOTALL)
+    if not sec:
+        return 0.0
+
+    dates = re.findall(
+        r"\*\*Duración:\*\*\s*(\w+)\s+(\d{4})\s*[–\-]\s*(\w+)\s+(\d{4})",
+        sec.group(1),
+        re.IGNORECASE,
+    )
+    if not dates:
+        return 0.0
+
+    all_months: list[int] = []
+    for sm, sy, em, ey in dates:
+        sm_i = _month_from_name(sm)
+        em_i = _month_from_name(em)
+        if sm_i is not None and em_i is not None:
+            all_months.append(int(sy) * 12 + sm_i)
+            all_months.append(int(ey) * 12 + em_i)
+
+    if not all_months:
+        return 0.0
+
+    span_months = max(all_months) - min(all_months)
+    return round(span_months / 12, 1)
 
 
 # Tablas deterministas
@@ -454,7 +499,8 @@ Ahora tienes la descripción completa. Confirma o corrige.
 
 TAREA 2 — DETECTAR BLOQUEOS REALES:
 Bloqueo real = requisito que hace inviable la candidatura independientemente del score.
-Ejemplos: convenio prácticas universitarias, certificado discapacidad obligatorio, nacionalidad legal.
+Ejemplos: convenio prácticas universitarias, certificado discapacidad obligatorio,
+nacionalidad legal, titulación académica obligatoria que el candidato no posee.
 NO son bloqueos: falta de experiencia, skills no dominadas, gap laboral.
 
 Responde SOLO este JSON:
@@ -478,11 +524,10 @@ Responde SOLO este JSON:
     return result if isinstance(result, dict) else {}
 
 
-def save_evaluation(
+def _build_evaluation_params(
     offer_id: int,
-    technical_llm: dict,
     hr: dict,
-    final: dict,
+    final: dict | None,
     skill_detail: dict,
     M_core: float,
     M_sec: float,
@@ -491,79 +536,153 @@ def save_evaluation(
     final_score: float,
     recommendation: str,
     processing_ms: int,
+) -> tuple:
+    final_dict = final or {}
+    return (
+        offer_id,
+        None,
+        round(M_core * 100),
+        round(F_exp * 100),
+        0,
+        0,
+        0,
+        0,
+        round(F_fit * 100),
+        0,
+        json.dumps(
+            {
+                "M_core": round(M_core, 4),
+                "M_sec": round(M_sec, 4),
+                "F_exp": round(F_exp, 4),
+                "F_fit": round(F_fit, 4),
+                "weights": {"W_CORE": W_CORE, "W_SEC": W_SEC, "W_EXP": W_EXP, "W_FIT": W_FIT},
+                "skill_detail": skill_detail,
+            },
+            ensure_ascii=False,
+        ),
+        round(final_score * 100),
+        recommendation,
+        hr.get("environment_compatibility"),
+        json.dumps(hr.get("hr_concerns", []), ensure_ascii=False),
+        json.dumps(hr.get("strengths", []), ensure_ascii=False),
+        json.dumps(hr.get("red_flags", []), ensure_ascii=False),
+        hr.get("verdict", ""),
+        recommendation,
+        processing_ms,
+        MODEL_TECHNICAL,
+        MODEL_HR,
+        None,
+        json.dumps([], ensure_ascii=False),
+        json.dumps([], ensure_ascii=False),
+        json.dumps(hr.get("interview_prep", []), ensure_ascii=False),
+        final_dict.get("relevance_validation"),
+        final_dict.get("relevance_corrected"),
+        final_dict.get("relevance_reasoning"),
+        final_dict.get("apply_block"),
+        final_dict.get("apply_block_reason"),
+        final_dict.get("apply_recommendation"),
+    )
+
+
+_COLUMNS = (
+    "offer_id, cv_version_id, "
+    "skills_hard_match, experience_match, "
+    "education_match, location_match, "
+    "trajectory_coherence, recency_relevance, "
+    "market_competitiveness, penalty, penalty_breakdown, "
+    "match_score, recommendation, "
+    "environment_compatibility, hr_concerns, "
+    "strengths, red_flags, gemma_verdict, "
+    "apply_recommendation, processing_ms, "
+    "model_technical, model_hr, "
+    "company_fit_score, company_green_flags, company_red_flags, "
+    "interview_prep, "
+    "relevance_validation, relevance_corrected, relevance_reasoning, "
+    "apply_block, apply_block_reason, llm_apply_signal"
+)
+
+_SET_CLAUSE = (
+    "skills_hard_match=?, experience_match=?, "
+    "education_match=?, location_match=?, "
+    "trajectory_coherence=?, recency_relevance=?, "
+    "market_competitiveness=?, penalty=?, penalty_breakdown=?, "
+    "match_score=?, recommendation=?, "
+    "environment_compatibility=?, hr_concerns=?, "
+    "strengths=?, red_flags=?, gemma_verdict=?, "
+    "apply_recommendation=?, processing_ms=?, "
+    "model_technical=?, model_hr=?, "
+    "company_fit_score=?, company_green_flags=?, company_red_flags=?, "
+    "interview_prep=?, "
+    "relevance_validation=?, relevance_corrected=?, relevance_reasoning=?, "
+    "apply_block=?, apply_block_reason=?, llm_apply_signal=?"
+)
+
+
+def save_evaluation(
+    offer_id: int,
+    technical_llm: dict,
+    hr: dict,
+    final: dict | None,
+    skill_detail: dict,
+    M_core: float,
+    M_sec: float,
+    F_exp: float,
+    F_fit: float,
+    final_score: float,
+    recommendation: str,
+    processing_ms: int,
+    partial: bool = False,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
 
-    match_score_int = round(final_score * 100)
+    params = _build_evaluation_params(
+        offer_id, hr, final, skill_detail,
+        M_core, M_sec, F_exp, F_fit,
+        final_score, recommendation, processing_ms,
+    )
 
+    existing = cur.execute(
+        "SELECT id FROM offer_evaluations WHERE offer_id = ?", (offer_id,)
+    ).fetchone()
+
+    if existing:
+        cur.execute(
+            f"UPDATE offer_evaluations SET {_SET_CLAUSE} WHERE offer_id = ?",
+            params[1:] + (offer_id,),
+        )
+    else:
+        cur.execute(
+            f"INSERT INTO offer_evaluations ({_COLUMNS}) VALUES ({','.join(['?'] * 32)})",
+            params,
+        )
+
+    if not partial:
+        cur.execute("UPDATE offers SET is_evaluated=1 WHERE id=?", (offer_id,))
+
+    conn.commit()
+    conn.close()
+
+
+def update_evaluation_final(offer_id: int, final: dict) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
     cur.execute(
-        """
-        INSERT INTO offer_evaluations (
-            offer_id, cv_version_id,
-            skills_hard_match, experience_match,
-            education_match, location_match,
-            trajectory_coherence, recency_relevance,
-            market_competitiveness, penalty, penalty_breakdown,
-            match_score, recommendation,
-            environment_compatibility, hr_concerns,
-            strengths, red_flags, gemma_verdict,
-            apply_recommendation, processing_ms,
-            model_technical, model_hr,
-            company_fit_score, company_green_flags, company_red_flags,
-            interview_prep,
-            relevance_validation, relevance_corrected, relevance_reasoning,
-            apply_block, apply_block_reason, llm_apply_signal
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """,
+        """UPDATE offer_evaluations SET
+            relevance_validation = ?, relevance_corrected = ?,
+            relevance_reasoning = ?, apply_block = ?,
+            apply_block_reason = ?, llm_apply_signal = ?,
+            gemma_verdict = ?
+         WHERE offer_id = ?""",
         (
-            offer_id,
-            None,
-            round(M_core * 100),  # skills_hard_match: M_core*100 para trazabilidad
-            round(F_exp * 100),  # experience_match: F_exp*100
-            0,  # education_match: no usado en nuevo modelo
-            0,  # location_match: no usado en nuevo modelo
-            0,  # trajectory_coherence: no usado
-            0,  # recency_relevance: no usado
-            round(F_fit * 100),  # market_competitiveness: F_fit*100
-            0,  # penalty: eliminado del modelo
-            json.dumps(
-                {  # penalty_breakdown: detalle completo para trazabilidad
-                    "M_core": round(M_core, 4),
-                    "M_sec": round(M_sec, 4),
-                    "F_exp": round(F_exp, 4),
-                    "F_fit": round(F_fit, 4),
-                    "weights": {
-                        "W_CORE": W_CORE,
-                        "W_SEC": W_SEC,
-                        "W_EXP": W_EXP,
-                        "W_FIT": W_FIT,
-                    },
-                    "skill_detail": skill_detail,
-                },
-                ensure_ascii=False,
-            ),
-            match_score_int,
-            recommendation,
-            hr.get("environment_compatibility"),
-            json.dumps(hr.get("hr_concerns", []), ensure_ascii=False),
-            json.dumps(hr.get("strengths", []), ensure_ascii=False),
-            json.dumps(hr.get("red_flags", []), ensure_ascii=False),
-            hr.get("verdict", ""),
-            recommendation,
-            processing_ms,
-            MODEL_TECHNICAL,
-            MODEL_HR,
-            None,
-            json.dumps([], ensure_ascii=False),
-            json.dumps([], ensure_ascii=False),
-            json.dumps(hr.get("interview_prep", []), ensure_ascii=False),
             final.get("relevance_validation"),
             final.get("relevance_corrected"),
             final.get("relevance_reasoning"),
             final.get("apply_block"),
             final.get("apply_block_reason"),
             final.get("apply_recommendation"),
+            final.get("verdict", ""),
+            offer_id,
         ),
     )
     cur.execute("UPDATE offers SET is_evaluated=1 WHERE id=?", (offer_id,))
@@ -659,19 +778,14 @@ def run_evaluate(limit: int = 10) -> dict:
             )
             recommendation = get_rating(final_score)
 
-            # Paso 6: Validación final (relevance + bloqueos)
-            final = evaluate_final(offer, perfil, skill_detail, hr, final_score)
-            if not final:
-                log.warning("Sin resultado final: %s", offer["title"])
-                stats["errors"] += 1
-                continue
-
             ms = int((time.monotonic() - t0) * 1000)
+
+            # Guardado parcial tras Step 5 (final validation pending)
             save_evaluation(
                 offer["id"],
                 technical_llm,
                 hr,
-                final,
+                None,
                 skill_detail,
                 M_core,
                 M_sec,
@@ -680,7 +794,18 @@ def run_evaluate(limit: int = 10) -> dict:
                 final_score,
                 recommendation,
                 ms,
+                partial=True,
             )
+
+            # Paso 6: Validación final (relevance + bloqueos)
+            final = evaluate_final(offer, perfil, skill_detail, hr, final_score)
+            if not final:
+                log.warning("Sin resultado final: %s", offer["title"])
+                stats["errors"] += 1
+                continue
+
+            # Actualizar campos finales + marcar is_evaluated=1
+            update_evaluation_final(offer["id"], final)
 
             block = final.get("apply_block")
             log.info(
