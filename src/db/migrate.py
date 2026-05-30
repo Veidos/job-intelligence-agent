@@ -39,6 +39,12 @@ SCHEMA_DEFINITIONS = {
         ("avg_inscriptions", "INTEGER"),
         ("offers_published_30d", "INTEGER"),
         ("response_rate_signal", "TEXT DEFAULT 'desconocida'"),
+        ("llm_description", "TEXT"),
+        ("green_flags", "TEXT"),
+        ("red_flags", "TEXT"),
+        ("llm_confidence", "TEXT"),
+        ("enriched_by_llm_at", "DATETIME"),
+        ("llm_model", "TEXT"),
         ("first_seen_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
         ("last_updated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
     ],
@@ -50,13 +56,13 @@ SCHEMA_DEFINITIONS = {
         ("is_active", "INTEGER NOT NULL DEFAULT 1"),
     ],
     "apify_raw_responses": [
-        ("run_id",      "TEXT NOT NULL"),
-        ("item_index",  "INTEGER NOT NULL"),
-        ("source_id",   "TEXT"),
-        ("fetched_at",  "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("payload",     "TEXT NOT NULL"),
-        ("processed",   "INTEGER NOT NULL DEFAULT 0"),
-        ("error",       "TEXT"),
+        ("run_id", "TEXT NOT NULL"),
+        ("item_index", "INTEGER NOT NULL"),
+        ("source_id", "TEXT"),
+        ("fetched_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
+        ("payload", "TEXT NOT NULL"),
+        ("processed", "INTEGER NOT NULL DEFAULT 0"),
+        ("error", "TEXT"),
     ],
     "offers": [
         ("source_id", "TEXT NOT NULL UNIQUE"),
@@ -215,9 +221,15 @@ def run_migration() -> dict:
             error        TEXT
         )
     """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_apify_raw_run_id    ON apify_raw_responses(run_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_apify_raw_source_id ON apify_raw_responses(source_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_apify_raw_processed ON apify_raw_responses(processed)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apify_raw_run_id    ON apify_raw_responses(run_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apify_raw_source_id ON apify_raw_responses(source_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apify_raw_processed ON apify_raw_responses(processed)"
+    )
     conn.commit()
     log.info("Tabla apify_raw_responses verificada")
 

@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from src.utils.ollama_client import ollama_call
+from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 logging.basicConfig(
     level=logging.INFO,
@@ -229,6 +229,7 @@ def classify_offer(
     offer: dict[str, Any],
     catalog: list[str],
     perfil_content: str,
+    model: str = MODEL_TECHNICAL,
 ) -> dict[str, Any] | None:
     """Classify an offer using gemma4."""
     title = offer.get("title", "")
@@ -248,9 +249,10 @@ def classify_offer(
     prompt = _build_prompt(title, description, skills_str, catalog, perfil_content)
     try:
         result = ollama_call(
-            model="gemma4:e4b",
+            model=model,
             prompt=prompt,
             expect_json=True,
+            think=True,
         )
         if result is None:
             logger.warning(f"gemma4 returned None for offer {offer.get('id')}")
@@ -289,9 +291,10 @@ def classify_offer(
             )
             try:
                 retry = ollama_call(
-                    model="gemma4:e4b",
+                    model=model,
                     prompt=retry_prompt,
                     expect_json=True,
+                    think=True,
                 )
                 if isinstance(retry, dict) and all(f in retry for f in required_fields):
                     retry_reasoning = retry.get("role_reasoning", "")

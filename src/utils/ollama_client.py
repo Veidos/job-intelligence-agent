@@ -23,10 +23,12 @@ OLLAMA_TIMEOUT = 180
 
 MODEL_TECHNICAL = "gemma4:e4b"
 MODEL_HR = "gemma4:e4b"
+MODEL_COMPANY = "qwen2.5:7b"
 
 MODEL_TEMPERATURES: dict[str, float] = {
     MODEL_TECHNICAL: 0.1,
     MODEL_HR: 0.0,
+    MODEL_COMPANY: 0.0,
 }
 
 
@@ -146,7 +148,11 @@ def ollama_call(
 
 def check_ollama_connection() -> dict[str, bool]:
     """Verifica disponibilidad de Ollama y modelos necesarios."""
-    status: dict[str, bool] = {MODEL_TECHNICAL: False, MODEL_HR: False}
+    status: dict[str, bool] = {
+        MODEL_TECHNICAL: False,
+        MODEL_HR: False,
+        MODEL_COMPANY: False,
+    }
     try:
         r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=10)
         r.raise_for_status()

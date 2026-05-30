@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.db.init_db import get_connection
-from src.utils.ollama_client import ollama_call
+from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def generate_keywords(perfil_text: str) -> list[str]:
 
     try:
         result = ollama_call(
-            model="gemma4:e4b",
+            model=MODEL_TECHNICAL,
             prompt=prompt,
             expect_json=True,
             temperature=0.1,

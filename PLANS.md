@@ -35,6 +35,8 @@
   [x] keyword_generator.py — generación y gestión de keywords desde PERFIL.md
 
 ## FASE 4 — Inteligencia
+  [x] fetch_company.py — rediseñado con enriquecimiento LLM (qwen2.5:7b, sector, tamaño, descripción, flags)
+  [x] Modelos hardcodeados eliminados — fetch.py, keyword_generator.py, role_classifier.py ahora usan MODEL_TECHNICAL
   [ ] role_discovery.py
   [ ] market_signals.py
   [ ] strategic_advisor.py con todos los triggers
@@ -73,9 +75,9 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-0 — Prerequisitos verificados (4/5 🤖 OK, pendiente revisión 👤 ítem T-0.5)
 - [x] T-1 — Onboarding validado manualmente (extracción + entrevista + PERFIL.md)
 - [x] T-2 — fetch.py histórico completo (150 raw, 92 offers). Enriquecimiento con think=True + 8K ctx → 92/92 ✅
-- [ ] T-3 — fetch_company.py sin errores ⏳ (bloqueado: depende de T-2, employer_id en ofertas)
-- [x] T-4 — role_classifier.py coherente con las ofertas (v5/v6 validado, ADR-005 documenta evolución)
-- [x] T-5 — evaluate.py — requisitos imposibles penalizados + scoring determinista 0-1
+- [x] T-3 — fetch_company.py sin errores (68 empresas enriquecidas, 0 errores ✅)
+- [x] T-4 — role_classifier.py coherente con las ofertas (92/92 clasificadas, 30 roles únicos, 0 contaminadas, ADR-005 documenta evolución)
+- [x] T-5 — evaluate.py sin errores en tests
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores
 - [ ] T-8 — Feedback bot funcional y natural

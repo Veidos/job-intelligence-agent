@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS companies (
     avg_inscriptions INTEGER,
     offers_published_30d INTEGER,
     response_rate_signal TEXT DEFAULT 'desconocida',
+    llm_description TEXT,
+    green_flags TEXT,
+    red_flags TEXT,
+    llm_confidence TEXT,
+    enriched_by_llm_at DATETIME,
+    llm_model TEXT,
     first_seen_at DATETIME NOT NULL DEFAULT (datetime('now')),
     last_updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
 );

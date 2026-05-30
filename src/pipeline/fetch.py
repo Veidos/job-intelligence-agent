@@ -20,7 +20,7 @@ from apify_client import ApifyClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.db.init_db import get_connection
-from src.utils.ollama_client import ollama_call
+from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 from src.utils.cleaner import clean_description
 
 log = logging.getLogger(__name__)
@@ -236,7 +236,7 @@ Responde SOLO con el JSON, sin markdown."""
 
     try:
         result = ollama_call(
-            model="gemma4:e4b",
+            model=MODEL_TECHNICAL,
             prompt=prompt,
             expect_json=True,
             temperature=0.0,

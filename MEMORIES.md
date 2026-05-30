@@ -179,6 +179,30 @@
 - 92/92 ofertas tienen `employer_id` poblado tras backfill desde `raw_data`
 - `fetch_company.py` usa `employer_id` como `infojobs_company_id` — compatible con ambos formatos
 
+## Company enrichment con qwen2.5:7b (mayo 2026)
+
+- `fetch_company.py` rediseñado: en lugar de crear filas vacías, agrupa ofertas por
+  `employer_id` y envía a qwen2.5:7b para inferir sector, tamaño, descripción y flags.
+- MODEL_COMPANY = "qwen2.5:7b" añadido en ollama_client.py con temperatura 0.0.
+- Separación de responsabilidades: gemma4:e4b para evaluación compleja, qwen2.5:7b
+  para extracción estructurada ligera.
+- InfoJobs company pages tienen bot protection (Distil Networks) — no fiables para
+  scraping automatizado. La inferencia desde ofertas agregadas es más robusta.
+- Prompt para qwen2.5:7b debe forzar `size_range` como valor único del enum
+  (el modelo tiende a mezclar variantes como "grande | gran_empresa" si no se
+  especifica correctamente).
+- Stale rule: solo enriquecer si `sector IS NULL` (Opción A). Simple y efectivo.
+- Columnas nuevas en companies: llm_description, green_flags, red_flags,
+  llm_confidence, enriched_by_llm_at, llm_model (sigue el patrón model_technical
+  de offer_evaluations).
+- 68 empresas enriquecidas en ~7 minutos, 0 errores. C/U toma ~3-4s en qwen2.5:7b.
+
+## Modelos hardcodeados eliminados (mayo 2026)
+
+- fetch.py, keyword_generator.py, role_classifier.py usaban `model="gemma4:e4b"` hardcodeado
+- Todos ahora importan y usan `MODEL_TECHNICAL` desde ollama_client.py
+- role_classifier.py añadió `think=True` + parámetro `model: str = MODEL_TECHNICAL` en classify_offer()
+- Patrón establecido: MODEL_TECHNICAL (gemma4), MODEL_HR (gemma4), MODEL_COMPANY (qwen2.5:7b)
 ## Triada de documentación (ADR-009)
 
 - `MEMORIES.md`: aprendizajes permanentes (ciclo de vida: infinito)

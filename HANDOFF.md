@@ -1,18 +1,17 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
-**Última actualización:** 2026-05-28
-**Fase activa:** Fase 3 — Testing (T-2 completado)
+**Última actualización:** 2026-05-30
+**Fase activa:** Fase 3 → Fase 4 (T-3 + T-4 completados)
 **Último completado:**
-- Reset DB completo + fetch histórico (--max-items 0): 150 raw items, 92 ofertas únicas
-- Fix parse_salary: Apify devuelve salary como dict, no string
-- Fix enrich: think=True + num_ctx=8192 → 92/92 enriquecidas, 0 errores
-- Añadido --enrich-only y --max-items a fetch.py
-- Añadido num_ctx como parámetro configurable en ollama_call
-- docs/PIPELINE.md actualizado con comandos de referencia
-- _extract_employer_id(): extrae employer_id de companyLink (em-i hash o subdominio)
-- 92/92 ofertas con employer_id poblado
-**Próximo paso:** T-3 (fetch_company) — próxima sesión
-**Bloqueados:** ninguno
+- Rediseño de fetch_company.py con enriquecimiento via LLM (qwen2.5:7b)
+- 68/68 empresas enriquecidas con sector, tamaño, descripción, green/red flags
+- Nuevo modelo MODEL_COMPANY = "qwen2.5:7b" en ollama_client.py
+- Eliminación de modelos hardcodeados: fetch.py, keyword_generator.py, role_classifier.py ahora usan MODEL_TECHNICAL
+- role_classifier.py: añadido think=True + parámetro model en classify_offer()
+- 92/92 ofertas clasificadas (30 roles únicos, 19 descubiertos)
+- 6 nuevas columnas en companies: llm_description, green_flags, red_flags, llm_confidence, enriched_by_llm_at, llm_model
+**Próximo paso:** T-5 (evaluate.py) — evaluar ofertas clasificadas
+**Bloqueados:** ninguno (T-3 ✅, T-4 ✅)
 **Tests:** 171 passing
 **ADRs a leer para nueva sesión:** ninguno
 **Decisión pendiente:** ninguna
