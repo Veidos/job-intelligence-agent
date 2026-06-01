@@ -322,3 +322,30 @@ Con candidate_years=4.3 y candidate_city="Jerez de la Frontera, Spain":
 - location_match ahora contribuye con 0.2–1.0 dependiendo de work_mode/ciudad
 - Scores deberían subir ~10–15 puntos de media (de 29.8 a ~40-45)
 - Pendiente: re-evaluar 92 ofertas con la nueva fórmula
+
+## Zombie columns cleanup (junio 2026)
+
+### Columnas eliminadas de offer_evaluations
+7 columnas nunca pobladas tras el refactor determinista (commit 7a4709b):
+- `education_match` (INTEGER) — LLM ya no devuelve score numérico
+- `trajectory_coherence` (INTEGER, 0–15)
+- `recency_relevance` (INTEGER, 0–15)
+- `penalty` (INTEGER, 0–25)
+- `company_fit_score` (INTEGER)
+- `company_green_flags` (TEXT, JSON)
+- `company_red_flags` (TEXT, JSON)
+
+### penalty_breakdown → scoring_detail
+Renombrada para reflejar que ahora almacena desglose de scoring v2
+(M_core, M_sec, F_exp, F_fit, skill_detail) en vez de penalizaciones.
+
+### Migración
+- `migrate.py` añade función `drop_zombie_columns()` con ALTER TABLE
+- `schema.sql` actualizado como fuente de verdad
+- Tests raw INSERT actualizados para alinearse con schema actual
+- `generate_dashboard.py`: SELECT sin zombies, scoring_detail aliased
+- `save_evaluation()` params, _COLUMNS, _SET_CLAUSE sincronizados
+
+### Pre-existing E402 en migrate.py
+`load_dotenv()` antes de import desde src/db/init_db. Sin ruff config file
+para per-file-ignores. No blocker: ruff format y tests pasan.

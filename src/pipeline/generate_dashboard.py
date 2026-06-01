@@ -42,9 +42,8 @@ SELECT
     e.environment_compatibility,
     e.skills_hard_match,
     e.experience_match,
-    e.education_match,
     e.location_match,
-    e.penalty_breakdown,
+    e.scoring_detail AS penalty_breakdown,
     c.sector AS company_sector,
     c.size_range AS company_size
 FROM offers o
@@ -68,9 +67,9 @@ def _fmt_salary(row):
     smin = row.get("salary_min")
     smax = row.get("salary_max")
     if smin is not None and smax is not None:
-        return f"{round(smin/1000)}k–{round(smax/1000)}k"
+        return f"{round(smin / 1000)}k–{round(smax / 1000)}k"
     if smin is not None:
-        return f"{round(smin/1000)}k"
+        return f"{round(smin / 1000)}k"
     return None
 
 
@@ -120,7 +119,6 @@ def fetch_data():
             "company_sector": r["company_sector"] or "",
             "company_size": r["company_size"] or "",
             "experience_match": r["experience_match"],
-            "education_match": r["education_match"],
             "location_match": r["location_match"],
             "gemma_verdict": r["gemma_verdict"] or "",
             "M_core": pb.get("M_core"),
@@ -135,15 +133,27 @@ def fetch_data():
             "interview_prep": _parse_json(r["interview_prep"]) or [],
         }
         # Calculate weighted score from components for verification
-        w = rec["weights"] or {"W_CORE": 0.45, "W_SEC": 0.15, "W_EXP": 0.25, "W_FIT": 0.15}
+        w = rec["weights"] or {
+            "W_CORE": 0.45,
+            "W_SEC": 0.15,
+            "W_EXP": 0.25,
+            "W_FIT": 0.15,
+        }
         mc = rec["M_core"] or 0
         ms = rec["M_sec"] or 0
         fe = rec["F_exp"] or 0
         ff = rec["F_fit"] or 0
-        calc = round(w.get("W_CORE", 0.45) * mc + w.get("W_SEC", 0.15) * ms
-                     + w.get("W_EXP", 0.25) * fe + w.get("W_FIT", 0.15) * ff, 4)
+        calc = round(
+            w.get("W_CORE", 0.45) * mc
+            + w.get("W_SEC", 0.15) * ms
+            + w.get("W_EXP", 0.25) * fe
+            + w.get("W_FIT", 0.15) * ff,
+            4,
+        )
         rec["calc_score"] = calc
-        rec["score_diff"] = round(rec["match_score"] / 100.0 - calc, 4) if rec["match_score"] else None
+        rec["score_diff"] = (
+            round(rec["match_score"] / 100.0 - calc, 4) if rec["match_score"] else None
+        )
         records.append(rec)
 
     # Calculate date range from all published_at dates
@@ -180,7 +190,12 @@ def _signal_class(s):
 
 
 def _size_label(sz):
-    mapping = {"gran_empresa": "Gran Empresa", "mediana": "Mediana", "pequena": "Pequeña", "startup": "Startup"}
+    mapping = {
+        "gran_empresa": "Gran Empresa",
+        "mediana": "Mediana",
+        "pequena": "Pequeña",
+        "startup": "Startup",
+    }
     return mapping.get(sz, sz or "")
 
 
@@ -806,13 +821,17 @@ def generate(records: list[dict], meta: dict) -> str:
         f" · {meta['date_range_min']} – {meta['date_range_max']}"
         f" · Generado: {meta['generated_at']}"
     )
-    html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", json.dumps(records, ensure_ascii=False, default=str))
+    html = HTML_TEMPLATE.replace(
+        "__DATA_PLACEHOLDER__", json.dumps(records, ensure_ascii=False, default=str)
+    )
     html = html.replace("__SUBTITLE_PLACEHOLDER__", subtitle)
     return html
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
     log.info("Fetching data from %s", DB)
     records, meta = fetch_data()
     log.info("Fetched %d evaluation records", meta["n_offers"])

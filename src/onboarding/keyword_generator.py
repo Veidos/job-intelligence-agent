@@ -177,7 +177,9 @@ def manage_keywords() -> None:
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, role_hierarchy FROM search_config ORDER BY id DESC LIMIT 1")
+        cursor.execute(
+            "SELECT id, role_hierarchy FROM search_config ORDER BY id DESC LIMIT 1"
+        )
         row = cursor.fetchone()
         if not row:
             print("No hay keywords guardadas en search_config.")
@@ -188,7 +190,9 @@ def manage_keywords() -> None:
         for i, kw in enumerate(keywords, 1):
             print(f"  {i}. {kw}")
         print("────────────────────────────────────────────────────")
-        raw = input("\nNúmeros a conservar (ej: 1 2 4 6 8) o Enter para mantener todas: ").strip()
+        raw = input(
+            "\nNúmeros a conservar (ej: 1 2 4 6 8) o Enter para mantener todas: "
+        ).strip()
         if not raw:
             print("Sin cambios.")
             return
@@ -208,7 +212,9 @@ def manage_keywords() -> None:
         print(f"\n✓ Conservadas {len(keep)} keywords. Quedan {len(updated)}:")
         for i, kw in enumerate(updated, 1):
             print(f"  {i}. {kw}")
-        raw_add = input("\nKeywords a añadir (separadas por comas si son varias, o una sola) o Enter para saltar: ").strip()
+        raw_add = input(
+            "\nKeywords a añadir (separadas por comas si son varias, o una sola) o Enter para saltar: "
+        ).strip()
         if raw_add:
             nuevas = [kw.strip() for kw in raw_add.split(",") if kw.strip()]
             existing_lower = {k.lower() for k in updated}

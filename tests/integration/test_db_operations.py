@@ -183,22 +183,18 @@ class TestOfferEvaluationsTable:
         test_db.execute(
             """
             INSERT INTO offer_evaluations (
-                offer_id, skills_hard_match, experience_match, education_match,
-                location_match, trajectory_coherence, recency_relevance,
-                market_competitiveness, penalty, match_score, recommendation,
+                offer_id, skills_hard_match, experience_match,
+                location_match,
+                market_competitiveness, match_score, recommendation,
                 model_technical, model_hr, sent_via_telegram
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 offer_id,
                 20,
                 12,
-                8,
                 5,
-                10,
-                8,
                 3,
-                5,
                 58,
                 "Aplicar",
                 "gemma4:e4b",
@@ -243,23 +239,19 @@ class TestOfferEvaluationsTable:
         test_db.execute(
             """
             INSERT INTO offer_evaluations (
-                offer_id, skills_hard_match, experience_match, education_match,
-                location_match, trajectory_coherence, recency_relevance,
-                market_competitiveness, penalty, penalty_breakdown, match_score,
+                offer_id, skills_hard_match, experience_match,
+                location_match,
+                market_competitiveness, scoring_detail, match_score,
                 recommendation, hr_concerns, strengths, red_flags,
                 model_technical, model_hr, sent_via_telegram
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 offer_id,
                 20,
                 12,
-                8,
                 5,
-                10,
-                8,
                 3,
-                5,
                 '{"gap_laboral": -5}',
                 58,
                 "Aplicar",
@@ -273,7 +265,7 @@ class TestOfferEvaluationsTable:
         )
 
         row = test_db.execute(
-            "SELECT penalty_breakdown, hr_concerns FROM offer_evaluations WHERE offer_id = ?",
+            "SELECT scoring_detail, hr_concerns FROM offer_evaluations WHERE offer_id = ?",
             (offer_id,),
         ).fetchone()
 
@@ -310,22 +302,18 @@ class TestOfferEvaluationsTable:
         test_db.execute(
             """
             INSERT INTO offer_evaluations (
-                offer_id, skills_hard_match, experience_match, education_match,
-                location_match, trajectory_coherence, recency_relevance,
-                market_competitiveness, penalty, match_score, recommendation,
+                offer_id, skills_hard_match, experience_match,
+                location_match,
+                market_competitiveness, match_score, recommendation,
                 model_technical, model_hr, sent_via_telegram
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 offer_id,
                 20,
                 12,
-                8,
                 5,
-                10,
-                8,
                 3,
-                5,
                 58,
                 "Aplicar",
                 "gemma4:e4b",

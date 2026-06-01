@@ -42,7 +42,9 @@ def load_skills_from_perfil(perfil: str) -> list[dict]:
     match = re.search(r"## Skills técnicas\s*\n((?:- .*\n?)+)", perfil, re.IGNORECASE)
     if match:
         skills_block = match.group(1)
-        skill_pattern = re.compile(r"- \*\*([^(]+)\((\w+)\)\*\*:?\s*(.+)?", re.IGNORECASE)
+        skill_pattern = re.compile(
+            r"- \*\*([^(]+)\((\w+)\)\*\*:?\s*(.+)?", re.IGNORECASE
+        )
 
         for line in skills_block.strip().split("\n"):
             line = line.strip()
@@ -75,7 +77,13 @@ def load_skills_from_perfil(perfil: str) -> list[dict]:
             if m:
                 title = m.group(1).strip()
                 if title.lower() not in existing_names:
-                    skills.append({"name": title, "level": "avanzado", "evidence": "formación académica"})
+                    skills.append(
+                        {
+                            "name": title,
+                            "level": "avanzado",
+                            "evidence": "formación académica",
+                        }
+                    )
                     existing_names.add(title.lower())
 
     return skills
@@ -115,14 +123,27 @@ def load_location_from_perfil(perfil: str) -> str:
     """
     import re
 
-    m = re.search(r'\*\*Ubicación actual:\*\*\s*(.+)', perfil, re.IGNORECASE)
+    m = re.search(r"\*\*Ubicación actual:\*\*\s*(.+)", perfil, re.IGNORECASE)
     return m.group(1).strip() if m else ""
 
 
 MONTH_NAMES: dict[str, int] = {
-    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-    "ene": 1, "abr": 4, "ago": 8, "dic": 12,
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
+    "ene": 1,
+    "abr": 4,
+    "ago": 8,
+    "dic": 12,
 }
 
 
@@ -329,7 +350,10 @@ def compute_location_score(
         return 0.7
     if not candidate_city or not offer_city:
         return 0.5
-    if candidate_city.lower() in offer_city.lower() or offer_city.lower() in candidate_city.lower():
+    if (
+        candidate_city.lower() in offer_city.lower()
+        or offer_city.lower() in candidate_city.lower()
+    ):
         return 0.5
     return 0.2
 
@@ -581,19 +605,20 @@ def _build_evaluation_params(
         None,
         round(M_core * 100),
         round(F_exp * 100),
-        0,
         round(location_match * 100),
-        0,
-        0,
         round(F_fit * 100),
-        0,
         json.dumps(
             {
                 "M_core": round(M_core, 4),
                 "M_sec": round(M_sec, 4),
                 "F_exp": round(F_exp, 4),
                 "F_fit": round(F_fit, 4),
-                "weights": {"W_CORE": W_CORE, "W_SEC": W_SEC, "W_EXP": W_EXP, "W_FIT": W_FIT},
+                "weights": {
+                    "W_CORE": W_CORE,
+                    "W_SEC": W_SEC,
+                    "W_EXP": W_EXP,
+                    "W_FIT": W_FIT,
+                },
                 "skill_detail": skill_detail,
             },
             ensure_ascii=False,
@@ -609,9 +634,6 @@ def _build_evaluation_params(
         processing_ms,
         MODEL_TECHNICAL,
         MODEL_HR,
-        None,
-        json.dumps([], ensure_ascii=False),
-        json.dumps([], ensure_ascii=False),
         json.dumps(hr.get("interview_prep", []), ensure_ascii=False),
         final_dict.get("relevance_validation"),
         final_dict.get("relevance_corrected"),
@@ -625,15 +647,13 @@ def _build_evaluation_params(
 _COLUMNS = (
     "offer_id, cv_version_id, "
     "skills_hard_match, experience_match, "
-    "education_match, location_match, "
-    "trajectory_coherence, recency_relevance, "
-    "market_competitiveness, penalty, penalty_breakdown, "
+    "location_match, "
+    "market_competitiveness, scoring_detail, "
     "match_score, recommendation, "
     "environment_compatibility, hr_concerns, "
     "strengths, red_flags, gemma_verdict, "
     "apply_recommendation, processing_ms, "
     "model_technical, model_hr, "
-    "company_fit_score, company_green_flags, company_red_flags, "
     "interview_prep, "
     "relevance_validation, relevance_corrected, relevance_reasoning, "
     "apply_block, apply_block_reason, llm_apply_signal"
@@ -641,15 +661,13 @@ _COLUMNS = (
 
 _SET_CLAUSE = (
     "skills_hard_match=?, experience_match=?, "
-    "education_match=?, location_match=?, "
-    "trajectory_coherence=?, recency_relevance=?, "
-    "market_competitiveness=?, penalty=?, penalty_breakdown=?, "
+    "location_match=?, "
+    "market_competitiveness=?, scoring_detail=?, "
     "match_score=?, recommendation=?, "
     "environment_compatibility=?, hr_concerns=?, "
     "strengths=?, red_flags=?, gemma_verdict=?, "
     "apply_recommendation=?, processing_ms=?, "
     "model_technical=?, model_hr=?, "
-    "company_fit_score=?, company_green_flags=?, company_red_flags=?, "
     "interview_prep=?, "
     "relevance_validation=?, relevance_corrected=?, relevance_reasoning=?, "
     "apply_block=?, apply_block_reason=?, llm_apply_signal=?"
@@ -676,9 +694,18 @@ def save_evaluation(
     cur = conn.cursor()
 
     params = _build_evaluation_params(
-        offer_id, hr, final, skill_detail,
-        M_core, M_sec, F_exp, F_fit, location_match,
-        final_score, recommendation, processing_ms,
+        offer_id,
+        hr,
+        final,
+        skill_detail,
+        M_core,
+        M_sec,
+        F_exp,
+        F_fit,
+        location_match,
+        final_score,
+        recommendation,
+        processing_ms,
     )
 
     existing = cur.execute(
@@ -691,8 +718,9 @@ def save_evaluation(
             params[1:] + (offer_id,),
         )
     else:
+        ncols = len(params)
         cur.execute(
-            f"INSERT INTO offer_evaluations ({_COLUMNS}) VALUES ({','.join(['?'] * 32)})",
+            f"INSERT INTO offer_evaluations ({_COLUMNS}) VALUES ({','.join(['?'] * ncols)})",
             params,
         )
 
@@ -882,7 +910,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Evaluar ofertas pendientes")
-    parser.add_argument("--limit", type=int, default=10, help="Número de ofertas a evaluar (0 = sin límite)")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Número de ofertas a evaluar (0 = sin límite)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(

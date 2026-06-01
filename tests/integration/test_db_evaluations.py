@@ -59,6 +59,7 @@ class TestSaveEvaluation:
                 M_sec=0.5,
                 F_exp=0.6,
                 F_fit=0.7,
+                location_match=0.5,
                 final_score=0.58,
                 recommendation="Aplicar",
                 processing_ms=1500,
@@ -121,13 +122,14 @@ class TestSaveEvaluation:
                 M_sec=0.2,
                 F_exp=0.3,
                 F_fit=0.2,
+                location_match=0.5,
                 final_score=0.42,
                 recommendation="Con expectativas bajas",
                 processing_ms=2000,
             )
 
         row = test_db.execute(
-            "SELECT penalty_breakdown FROM offer_evaluations WHERE offer_id = ?",
+            "SELECT scoring_detail FROM offer_evaluations WHERE offer_id = ?",
             (offer_id,),
         ).fetchone()
         breakdown = json.loads(row[0])

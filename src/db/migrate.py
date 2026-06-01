@@ -109,18 +109,17 @@ SCHEMA_DEFINITIONS = {
         ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),
         ("cv_version_id", "INTEGER REFERENCES cv_versions(id)"),
         ("evaluated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
+        ("skills_hard_match", "INTEGER"),
+        ("experience_match", "INTEGER"),
+        ("location_match", "INTEGER"),
+        ("market_competitiveness", "INTEGER"),
+        ("scoring_detail", "TEXT"),
         ("match_score", "INTEGER"),
         ("recommendation", "TEXT"),
-        ("technical_skills_score", "INTEGER"),
-        ("technical_experience_score", "INTEGER"),
-        ("technical_education_score", "INTEGER"),
-        ("technical_location_score", "INTEGER"),
-        ("hr_trajectory_score", "INTEGER"),
-        ("hr_recency_score", "INTEGER"),
-        ("hr_market_score", "INTEGER"),
-        ("hr_penalty", "INTEGER"),
+        ("environment_compatibility", "TEXT"),
         ("hr_concerns", "TEXT"),
         ("strengths", "TEXT"),
+        ("red_flags", "TEXT"),
         ("gemma_verdict", "TEXT"),
         ("interview_prep", "TEXT"),
         ("apply_recommendation", "TEXT"),
@@ -201,6 +200,45 @@ def migrate_table(conn, table_name: str, columns: list[tuple]) -> list[str]:
     return added
 
 
+ZOMBIE_COLUMNS = [
+    "education_match",
+    "trajectory_coherence",
+    "recency_relevance",
+    "penalty",
+    "company_fit_score",
+    "company_green_flags",
+    "company_red_flags",
+]
+
+
+def drop_zombie_columns(conn) -> list[str]:
+    """Elimina columnas zombies de offer_evaluations y renombra penalty_breakdown."""
+    existing = get_existing_columns(conn, "offer_evaluations")
+    dropped = []
+
+    for col in ZOMBIE_COLUMNS:
+        if col.lower() in {c.lower() for c in existing}:
+            try:
+                conn.execute(f"ALTER TABLE offer_evaluations DROP COLUMN {col}")
+                dropped.append(col)
+                log.info("  Eliminada columna offer_evaluations.%s", col)
+            except Exception as e:
+                log.warning("  Error eliminando %s: %s", col, e)
+
+    # Renombrar penalty_breakdown → scoring_detail
+    if "penalty_breakdown" in existing and "scoring_detail" not in existing:
+        try:
+            conn.execute(
+                "ALTER TABLE offer_evaluations RENAME COLUMN penalty_breakdown TO scoring_detail"
+            )
+            dropped.append("penalty_breakdown → scoring_detail")
+            log.info("  Renombrada penalty_breakdown → scoring_detail")
+        except Exception as e:
+            log.warning("  Error renombrando penalty_breakdown: %s", e)
+
+    return dropped
+
+
 def run_migration() -> dict:
     """Ejecuta la migración del schema."""
     log.info("Iniciando migración de schema...")
@@ -232,6 +270,12 @@ def run_migration() -> dict:
     )
     conn.commit()
     log.info("Tabla apify_raw_responses verificada")
+
+    # Fase 2: limpieza de columnas zombies (solo si existen)
+    dropped_cols = drop_zombie_columns(conn)
+    if dropped_cols:
+        conn.commit()
+        log.info("Limpieza completada: %d columnas procesadas", len(dropped_cols))
 
     for table_name, columns in SCHEMA_DEFINITIONS.items():
         try:
