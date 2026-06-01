@@ -117,23 +117,23 @@ sqlite3 data/jobs.db "SELECT title, role, relevance_flag FROM offers ORDER BY fe
 
 | # | Tipo | Ítem | Criterio de éxito |
 |---|---|---|---|
-| 5.1 | 🤖 | Script termina sin `OperationalError` | exit 0 |
-| 5.2 | 🤖 | Todas las ofertas evaluadas | `COUNT(offer_evaluations) = COUNT(offers)` |
-| 5.3 | 🤖 | Scores dentro de rango | `total_score` entre 0 y 100 en todas las filas |
+| 5.1 | 🤖 | Script termina sin excepciones | exit 0 |
+| 5.2 | 🤖 | Todas las ofertas evaluadas | `COUNT(offer_evaluations) = COUNT(offers WHERE relevance_flag IS NOT NULL)` |
+| 5.3 | 🤖 | Scores dentro de rango | `match_score` entre 0 y 100 en todas las filas |
 | 5.4 | 🤖 | `gemma4:e4b` devuelve JSON válido | Sin errores de parsing en logs |
-| 5.5 | 🤖 | Requisitos imposibles → `pre_filter_passed = 0` | Ofertas con certificado discapacidad etc. filtradas |
+| 5.5 | 🤖 | Apply_block detecta requisitos imposibles | Ofertas con requisito legal (catalán, máster oficial) bloqueadas |
 | 5.6 | 👤 | Distribución de scores razonable | No todos 0 ni todos 100, curva lógica |
 | 5.7 | 👤 | Top 5 scores corresponden a ofertas realmente buenas | El candidato confirma que las top son las mejores |
-| 5.8 | 👤 | Pre-filtro aplicado a los casos correctos | Las ofertas filtradas tienen requisitos realmente imposibles |
+| 5.8 | 👤 | Componentes del scoring (M_core, M_sec, F_exp, F_fit) coherentes | Penalty_breakdown JSON visible en dashboard |
 
 ```bash
-PYTHONPATH=. python src/pipeline/evaluate.py
-sqlite3 data/jobs.db "SELECT MIN(total_score), MAX(total_score), ROUND(AVG(total_score),1), COUNT(*) FROM offer_evaluations;"
-sqlite3 data/jobs.db "SELECT o.title, e.total_score, e.pre_filter_passed FROM offers o JOIN offer_evaluations e ON o.id = e.offer_id ORDER BY e.total_score DESC LIMIT 10;"
-sqlite3 data/jobs.db "SELECT o.title, e.pre_filter_passed FROM offers o JOIN offer_evaluations e ON o.id = e.offer_id WHERE e.pre_filter_passed = 0 LIMIT 5;"
+PYTHONPATH=. python src/pipeline/evaluate.py --limit 0
+sqlite3 data/jobs.db "SELECT MIN(match_score), MAX(match_score), ROUND(AVG(match_score),1), COUNT(*) FROM offer_evaluations;"
+sqlite3 data/jobs.db "SELECT o.title, e.match_score, e.apply_block, e.llm_apply_signal FROM offers o JOIN offer_evaluations e ON o.id = e.offer_id ORDER BY e.match_score DESC LIMIT 10;"
+sqlite3 data/jobs.db "SELECT o.title, e.match_score, e.apply_block_reason FROM offers o JOIN offer_evaluations e ON o.id = e.offer_id WHERE e.apply_block IS NOT NULL LIMIT 5;"
 ```
 
-**Reporte:** `reports/testing/05-evaluate.html`
+**Reporte:** `reports/dashboard.html`
 
 ---
 

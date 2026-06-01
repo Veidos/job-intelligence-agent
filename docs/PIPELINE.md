@@ -18,6 +18,11 @@ or whenever `PERFIL.md` changes significantly.
 run.py: fetch → classify → evaluate → send
 ```
 
+Additionally, a static dashboard can be generated for inspection:
+```bash
+python src/pipeline/generate_dashboard.py   # reports/dashboard.html
+```
+
 ## 1. Fetch (fetch.py)
 
 Fetches job offers from InfoJobs via Apify. Operates in **three sequential phases**.
@@ -170,7 +175,11 @@ python src/pipeline/run.py --dry-run
 python src/pipeline/role_classifier.py
 
 # Evaluar ofertas clasificadas
-python src/pipeline/evaluate.py
+python src/pipeline/evaluate.py                # Por defecto 10 ofertas
+python src/pipeline/evaluate.py --limit 0      # Todas las pendientes
+
+# Generar dashboard HTML
+python src/pipeline/generate_dashboard.py      # reports/dashboard.html
 
 # Enviar resumen diario a Telegram
 python src/telegram/send.py --mode daily
