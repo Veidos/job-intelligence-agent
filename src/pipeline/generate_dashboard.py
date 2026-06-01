@@ -372,15 +372,15 @@ tbody tr.active { background:#1c2a42; }
   <th data-col="M_sec" class="nowrap">M_sec <span class="arrow"></span></th>
   <th data-col="F_exp" class="nowrap">F_exp <span class="arrow"></span></th>
   <th data-col="F_fit" class="nowrap">F_fit <span class="arrow"></span></th>
-  <th data-col="title">Título</th>
-  <th data-col="company_name">Empresa</th>
-  <th data-col="role_normalized">Rol</th>
-  <th data-col="relevance_flag">Relevance</th>
+  <th data-col="title">Título <span class="arrow"></span></th>
+  <th data-col="company_name">Empresa <span class="arrow"></span></th>
+  <th data-col="role_normalized">Rol <span class="arrow"></span></th>
+  <th data-col="relevance_flag">Relevance <span class="arrow"></span></th>
   <th data-col="published_at" class="nowrap">📅 Publicado <span class="arrow"></span></th>
-  <th data-col="location">Ubicación</th>
-  <th data-col="llm_apply_signal">Señal</th>
-  <th data-col="recommendation">Recomendación</th>
-  <th data-col="apply_block">Bloqueo</th>
+  <th data-col="location">Ubicación <span class="arrow"></span></th>
+  <th data-col="llm_apply_signal">Señal <span class="arrow"></span></th>
+  <th data-col="recommendation">Recomendación <span class="arrow"></span></th>
+  <th data-col="apply_block">Bloqueo <span class="arrow"></span></th>
 </tr>
 </thead>
 <tbody id="tbody"></tbody>
@@ -453,6 +453,13 @@ let selectedId = null;
 let chartDistInst = null, chartSignalInst = null;
 
 /* --- Helpers --- */
+const MONTHS = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function dateFmt(iso) {
+  if (!iso) return '—';
+  const p = iso.slice(0,10).split('-');
+  if (p.length !== 3) return '—';
+  return `${parseInt(p[2])} ${MONTHS[parseInt(p[1])]}`;
+}
 function scoreClass(s) { return s >= 55 ? 'green' : s >= 35 ? 'yellow' : 'red'; }
 function signalClass(s) { return ({yes:'green',maybe:'yellow',no:'red'})[s && s.toLowerCase()] || 'gray'; }
 function recTag(r) {
@@ -558,7 +565,7 @@ function render() {
       <td>${d.company_name || ''}</td>
       <td>${d.role_normalized || ''}</td>
       <td>${relTag(d.relevance_flag)}</td>
-      <td><span class="cell-date">${d.published_at ? d.published_at.slice(5,10).replace('-',' ') : '—'}</span></td>
+      <td><span class="cell-date">${dateFmt(d.published_at)}</span></td>
       <td>${d.location || ''}</td>
       <td>${signalTag(d.llm_apply_signal)}</td>
       <td>${recTag(d.recommendation)}</td>
