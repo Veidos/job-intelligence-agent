@@ -6,6 +6,7 @@ Output: reports/dashboard.html (self-contained, no server needed)
 import json
 import logging
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -23,10 +24,12 @@ SELECT
     o.url,
     o.salary_min,
     o.salary_max,
+    o.published_at,
     o.work_mode,
     o.role_normalized,
     o.relevance_flag,
     e.match_score,
+    e.evaluated_at,
     e.recommendation,
     e.llm_apply_signal,
     e.gemma_verdict,
@@ -103,6 +106,8 @@ def fetch_data():
             "salary_min": r["salary_min"],
             "salary_max": r["salary_max"],
             "salary_display": _fmt_salary(r),
+            "published_at": r["published_at"],
+            "evaluated_at": r["evaluated_at"],
             "work_mode": r["work_mode"] or "",
             "role_normalized": r["role_normalized"] or "",
             "relevance_flag": r["relevance_flag"] or "",
@@ -114,7 +119,6 @@ def fetch_data():
             "environment_compatibility": r["environment_compatibility"] or "",
             "company_sector": r["company_sector"] or "",
             "company_size": r["company_size"] or "",
-            "skills_hard_match": r["skills_hard_match"],
             "experience_match": r["experience_match"],
             "education_match": r["education_match"],
             "location_match": r["location_match"],
@@ -142,7 +146,24 @@ def fetch_data():
         rec["score_diff"] = round(rec["match_score"] / 100.0 - calc, 4) if rec["match_score"] else None
         records.append(rec)
 
-    return records
+    # Calculate date range from all published_at dates
+    dates = []
+    for rec in records:
+        if rec.get("published_at"):
+            try:
+                d = rec["published_at"][:10]
+                dates.append(d)
+            except (IndexError, TypeError):
+                pass
+
+    meta = {
+        "n_offers": len(records),
+        "generated_at": datetime.now().strftime("%d %b %Y %H:%M"),
+        "date_range_min": min(dates) if dates else "—",
+        "date_range_max": max(dates) if dates else "—",
+    }
+
+    return records, meta
 
 
 def _score_class(s):
@@ -242,6 +263,7 @@ tbody tr.active { background:#1c2a42; }
 .cell-score { font-weight:700; font-size:13px; white-space:nowrap; }
 .cell-comp { font-size:11px; white-space:nowrap; color:var(--text2); }
 .cell-comp strong { color:var(--text); }
+.cell-date { font-size:11px; white-space:nowrap; color:var(--text2); font-family:monospace; }
 
 .tag {
   display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px;
@@ -308,7 +330,7 @@ tbody tr.active { background:#1c2a42; }
 <body>
 
 <h1>Dashboard de Evaluaciones <small id="totalOffers"></small></h1>
-<div class="subtitle">Job Intelligence Agent · 92 ofertas evaluadas</div>
+<div class="subtitle">__SUBTITLE_PLACEHOLDER__</div>
 
 <div class="kpi-grid" id="kpiGrid">
   <div class="kpi"><div class="label">Total evaluadas</div><div class="value blue" id="kpiTotal">—</div></div>
@@ -354,6 +376,7 @@ tbody tr.active { background:#1c2a42; }
   <th data-col="company_name">Empresa</th>
   <th data-col="role_normalized">Rol</th>
   <th data-col="relevance_flag">Relevance</th>
+  <th data-col="published_at" class="nowrap">📅 Publicado <span class="arrow"></span></th>
   <th data-col="location">Ubicación</th>
   <th data-col="llm_apply_signal">Señal</th>
   <th data-col="recommendation">Recomendación</th>
@@ -458,6 +481,14 @@ function compPct(v, label) {
   return `<span class="cell-comp"><strong>${v}</strong> ${label}</span>`;
 }
 
+/* --- SORT configuration --- */
+const SORT_ORDERS = {
+  relevance_flag: ['temporal','stretch','adjacent','core'],
+  recommendation: ['No aplicar','Con expectativas bajas','Aplicar'],
+  llm_apply_signal: ['no','maybe','yes'],
+};
+const NUM_COLS = new Set(['match_score','M_core','M_sec','F_exp','F_fit','skills_hard_match','experience_match']);
+
 /* --- Render --- */
 function render() {
   const minScore = parseInt(document.getElementById('filterScore').value) || 0;
@@ -476,12 +507,18 @@ function render() {
   });
 
   filtered.sort((a,b) => {
-    const isNum = sortCol === 'match_score' || sortCol === 'M_core' || sortCol === 'M_sec' || sortCol === 'F_exp' || sortCol === 'F_fit';
-    if (isNum) {
-      return ((a[sortCol] ?? -1) - (b[sortCol] ?? -1)) * sortDir;
+    const col = sortCol;
+    if (NUM_COLS.has(col)) {
+      return ((a[col] ?? -1) - (b[col] ?? -1)) * sortDir;
     }
-    const va = String(a[sortCol] ?? '').toLowerCase();
-    const vb = String(b[sortCol] ?? '').toLowerCase();
+    if (SORT_ORDERS[col]) {
+      const order = SORT_ORDERS[col];
+      const ia = order.indexOf(a[col] ?? '');
+      const ib = order.indexOf(b[col] ?? '');
+      return (ia - ib) * sortDir;
+    }
+    const va = String(a[col] ?? '').toLowerCase();
+    const vb = String(b[col] ?? '').toLowerCase();
     return va < vb ? -sortDir : va > vb ? sortDir : 0;
   });
 
@@ -521,6 +558,7 @@ function render() {
       <td>${d.company_name || ''}</td>
       <td>${d.role_normalized || ''}</td>
       <td>${relTag(d.relevance_flag)}</td>
+      <td><span class="cell-date">${d.published_at ? d.published_at.slice(5,10).replace('-',' ') : '—'}</span></td>
       <td>${d.location || ''}</td>
       <td>${signalTag(d.llm_apply_signal)}</td>
       <td>${recTag(d.recommendation)}</td>
@@ -628,6 +666,7 @@ function openPanel(d) {
   if (d.salary_display) meta.push(d.salary_display);
   if (d.company_sector) meta.push(d.company_sector);
   if (d.company_size) meta.push(d.company_size);
+  if (d.evaluated_at) meta.push(`✅ ${d.evaluated_at.slice(0,10)}`);
   let metaHtml = meta.join(' · ');
   metaHtml += ` · Score: <strong class="${scoreClass(d.match_score)}">${d.match_score}</strong>`;
   if (d.url) metaHtml += ` · <a href="${d.url}" target="_blank">Ver oferta ↗</a>`;
@@ -754,18 +793,25 @@ renderCharts();
 </html>"""
 
 
-def generate(records: list[dict]) -> str:
-    return HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", json.dumps(records, ensure_ascii=False, default=str))
+def generate(records: list[dict], meta: dict) -> str:
+    subtitle = (
+        f"Job Intelligence Agent · {meta['n_offers']} ofertas evaluadas"
+        f" · {meta['date_range_min']} – {meta['date_range_max']}"
+        f" · Generado: {meta['generated_at']}"
+    )
+    html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", json.dumps(records, ensure_ascii=False, default=str))
+    html = html.replace("__SUBTITLE_PLACEHOLDER__", subtitle)
+    return html
 
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     log.info("Fetching data from %s", DB)
-    records = fetch_data()
-    log.info("Fetched %d evaluation records", len(records))
+    records, meta = fetch_data()
+    log.info("Fetched %d evaluation records", meta["n_offers"])
 
     log.info("Generating dashboard HTML")
-    html = generate(records)
+    html = generate(records, meta)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
