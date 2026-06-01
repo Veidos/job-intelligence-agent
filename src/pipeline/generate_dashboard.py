@@ -189,7 +189,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Evaluaciones — Job Intelligence Agent</title>
+<title>Evaluaciones v2 — Job Intelligence Agent</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -329,7 +329,7 @@ tbody tr.active { background:#1c2a42; }
 </head>
 <body>
 
-<h1>Evaluaciones <small id="totalOffers"></small></h1>
+<h1>Evaluaciones v2 <small id="totalOffers"></small></h1>
 <div class="subtitle">__SUBTITLE_PLACEHOLDER__</div>
 
 <div class="kpi-grid" id="kpiGrid">
