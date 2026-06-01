@@ -256,7 +256,7 @@ def compute_skill_score(
             cand_level = None
             name_lower = name.lower()
             for cand_name, cand_lv in candidate_skills_map.items():
-                if name_lower in cand_name or cand_name in name_lower:
+                if name_lower in cand_name.lower() or cand_name.lower() in name_lower:
                     cand_level = cand_lv
                     break
             present = cand_level is not None
@@ -708,12 +708,14 @@ def run_evaluate(limit: int = 10) -> dict:
         candidate_years,
     )
 
-    stats = {"evaluated": 0, "errors": 0, "scores": []}
+    stats = {"evaluated": 0, "errors": 0, "scores": [], "total": len(offers)}
 
-    for offer in offers:
+    for idx, offer in enumerate(offers, 1):
         t0 = time.monotonic()
         try:
-            log.info("Evaluando: %s", offer["title"])
+            if idx == 1 or idx % 10 == 0:
+                log.info("Progreso: %d/%d ofertas procesadas", idx - 1, len(offers))
+            log.info("[%d/%d] Evaluando: %s", idx, len(offers), offer["title"])
 
             # Parsear skills de la oferta (backward-compat con legacy flat array)
             offer_skills = parse_skills_required(offer.get("skills_required"))
@@ -829,8 +831,15 @@ def run_evaluate(limit: int = 10) -> dict:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Evaluar ofertas pendientes")
+    parser.add_argument("--limit", type=int, default=10, help="Número de ofertas a evaluar (0 = sin límite)")
+    args = parser.parse_args()
+
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
     )
-    stats = run_evaluate(limit=3)
+    limit = args.limit if args.limit > 0 else 1000
+    stats = run_evaluate(limit=limit)
     log.info("Completado: %s", stats)
