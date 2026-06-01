@@ -1,15 +1,18 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
 **Última actualización:** 2026-06-01
-**Fase activa:** T-5e — Dashboard improvements + null normalization
+**Fase activa:** T-5f — Megadashboard web (Flask)
 
 **Último completado:**
-- evaluate.py: _normalize_none() para aplicar_block/apply_block_reason (evita string "null"/"None" del LLM)
-- generate_dashboard.py: nuevas columnas Modalidad (🏠/🔄/🏢) y 💰 Salario en tabla
-- generate_dashboard.py: bloqueo ahora muestra badge verde "Sin bloqueo" en vez de celda vacía
-- generate_dashboard.py: location_match eliminado del payload (no se usaba)
-- TRAGSA documentado en MEMORIES.md (datos incompletos por ATS custom)
-- Dashboard regenerado con cambios visibles
+- nueva tabla `applications` en schema.sql + migrate.py
+- servidor Flask en src/dashboard/server.py con API REST completa
+- dashboard HTML con 6 secciones: Pipeline, Evaluaciones, Empresas, Aplicaciones, Estadísticos, Runs
+- Tabla Evaluaciones con filtros inline, ordenación por columna, modal detalle
+- Feedback inline desde el modal (POST /api/feedback)
+- Seguimiento de aplicaciones con estados y timeline semanal
+- Charts: distribución scores, recomendación×relevance, señal×recomendación, tendencia
+- pip install flask como nueva dependencia
+- 171 tests passing, ruff clean
 
 **Próximo paso:** T-6 (send.py) — validar mensaje Telegram correcto
 **Bloqueados:** ninguno

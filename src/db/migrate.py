@@ -161,6 +161,16 @@ SCHEMA_DEFINITIONS = {
         ("last_updated", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
         ("role_catalog", "TEXT"),
     ],
+    "applications": [
+        ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),
+        ("applied_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
+        ("status", "TEXT NOT NULL DEFAULT 'applied'"),
+        ("notes", "TEXT"),
+        ("contact_name", "TEXT"),
+        ("next_action_date", "TEXT"),
+        ("created_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
+    ],
     "user_settings": [
         ("key", "TEXT NOT NULL UNIQUE"),
         ("value", "TEXT"),
@@ -270,6 +280,29 @@ def run_migration() -> dict:
     )
     conn.commit()
     log.info("Tabla apify_raw_responses verificada")
+
+    # Crear tabla applications si no existe
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            offer_id INTEGER NOT NULL REFERENCES offers(id),
+            applied_at DATETIME NOT NULL DEFAULT (datetime('now')),
+            status TEXT NOT NULL DEFAULT 'applied',
+            notes TEXT,
+            contact_name TEXT,
+            next_action_date TEXT,
+            created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+            updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_applications_offer_id ON applications(offer_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_applications_applied_at ON applications(applied_at)"
+    )
+    conn.commit()
+    log.info("Tabla applications verificada")
 
     # Fase 2: limpieza de columnas zombies (solo si existen)
     dropped_cols = drop_zombie_columns(conn)

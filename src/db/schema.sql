@@ -216,6 +216,21 @@ CREATE TABLE IF NOT EXISTS search_config (
     role_catalog TEXT
 );
 
+CREATE TABLE IF NOT EXISTS applications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_id INTEGER NOT NULL REFERENCES offers(id),
+    applied_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    status TEXT NOT NULL DEFAULT 'applied'
+        CHECK(status IN ('applied','interviewing','rejected','offer','accepted','archived')),
+    notes TEXT,
+    contact_name TEXT,
+    next_action_date TEXT,
+    created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_applications_offer_id ON applications(offer_id);
+CREATE INDEX IF NOT EXISTS idx_applications_applied_at ON applications(applied_at);
+
 CREATE TABLE IF NOT EXISTS user_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
