@@ -1,9 +1,9 @@
 # Base de Datos
 
-## Motor y ORM
+## Motor
 
 - **Motor:** SQLite en `data/jobs.db`
-- **ORM:** SQLAlchemy (usar siempre, no SQL raw salvo en `init_db.py`)
+- **Driver:** `sqlite3` estándar (raw SQL, sin ORM)
 - **Convenciones:** `snake_case` para todas las columnas
 
 ## Tablas Principales

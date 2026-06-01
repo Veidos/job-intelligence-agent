@@ -1,8 +1,8 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** T-5c — re-evaluar 92 ofertas con fórmula corregida
+> **Próximo paso:** T-6 — send.py mensaje Telegram correcto
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
-> **Scoring rebalance:** F_exp sin gap (ADR-016) + location_match determinista (pendiente re-evaluación)
+> T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
 > Dashboard: `reports/evaluations-v2.html` — generate con `src/pipeline/generate_dashboard.py`
 > Ver docs/TESTING.md para el checklist completo.
 
@@ -83,7 +83,9 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-5b — evaluate.py real contra 92 ofertas (Batch 1 + 2 + 82 restantes), 0 errores
 - [x] Dashboard de evaluaciones — `reports/evaluations-v2.html` (static HTML + Chart.js)
 - [x] Scoring rebalance: F_exp sin gap, location_match determinista (ADR-016, código listo)
-- [ ] T-5c — Re-evaluar 92 ofertas con nueva fórmula
+- [x] T-5c — Re-evaluar 92 ofertas con nueva fórmula (avg 41.4, 10 "Aplicar")
+  - [x] Scoring rebalance + location_match determinista
+  - [x] Zombie columns cleanup (7 columnas eliminadas)
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores
 - [ ] T-8 — Feedback bot funcional y natural

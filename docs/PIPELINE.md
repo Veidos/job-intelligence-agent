@@ -101,7 +101,7 @@ with a single context prompt.**
 |-----------|--------|--------|--------|
 | `M_core` (core skills) | 0.45 | Python | Level multiplier per skill |
 | `M_sec` (secondary skills) | 0.15 | Python | Level multiplier per skill |
-| `F_exp` (experience) | 0.25 | Python | years_match · gap_multiplier |
+| `F_exp` (experience) | 0.25 | Python | years_match |
 | `F_fit` (context) | 0.15 | gemma4:e4b | Qualitative evaluation |
 
 ### Key rules

@@ -43,7 +43,7 @@ SELECT
     e.skills_hard_match,
     e.experience_match,
     e.location_match,
-    e.scoring_detail AS penalty_breakdown,
+    e.scoring_detail,
     c.sector AS company_sector,
     c.size_range AS company_size
 FROM offers o
@@ -93,7 +93,7 @@ def fetch_data():
     records = []
     for r in rows:
         r = dict(r)
-        pb = _parse_json(r["penalty_breakdown"]) or {}
+        pb = _parse_json(r["scoring_detail"]) or {}
         rec = {
             "id": r["id"],
             "title": r["title"] or "",

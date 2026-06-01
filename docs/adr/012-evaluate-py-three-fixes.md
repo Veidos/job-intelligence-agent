@@ -77,7 +77,7 @@ If Step 6 crashes, the partial row exists with `is_evaluated=0`. On restart, `ge
 
 ## Consequences
 
-- **F_exp now reflects real experience.** For this candidate, all offers get `F_exp = years_match * 0.55` (gap multiplier for 3.7 years). Offers with `experience_min >= 4.3` get partial credit; offers with `experience_min = 0` get full 0.55.
+- **F_exp now reflects real experience.** For this candidate, all offers get `F_exp = years_match`. *(Note: gap was later moved to qualitative HR context — see ADR-016. The `gap_multiplier` no longer multiplies F_exp.)*
 - **Education-derived skills are present in the LLM prompt.** The technical LLM can now map "Ingeniería Técnica Industrial, esp. Mecánica" to "Ingeniería Industrial" semantically. In testing, ID 336 (Rioglass) M_core rose from 0.1667 to 0.5000 and score from 0.34 to 0.49.
 - **Partial evaluation rows survive crashes.** If Step 6 times out, the partial row is in the DB, restartable via upsert detection.
 - **No schema migration needed.** The existing `offer_evaluations` schema supports NULL final fields and the `offers.is_evaluated` flag. The upsert is purely application-level.

@@ -52,10 +52,10 @@ S = 0.45·M_core + 0.15·M_sec + 0.25·F_exp + 0.15·F_fit
 |--------|----------|------------------|-------------|
 | 0.45 | `M_core` | Average level match over core skills | Python |
 | 0.15 | `M_sec` | Average level match over secondary skills | Python |
-| 0.25 | `F_exp` | Years of experience, penalised by employment gap | Python |
+| 0.25 | `F_exp` | Years of experience (capped at 1.0, no gap penalty) | Python |
 | 0.15 | `F_fit` | Cultural fit, location, work mode | gemma4:e4b |
 
-Skills use a level multiplier (`L_i = min(cand, req) / req`), experience applies a gap multiplier table, and overqualification is capped at 1.0.
+Skills use a level multiplier (`L_i = min(cand, req) / req`), experience is `min(cand_years / req, 1.0)`, and overqualification is capped at 1.0. Employment gap is context for the HR LLM, not a numeric penalty.
 
 See full details in [`docs/RATING.md`](docs/RATING.md).
 
