@@ -275,7 +275,7 @@
 
 ## Dashboard de evaluaciones (static HTML + Chart.js)
 
-- Patrón establecido: `src/pipeline/generate_dashboard.py` → `reports/evaluations.html`
+- Patrón establecido: `src/pipeline/generate_dashboard.py` → `reports/evaluations-v2.html`
 - Sin dependencias nuevas: Chart.js vía CDN, mismo patrón que reportes HTML existentes
 - Datos embebidos como `const DATA = [...]` JSON (92 registros)
 - KPIs, doughnut chart (distribución recomendación), grouped bar (recomendación × señal)
@@ -291,7 +291,7 @@
 - Fix dual: (A) 14/14 columnas ahora tienen `<span class="arrow">`, (B) safety con `if(arrow)` opcional
 - Formato fecha: helper `dateFmt()` con `MONTHS` array en español (`Ene`, `Feb`, `Mar`...)
   publicado como "20 May" en vez de "05-20" ISO slice
-- Renombrado `reports/dashboard.html` → `reports/evaluations.html` para evitar confusión
+- Renombrado `reports/dashboard.html` → `reports/evaluations-v1.html` (v1 legacy) y `reports/evaluations-v2.html` (actual)
 
 ## Scoring rebalance — ADR-016 (junio 2026)
 

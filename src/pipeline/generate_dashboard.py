@@ -1,6 +1,6 @@
 """
 Generates a static HTML dashboard of all evaluations.
-Output: reports/evaluations.html (self-contained, no server needed)
+Output: reports/evaluations-v2.html (+ symlink evaluations.html)
 """
 
 import json
@@ -12,7 +12,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 DB = Path(__file__).resolve().parent.parent.parent / "data" / "jobs.db"
-OUT = Path(__file__).resolve().parent.parent.parent / "reports" / "evaluations.html"
+OUT = Path(__file__).resolve().parent.parent.parent / "reports" / "evaluations-v2.html"
 
 QUERY = """
 SELECT

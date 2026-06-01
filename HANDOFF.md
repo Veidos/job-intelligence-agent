@@ -1,19 +1,15 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
 **Última actualización:** 2026-06-01
-**Fase activa:** T-5 completado — Dashboard de evaluaciones generado
+**Fase activa:** T-5c completado — Re-evaluación v2 (92/92, 0 errores)
 
 **Último completado:**
-- Batch 2 (IDs 326, 334, 325, 315, 369) evaluado — comportamiento consistente
-- Evaluate completo contra 82 ofertas restantes — 0 errores, 92/92 evaluadas
-- Bug case-sensitive fix en substring match (evaluate.py:259)
-- Log de progreso cada 10 ofertas + argparse `--limit` en evaluate.py
-- Dashboard `reports/evaluations.html` generado desde `src/pipeline/generate_dashboard.py`
-  - KPIs, charts (doughnut + grouped bar), tabla sortable con M_core/M_sec/F_exp/F_fit
-  - Panel lateral con fórmula de scoring, tabla de skills por fila, LLM verdicts
-  - Fechas contextuales (published_at, evaluated_at, date range, generated_at)
-  - Ordenación inteligente: numérica, ordinal (relevance, recommendation, signal), alfabética
-- Documentación actualizada: PLANS.md, MEMORIES.md, AGENTS.md, PIPELINE.md, SETUP.md, TESTING.md
+- Fix A: experience_min al SELECT (get_pending_offers)
+- Opción C: Gap eliminado de F_exp → contexto cualitativo HR
+- Location_match determinista (remoto=1.0, híbrido=0.7, presencial fuera=0.2)
+- Re-evaluación de 92 ofertas con nueva fórmula (avg 29.8 → 41.4, 10 "Aplicar")
+- Dashboard v2 en reports/evaluations-v2.html (v1 preservado como evaluations-v1.html)
+- Symlink reports/evaluations.html → evaluations-v2.html
 
 **Próximo paso:** T-6 (send.py) — validar mensaje Telegram correcto
 **Bloqueados:** ninguno
