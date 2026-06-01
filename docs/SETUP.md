@@ -19,7 +19,7 @@ python src/db/init_db.py
 | `python src/pipeline/fetch.py` | Solo fetch de ofertas desde InfoJobs |
 | `python src/pipeline/evaluate.py` | Solo evaluación de ofertas (default 10) |
 | `python src/pipeline/evaluate.py --limit 0` | Evaluar todas las ofertas pendientes |
-| `python src/pipeline/generate_dashboard.py` | Generar dashboard HTML en reports/dashboard.html |
+| `python src/pipeline/generate_dashboard.py` | Generar HTML de evaluaciones en reports/evaluations.html |
 | `python src/telegram/send.py --mode daily` | Enviar ofertas por Telegram |
 
 ## Flujo post-onboarding

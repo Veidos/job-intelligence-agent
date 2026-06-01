@@ -133,7 +133,7 @@ sqlite3 data/jobs.db "SELECT o.title, e.match_score, e.apply_block, e.llm_apply_
 sqlite3 data/jobs.db "SELECT o.title, e.match_score, e.apply_block_reason FROM offers o JOIN offer_evaluations e ON o.id = e.offer_id WHERE e.apply_block IS NOT NULL LIMIT 5;"
 ```
 
-**Reporte:** `reports/dashboard.html`
+**Reporte:** `reports/evaluations.html`
 
 ---
 

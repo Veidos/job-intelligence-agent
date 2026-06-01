@@ -52,7 +52,7 @@ python src/pipeline/evaluate.py --limit 0     # Evaluar todas las pendientes
 python src/telegram/send.py --mode daily      # Enviar Telegram
 
 # Dashboard
-python src/pipeline/generate_dashboard.py     # Generar reports/dashboard.html
+python src/pipeline/generate_dashboard.py     # Generar reports/evaluations.html
 
 # Linter (siempre antes de terminar tarea)
 ruff check src/ && ruff format src/

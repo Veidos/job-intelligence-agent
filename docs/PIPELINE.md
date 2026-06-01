@@ -20,7 +20,7 @@ run.py: fetch → classify → evaluate → send
 
 Additionally, a static dashboard can be generated for inspection:
 ```bash
-python src/pipeline/generate_dashboard.py   # reports/dashboard.html
+python src/pipeline/generate_dashboard.py   # reports/evaluations.html
 ```
 
 ## 1. Fetch (fetch.py)
@@ -178,8 +178,8 @@ python src/pipeline/role_classifier.py
 python src/pipeline/evaluate.py                # Por defecto 10 ofertas
 python src/pipeline/evaluate.py --limit 0      # Todas las pendientes
 
-# Generar dashboard HTML
-python src/pipeline/generate_dashboard.py      # reports/dashboard.html
+# Generar HTML de evaluaciones
+python src/pipeline/generate_dashboard.py      # reports/evaluations.html
 
 # Enviar resumen diario a Telegram
 python src/telegram/send.py --mode daily

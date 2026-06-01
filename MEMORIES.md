@@ -275,7 +275,7 @@
 
 ## Dashboard de evaluaciones (static HTML + Chart.js)
 
-- Patrón establecido: `src/pipeline/generate_dashboard.py` → `reports/dashboard.html`
+- Patrón establecido: `src/pipeline/generate_dashboard.py` → `reports/evaluations.html`
 - Sin dependencias nuevas: Chart.js vía CDN, mismo patrón que reportes HTML existentes
 - Datos embebidos como `const DATA = [...]` JSON (92 registros)
 - KPIs, doughnut chart (distribución recomendación), grouped bar (recomendación × señal)
@@ -283,3 +283,12 @@
 - Panel lateral con fórmula de scoring, tabla de skills (level_required, candidate_level, present, L)
 - Filtros: score mínimo, recomendación, señal, relevance_flag, toggle bloqueadas
 - URLs prefijadas con `https:` desde `//...` relativas
+
+## Bug: sort crash por columnas sin flecha (junio 2026)
+
+- Columnas sin `<span class="arrow"></span>` → `querySelector('.arrow')` devuelve `null`
+- Click handler accedía `.classList` sobre null → `TypeError` → no llegaba a `render()`
+- Fix dual: (A) 14/14 columnas ahora tienen `<span class="arrow">`, (B) safety con `if(arrow)` opcional
+- Formato fecha: helper `dateFmt()` con `MONTHS` array en español (`Ene`, `Feb`, `Mar`...)
+  publicado como "20 May" en vez de "05-20" ISO slice
+- Renombrado `reports/dashboard.html` → `reports/evaluations.html` para evitar confusión

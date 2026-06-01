@@ -2,7 +2,7 @@
 
 > **Próximo paso:** T-6 (send.py) — validar mensaje Telegram
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
-> Dashboard: `reports/dashboard.html` — generate con `src/pipeline/generate_dashboard.py`
+> Dashboard: `reports/evaluations.html` — generate con `src/pipeline/generate_dashboard.py`
 > Ver docs/TESTING.md para el checklist completo.
 
 ## FASE 1 — Cimientos
@@ -80,7 +80,7 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-4 — role_classifier.py coherente con las ofertas (92/92 clasificadas, 30 roles únicos, 0 contaminadas, ADR-005 documenta evolución)
 - [x] T-5 — evaluate.py sin errores en tests
 - [x] T-5b — evaluate.py real contra 92 ofertas (Batch 1 + 2 + 82 restantes), 0 errores
-- [x] Dashboard de evaluaciones — `reports/dashboard.html` (static HTML + Chart.js)
+- [x] Dashboard de evaluaciones — `reports/evaluations.html` (static HTML + Chart.js)
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores
 - [ ] T-8 — Feedback bot funcional y natural
