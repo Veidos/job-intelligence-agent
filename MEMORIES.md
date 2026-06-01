@@ -292,3 +292,33 @@
 - Formato fecha: helper `dateFmt()` con `MONTHS` array en español (`Ene`, `Feb`, `Mar`...)
   publicado como "20 May" en vez de "05-20" ISO slice
 - Renombrado `reports/dashboard.html` → `reports/evaluations.html` para evitar confusión
+
+## Scoring rebalance — ADR-016 (junio 2026)
+
+### Problema diagnosticado
+
+1. **F_exp plana en 55** para las 92 ofertas. Causa raíz: `get_pending_offers()` no seleccionaba `o.experience_min`, así que `offer.get("experience_min")` era siempre `None` → `req=0` → `years_match=1`. Fix: agregar `o.experience_min` al SELECT.
+
+2. **Gap multiplier = 0.55** cegaba F_exp al 55% máximo. Con W_EXP=0.25, el score máximo teórico era 0.74, y ninguna oferta podía tener F_exp > 0.55. El gap no distinguía reconversión activa de inactividad real. Fix: gap eliminado de F_exp, pasa a ser contexto cualitativo exclusivo del HR LLM (ya estaba en el prompt de evaluate_hr).
+
+3. **location_match = 0** por diseño (ADR-008). Implementado `compute_location_score()` determinista: remoto=1.0, híbrido=0.7, presencial misma ciudad=0.5, presencial fuera=0.2.
+
+### Cambios en evaluate.py
+
+| Línea | Antes | Después |
+|-------|-------|---------|
+| SELECT (get_pending_offers) | sin experience_min | `o.experience_min` añadido |
+| compute_experience_score | `years_match * G(gap)` | `years_match` solo |
+| run_evaluate → F_exp | `offer.get("experience_min"), candidate_years, employment_gap` | sin gap |
+| _build_evaluation_params | `0` (hardcode) | `round(location_match * 100)` |
+| save_evaluation | sin location_match | nuevo parámetro location_match |
+| Nuevas funciones | — | `load_location_from_perfil`, `compute_location_score` |
+| MONTH_NAMES | duplicados ene/es | merge sin duplicados |
+
+### Efecto esperado en scores
+
+Con candidate_years=4.3 y candidate_city="Jerez de la Frontera, Spain":
+- F_exp sube de 0.55 a ~1.0 para 89/92 ofertas (antes capado por gap)
+- location_match ahora contribuye con 0.2–1.0 dependiendo de work_mode/ciudad
+- Scores deberían subir ~10–15 puntos de media (de 29.8 a ~40-45)
+- Pendiente: re-evaluar 92 ofertas con la nueva fórmula

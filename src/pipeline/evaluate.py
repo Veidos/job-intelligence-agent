@@ -107,11 +107,22 @@ def load_gap_from_perfil(perfil: str) -> float | None:
     return None
 
 
+def load_location_from_perfil(perfil: str) -> str:
+    """Extrae ubicación actual del candidato desde PERFIL.md.
+
+    Formato esperado:
+    - **Ubicación actual:** Jerez de la Frontera, Spain
+    """
+    import re
+
+    m = re.search(r'\*\*Ubicación actual:\*\*\s*(.+)', perfil, re.IGNORECASE)
+    return m.group(1).strip() if m else ""
+
+
 MONTH_NAMES: dict[str, int] = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
     "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-    "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
-    "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12,
+    "ene": 1, "abr": 4, "ago": 8, "dic": 12,
 }
 
 
@@ -286,15 +297,41 @@ def compute_skill_score(
 def compute_experience_score(
     experience_min: int | None,
     candidate_years: float,
-    gap_years: float | None,
 ) -> float:
-    """F_exp = years_match * G(gap).
+    """F_exp = years_match (sin gap — el gap es contexto cualitativo HR).
 
     Si experience_min == 0 → years_match = 1.0.
     """
     req = max(int(experience_min or 0), 0)
     years_match = 1.0 if req == 0 else min(candidate_years / req, 1.0)
-    return round(years_match * get_gap_multiplier(gap_years), 4)
+    return round(years_match, 4)
+
+
+def compute_location_score(
+    work_mode: str | None,
+    candidate_city: str,
+    offer_city: str | None,
+) -> float:
+    """Location_match determinista basado en modalidad y ciudad.
+
+    | Condición | Score |
+    |---|---|
+    | Solo teletrabajo | 1.0 |
+    | Híbrido | 0.7 |
+    | Presencial, misma ciudad | 0.5 |
+    | Presencial, ciudad distinta | 0.2 |
+    | Sin datos | 0.5 (neutral) |
+    """
+    mode = (work_mode or "").strip().lower()
+    if mode == "solo teletrabajo":
+        return 1.0
+    if mode == "híbrido" or mode == "hibrido":
+        return 0.7
+    if not candidate_city or not offer_city:
+        return 0.5
+    if candidate_city.lower() in offer_city.lower() or offer_city.lower() in candidate_city.lower():
+        return 0.5
+    return 0.2
 
 
 def get_rating(score: float) -> str:
@@ -317,7 +354,7 @@ def get_pending_offers(limit: int = 10) -> list[dict]:
         SELECT o.id, o.title, o.company_name, o.city, o.work_mode,
                o.description_clean, o.skills_required,
                o.relevance_flag, o.role_normalized,
-               o.role_level_label,
+               o.role_level_label, o.experience_min,
                o.salary_min, o.salary_max, o.published_at,
                c.sector AS company_sector, c.size_range AS company_size
         FROM offers o
@@ -533,6 +570,7 @@ def _build_evaluation_params(
     M_sec: float,
     F_exp: float,
     F_fit: float,
+    location_match: float,
     final_score: float,
     recommendation: str,
     processing_ms: int,
@@ -544,7 +582,7 @@ def _build_evaluation_params(
         round(M_core * 100),
         round(F_exp * 100),
         0,
-        0,
+        round(location_match * 100),
         0,
         0,
         round(F_fit * 100),
@@ -628,6 +666,7 @@ def save_evaluation(
     M_sec: float,
     F_exp: float,
     F_fit: float,
+    location_match: float,
     final_score: float,
     recommendation: str,
     processing_ms: int,
@@ -638,7 +677,7 @@ def save_evaluation(
 
     params = _build_evaluation_params(
         offer_id, hr, final, skill_detail,
-        M_core, M_sec, F_exp, F_fit,
+        M_core, M_sec, F_exp, F_fit, location_match,
         final_score, recommendation, processing_ms,
     )
 
@@ -696,16 +735,18 @@ def run_evaluate(limit: int = 10) -> dict:
     candidate_skills_map = load_skills_from_perfil(perfil)
     employment_gap = load_gap_from_perfil(perfil)
     candidate_years = load_experience_years_from_perfil(perfil)
+    candidate_city = load_location_from_perfil(perfil)
 
     # Convertir load_skills_from_perfil (list[dict]) a dict[str, str]
     candidate_skills_map = {s["name"]: s["level"] for s in candidate_skills_map}
 
     log.info("Ofertas pendientes: %d", len(offers))
     log.info(
-        "Skills candidato: %d | Gap: %s años | Exp: %.1f años",
+        "Skills candidato: %d | Gap: %s años | Exp: %.1f años | Ciudad: %s",
         len(candidate_skills_map),
         employment_gap,
         candidate_years,
+        candidate_city,
     )
 
     stats = {"evaluated": 0, "errors": 0, "scores": [], "total": len(offers)}
@@ -736,11 +777,17 @@ def run_evaluate(limit: int = 10) -> dict:
                 role_level_label=offer.get("role_level_label"),
             )
 
-            # Paso 3: Python calcula F_exp (determinista)
+            # Paso 3: Python calcula F_exp (determinista, sin gap — es contexto HR)
             F_exp = compute_experience_score(
                 offer.get("experience_min"),
                 candidate_years,
-                employment_gap,
+            )
+
+            # Location match determinista
+            location_match = compute_location_score(
+                offer.get("work_mode"),
+                candidate_city,
+                offer.get("city"),
             )
 
             # Severidad del gap para contexto HR
@@ -793,6 +840,7 @@ def run_evaluate(limit: int = 10) -> dict:
                 M_sec,
                 F_exp,
                 F_fit,
+                location_match,
                 final_score,
                 recommendation,
                 ms,

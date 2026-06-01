@@ -12,8 +12,8 @@ S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
 |--------|----------|--------|
 | 0.45 | `M_core` | Core skills from offer vs CV |
 | 0.15 | `M_sec` | Secondary skills from offer vs CV |
-| 0.25 | `F_exp` | Years of experience + employment gap |
-| 0.15 | `F_fit` | gemma4:e4b (only LLM intervention) |
+| 0.25 | `F_exp` | Years of experience (sin gap — cualitativo en HR) |
+| 0.15 | `F_fit` | gemma4:e4b + location_match determinista |
 
 ## Skills: per-skill level
 
@@ -60,7 +60,7 @@ L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
 ## Experience
 
 ```
-F_exp = years_match · G(gap)
+F_exp = years_match
 
 years_match = 1.0                                  if experience_min = 0 or NULL
 years_match = min(candidate_years / experience_min, 1.0)  otherwise
@@ -74,15 +74,33 @@ The span approach (ADR-012) uses all employment dates to calculate total profess
 experience, avoiding overcounting overlapping employments. For the current profile:
 May 2018 → Sep 2022 = 4.3 years.
 
-### Gap multiplier
+### Gap — context qualitativo (ADR-016)
 
-| Gap (years) | G |
-|-------------|---|
-| 0 – <1 | 1.00 |
-| 1 – <2 | 0.85 |
-| 2 – <3 | 0.70 |
-| 3 – <4 | 0.55 |
-| ≥ 4 | 0.40 |
+Employment gap is NOT part of the numeric score. It is passed as context to the
+HR LLM (Step 4), which evaluates whether the gap is a real barrier for each
+specific offer. The gap multiplier table is still used for severity classification
+(low/medium/high) passed to the prompt, but does NOT multiply F_exp.
+
+This avoids a blind heuristic from capping all scores —
+gemma4 evaluates contextually whether the gap matters for each role and company.
+
+## Location
+
+```
+location_match = f(work_mode, candidate_city, offer_city)
+```
+
+Deterministic, computed in Python:
+
+| Condition | Score |
+|---|---|
+| Remote | 1.0 |
+| Hybrid | 0.7 |
+| On-site, same city | 0.5 |
+| On-site, different city | 0.2 |
+
+Covers the 60 on-site, 28 hybrid, 4 remote offers in the current dataset,
+providing real signal for W_FIT = 0.15.
 
 ## Context
 
