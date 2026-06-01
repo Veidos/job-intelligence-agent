@@ -731,6 +731,13 @@ def save_evaluation(
     conn.close()
 
 
+def _normalize_none(val):
+    """Convierte string 'null'/'None' (típico error del LLM) a Python None."""
+    if isinstance(val, str) and val.strip().lower() in ("null", "none"):
+        return None
+    return val
+
+
 def update_evaluation_final(offer_id: int, final: dict) -> None:
     conn = get_connection()
     cur = conn.cursor()
@@ -745,8 +752,8 @@ def update_evaluation_final(offer_id: int, final: dict) -> None:
             final.get("relevance_validation"),
             final.get("relevance_corrected"),
             final.get("relevance_reasoning"),
-            final.get("apply_block"),
-            final.get("apply_block_reason"),
+            _normalize_none(final.get("apply_block")),
+            _normalize_none(final.get("apply_block_reason")),
             final.get("apply_recommendation"),
             final.get("verdict", ""),
             offer_id,
@@ -885,7 +892,7 @@ def run_evaluate(limit: int = 10) -> dict:
             # Actualizar campos finales + marcar is_evaluated=1
             update_evaluation_final(offer["id"], final)
 
-            block = final.get("apply_block")
+            block = _normalize_none(final.get("apply_block"))
             log.info(
                 "✓ %s → %.2f (%s)%s",
                 offer["title"],

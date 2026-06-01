@@ -42,7 +42,6 @@ SELECT
     e.environment_compatibility,
     e.skills_hard_match,
     e.experience_match,
-    e.location_match,
     e.scoring_detail,
     c.sector AS company_sector,
     c.size_range AS company_size
@@ -119,7 +118,6 @@ def fetch_data():
             "company_sector": r["company_sector"] or "",
             "company_size": r["company_size"] or "",
             "experience_match": r["experience_match"],
-            "location_match": r["location_match"],
             "gemma_verdict": r["gemma_verdict"] or "",
             "M_core": pb.get("M_core"),
             "M_sec": pb.get("M_sec"),
@@ -392,7 +390,9 @@ tbody tr.active { background:#1c2a42; }
   <th data-col="role_normalized">Rol <span class="arrow"></span></th>
   <th data-col="relevance_flag">Relevance <span class="arrow"></span></th>
   <th data-col="published_at" class="nowrap">📅 Publicado <span class="arrow"></span></th>
+  <th data-col="salary_display">💰 Salario <span class="arrow"></span></th>
   <th data-col="location">Ubicación <span class="arrow"></span></th>
+  <th data-col="work_mode">Modalidad <span class="arrow"></span></th>
   <th data-col="llm_apply_signal">Señal <span class="arrow"></span></th>
   <th data-col="recommendation">Recomendación <span class="arrow"></span></th>
   <th data-col="apply_block">Bloqueo <span class="arrow"></span></th>
@@ -493,8 +493,13 @@ function relTag(r) {
   return `<span class="tag ${c}">${r}</span>`;
 }
 function blockTag(b) {
-  if (!b) return '';
+  if (!b || b === 'null') return '<span class="tag green">Sin bloqueo</span>';
   return `<span class="tag red">${b}</span>`;
+}
+function workModeTag(w) {
+  if (!w) return '—';
+  const icons = {'Solo teletrabajo':'🏠 Remoto','Híbrido':'🔄 Híbrido','Presencial':'🏢 Presencial'};
+  return icons[w] || w;
 }
 function pct(v) { return v != null ? (v*100).toFixed(0) : '—'; }
 function compPct(v, label) {
@@ -509,7 +514,7 @@ const SORT_ORDERS = {
   recommendation: ['No aplicar','Con expectativas bajas','Aplicar'],
   llm_apply_signal: ['no','maybe','yes'],
 };
-const NUM_COLS = new Set(['match_score','M_core','M_sec','F_exp','F_fit','skills_hard_match','experience_match']);
+const NUM_COLS = new Set(['match_score','M_core','M_sec','F_exp','F_fit','skills_hard_match','experience_match','salary_display']);
 
 /* --- Render --- */
 function render() {
@@ -581,7 +586,9 @@ function render() {
       <td>${d.role_normalized || ''}</td>
       <td>${relTag(d.relevance_flag)}</td>
       <td><span class="cell-date">${dateFmt(d.published_at)}</span></td>
+      <td>${d.salary_display || '—'}</td>
       <td>${d.location || ''}</td>
+      <td>${workModeTag(d.work_mode)}</td>
       <td>${signalTag(d.llm_apply_signal)}</td>
       <td>${recTag(d.recommendation)}</td>
       <td>${blockTag(d.apply_block)}</td>

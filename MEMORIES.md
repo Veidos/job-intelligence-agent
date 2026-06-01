@@ -349,3 +349,19 @@ Renombrada para reflejar que ahora almacena desglose de scoring v2
 ### Pre-existing E402 en migrate.py
 `load_dotenv()` antes de import desde src/db/init_db. Sin ruff config file
 para per-file-ignores. No blocker: ruff format y tests pasan.
+
+## Datos incompletos de Apify — TRAGSA / ATS custom (junio 2026)
+
+- GRUPO TRAGSA (~12 ofertas) usa un ATS custom que no expone structured
+  requirements (experience_min, education_level, etc.) a través del actor
+  `easyapi/infojobs-job-scraper` de Apify.
+- Consecuencia: `experience_min=0` y `education_level=NULL` en estas ofertas,
+  causando que F_exp=1.0 (sin requisito de experiencia aparente) y que el LLM
+  no tenga contexto estructurado de requisitos educativos.
+- **No es un bug de nuestro código.** Es una limitación del scraping vía Apify.
+  Las ofertas se incluyen igual pero con scoring basado solo en description_clean
+  (el LLM puede detectar requisitos por texto libre si aparecen en la descripción).
+- TRAGSA IDs en DB: 338, 343, 344, 345, 348, 351, 353, 354, 356, 357, 358, 359,
+  360, 361, 362 (15 ofertas). Algunas con apply_block (titulación académica) porque
+  el LLM lo detectó en la descripción; otras sin bloqueo porque el requisito solo
+  está en los metadatos que Apify no capturó.
