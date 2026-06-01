@@ -254,3 +254,32 @@
 - Ofertas donde el título es contexto de dominio (observador pesquero, ID 348) no
   se bloquean — el LLM distingue entre requisito legal y preferencia contextual
 - Comportamiento aceptado: el score bajo ya filtra las que no se bloquean
+
+## Batch 2 + full evaluate (mayo 2026)
+
+- Batch 2 (IDs 326, 334, 325, 315, 369) validado: comportamiento consistente con Batch 1
+  - Scores 30–48, el más alto Data Analyst @ BETWEEN (48, Con expectativas bajas)
+  - ID 325 bloqueado por requisito_imposible (catalán alto) — prompt generaliza bien
+  - ID 369 (process_engineer core): score 0.44, educación industrial mapeada correctamente
+- Full evaluate: 82 ofertas, 0 errores, score promedio 0.29
+- Solo 2 ofertas alcanzan "Aplicar" (≥55): ANALISTA DATOS @ RECACOR (63), Ingeniero Procesos @ Etalentum (62)
+- Coherente con perfil bootcamp + gap 3.7a — la mayoría en "No aplicar" (<35)
+
+## Bug case-sensitive en substring match (evaluate.py:259)
+
+- `compute_skill_score()` comparaba `name_lower in cand_name or cand_name in name_lower`
+- `cand_name` no se pasaba a lowercase → `"SQL" in "sql avanzado"` era False en Python
+- Skills que el LLM no detectaba como presentes perdían el substring match de respaldo
+- Fix: `.lower()` en ambos lados de la comparación
+- Impacto práctico mínimo para este perfil, pero preventivo para batches futuros
+
+## Dashboard de evaluaciones (static HTML + Chart.js)
+
+- Patrón establecido: `src/pipeline/generate_dashboard.py` → `reports/dashboard.html`
+- Sin dependencias nuevas: Chart.js vía CDN, mismo patrón que reportes HTML existentes
+- Datos embebidos como `const DATA = [...]` JSON (92 registros)
+- KPIs, doughnut chart (distribución recomendación), grouped bar (recomendación × señal)
+- Tabla sortable con M_core, M_sec, F_exp, F_fit visibles en columnas
+- Panel lateral con fórmula de scoring, tabla de skills (level_required, candidate_level, present, L)
+- Filtros: score mínimo, recomendación, señal, relevance_flag, toggle bloqueadas
+- URLs prefijadas con `https:` desde `//...` relativas

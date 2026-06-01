@@ -1,0 +1,194 @@
+[
+  {
+    "id": 313,
+    "title": "Analista Power BI Junior",
+    "company": "NTT DATA ofertas de empleo profesionales",
+    "flag": "adjacent",
+    "score": 0.2775,
+    "rating": "No aplicar",
+    "M_core": 0.0,
+    "M_sec": 0.3333,
+    "F_exp": 0.55,
+    "F_fit": 0.6,
+    "apply_block": null,
+    "apply_block_reason": null,
+    "apply_recommendation": "maybe",
+    "relevance_validation": "confirmed",
+    "relevance_corrected": "adjacent",
+    "apply_signal": "maybe",
+    "processing_ms": 113761,
+    "verdict": "El perfil es viable para un rol Junior de Analista de Datos, dada su formación en Data Science y sus conocimientos de SQL. Sin embargo, la falta de experiencia demostrable en Power BI y Excel avanzado es un riesgo significativo. Es crucial resolver la incompatibilidad de ubicación (Jerez vs. Madrid/Híbrido) y enfocar la entrevista en cómo ha aplicado el modelado de datos en proyectos académicos para mitigar la falta de experiencia práctica.",
+    "hr_concerns": [
+      "La transición de roles: Es necesario evaluar si el candidato puede pasar de un perfil de 'ejecutor técnico/supervisor' a un rol de 'analista de negocio' que requiere alta autonomía y comunicación de resultados.",
+      "Profundidad en el modelado de datos: Dado que el rol se centra en la configuración y modelado de datos en Power BI, se debe verificar si su conocimiento teórico de modelado (adquirido en bootcamp) se traduce en práctica de BI (DAX, relaciones de tablas, etc.).",
+      "Alineación de expectativas: Es crucial confirmar si el candidato está dispuesto a considerar la ubicación y modalidad de Madrid/Híbrido, o si su preferencia por Jerez es un límite innegociable."
+    ],
+    "strengths": [
+      "Alta motivación y capacidad de reconversión: El candidato ha demostrado un compromiso significativo con el campo de Data Science a través de un bootcamp y proyectos personales sólidos.",
+      "Habilidades transferibles de gestión y proceso: Su experiencia previa como Supervisor y Operador le ha dotado de habilidades de organización, control de calidad y gestión de procesos, cruciales para entender el ciclo de vida de los datos operativos.",
+      "Proyectos de impacto: Los proyectos desarrollados (ej. predicción de consumo de agua) demuestran la capacidad de aplicar el análisis de datos a problemas de negocio reales, lo cual es altamente valorado en BI."
+    ],
+    "red_flags": [
+      "Incompatibilidad geográfica y de modalidad: El candidato prefiere un entorno presencial en Jerez de la Frontera, mientras que la oferta es híbrida en Madrid. Esto es un obstáculo logístico significativo.",
+      "Falta de experiencia directa en Power BI: Aunque tiene conocimientos de SQL y Python, la oferta requiere experiencia previa con la herramienta específica (Power BI) y modelado de datos en ese entorno, lo cual no está demostrado.",
+      "Gap laboral: El periodo de 3.7 años requiere ser gestionado con cuidado durante la entrevista, enfocándose en el aprendizaje continuo y la reinserción profesional."
+    ],
+    "interview_prep": [
+      "Pedirle que describa el proceso de negocio detrás de un KPI específico (ej. 'Tasa de Desviación Operativa') y cómo lo modelaría en Power BI, en lugar de solo pedirle que use la herramienta.",
+      "Preparar preguntas sobre cómo gestionó la transición de sus roles anteriores (mecánico/supervisor) a la ciencia de datos, para evaluar su capacidad de adaptación y resiliencia.",
+      "Solicitar que prepare un ejemplo de un dashboard de principio a fin, explicando las decisiones de diseño y las fuentes de datos que utilizaría."
+    ]
+  },
+  {
+    "id": 333,
+    "title": "Actuario / Data Scientist – Pricing No Vida (Python & Machine Learning)",
+    "company": "COBSER CONSULTING",
+    "flag": "stretch",
+    "score": 0.4,
+    "rating": "Con expectativas bajas",
+    "M_core": 0.3,
+    "M_sec": 0.25,
+    "F_exp": 0.55,
+    "F_fit": 0.6,
+    "apply_block": null,
+    "apply_block_reason": null,
+    "apply_recommendation": "maybe",
+    "relevance_validation": "confirmed",
+    "relevance_corrected": "stretch",
+    "apply_signal": "maybe",
+    "processing_ms": 100293,
+    "verdict": "El candidato presenta una base técnica sólida y una alta capacidad de aprendizaje, lo cual es positivo para un rol de Data Scientist. Sin embargo, la brecha de conocimiento en el dominio Actuarial/Pricing es considerable, y la incompatibilidad de ubicación/modalidad (Jerez vs. Madrid/Híbrido) es un riesgo logístico importante. Solo debería avanzar si la empresa está dispuesta a invertir en formación de dominio y si el candidato acepta la reubicación a Madrid.",
+    "hr_concerns": [
+      "La combinación de un gap laboral significativo con un cambio de carrera tan especializado (Actuarial/Pricing) aumenta el riesgo percibido.",
+      "El candidato debe demostrar que su interés en el sector asegurador es genuino y no solo un intento de 'saltar' a un sector más estable.",
+      "La necesidad de formación intensiva en el dominio de seguros podría ralentizar su curva de aprendizaje inicial."
+    ],
+    "strengths": [
+      "Fuerte capacidad de reconversión y motivación demostrada (bootcamp y proyectos).",
+      "Experiencia en la aplicación de ML y análisis predictivo en contextos de negocio (proyectos de energía y agua).",
+      "Background de ingeniería y supervisión que aporta habilidades de resolución de problemas y gestión de procesos (transferibles al entorno de consultoría)."
+    ],
+    "red_flags": [
+      "Gap de empleo de 3.7 años, lo que requiere una explicación sólida y convincente.",
+      "Fuerte brecha de conocimiento en el dominio Actuarial y Pricing de seguros No Vida (el núcleo de la oferta).",
+      "Incompatibilidad geográfica y de modalidad (Candidato prefiere Jerez/Presencial; Oferta es Madrid/Híbrido)."
+    ],
+    "interview_prep": [
+      "Preparar ejemplos de cómo aplicó el pensamiento de ingeniería/operativo (ej. optimización de procesos) a la estructura de un modelo de datos.",
+      "Estudiar los conceptos básicos de riesgo y elasticidad en seguros No Vida para demostrar interés en el dominio, incluso si no tiene experiencia formal.",
+      "Anticipar la pregunta sobre el gap laboral y enmarcarlo como un periodo de desarrollo de habilidades técnicas y de autoaprendizaje."
+    ]
+  },
+  {
+    "id": 336,
+    "title": "Ingeniero/a Industrial",
+    "company": "Rioglass",
+    "flag": "core",
+    "score": 0.49,
+    "rating": "Con expectativas bajas",
+    "M_core": 0.5,
+    "M_sec": 0.0,
+    "F_exp": 0.55,
+    "F_fit": 0.85,
+    "apply_block": null,
+    "apply_block_reason": null,
+    "apply_recommendation": "yes",
+    "relevance_validation": "confirmed",
+    "relevance_corrected": "core",
+    "apply_signal": "yes",
+    "processing_ms": 109123,
+    "verdict": "El candidato es un perfil altamente relevante. Su formación en Ingeniería Industrial, combinada con experiencia práctica en entornos industriales y la reciente adquisición de habilidades en Data Science (Python, ML), lo posicionan idealmente para la gestión de mantenimiento predictivo y la mejora continua en el sector energético. Se recomienda avanzar con la entrevista, enfocando la conversación en cómo aplicará sus conocimientos de análisis de datos a los procesos de calidad y mantenimiento industrial.",
+    "hr_concerns": [
+      "La gestión de expectativas sobre el nivel de autonomía en la programación. Dado que el puesto requiere 'Programación en Python' y 'Data Scientist', debemos asegurar que el candidato está listo para pasar de la teoría de bootcamp a la implementación de código en sistemas de producción (OT/IT).",
+      "El gap laboral de 3.7 años, aunque manejable, debe ser enmarcado en la narrativa de la reconversión profesional, mostrando que el tiempo fue dedicado a la formación intensiva y la adquisición de habilidades de alto valor."
+    ],
+    "strengths": [
+      "El perfil es ideal para un rol de 'Ingeniero de Datos Industriales', ya que combina su sólida base en Ingeniería Industrial y experiencia en entornos de manufactura con las habilidades analíticas de Data Science (Python, ML).",
+      "La descripción del puesto (Mantenimiento Predictivo/Preventivo y Mejora Continua) es el puente perfecto entre su experiencia técnica pasada y su reconversión analítica.",
+      "Su experiencia en proyectos (Optimización de mercados, Modelado de consumo) demuestra capacidad de aplicar análisis avanzado a problemas de negocio reales, lo cual es clave para la gestión de proyectos."
+    ],
+    "red_flags": [
+      "La ubicación es un desajuste significativo (Jerez vs. Aznalcóllar). Esto debe ser abordado proactivamente.",
+      "Aunque el perfil es fuerte, la transición de un rol de 'Supervisor' o 'Técnico' a un rol de 'Programador/Analista' requiere que el candidato demuestre cómo aplicará el código en un entorno industrial real, no solo en un bootcamp."
+    ],
+    "interview_prep": [
+      "Pedirle que describa un proceso de mejora continua (Kaizen) que haya implementado en su pasado, y luego que explique cómo usaría Python o un modelo predictivo para optimizar ese proceso, forzando la conexión entre su pasado industrial y su futuro analítico.",
+      "Prepararlo para hablar sobre la diferencia entre un modelo predictivo teórico (bootcamp) y la implementación de ese modelo en un entorno físico y regulado (Rioglass)."
+    ]
+  },
+  {
+    "id": 338,
+    "title": "Licenciado/a o Graduado/a + Máster Oficial Física o Ciencias Ambientales - AEMET- IZAÑA (Santa Cruz de Tenerife) -  55909",
+    "company": "GRUPO TRAGSA",
+    "flag": "temporal",
+    "score": 0.1975,
+    "rating": "No aplicar",
+    "M_core": 0.0,
+    "M_sec": 0.0,
+    "F_exp": 0.55,
+    "F_fit": 0.4,
+    "apply_block": "requisito_imposible",
+    "apply_block_reason": "El requisito de titulación académica (Licenciado/a o Graduado/a + Máster Oficial en Física o Ciencias Ambientales) es un filtro de entrada obligatorio y no negociable para este puesto de apoyo a AEMET.",
+    "apply_recommendation": "no",
+    "relevance_validation": "confirmed",
+    "relevance_corrected": "stretch",
+    "apply_signal": "maybe",
+    "processing_ms": 87750,
+    "verdict": "A pesar de que el candidato posee habilidades técnicas de Data Science y una base de ingeniería que son valiosas para el sector ambiental, el requisito académico de Máster en Física o Ciencias Ambientales es un bloqueo crítico. La falta de esta titulación específica hace que la candidatura sea inviable para esta oferta en particular, a menos que la empresa esté dispuesta a ignorar un requisito de cualificación tan fundamental.",
+    "hr_concerns": [
+      "La principal preocupación es la brecha académica. Aunque sus habilidades de data science son sólidas, el rol requiere un conocimiento profundo y formal de la física o ciencias ambientales que no están presentes en su currículum.",
+      "El salto de un perfil técnico/operativo a un rol de consultoría científica de alta especialización, sin el título base, podría generar dudas sobre su profundidad de conocimiento en el dominio."
+    ],
+    "strengths": [
+      "Los proyectos de data science del candidato (mercado energético, consumo de agua) demuestran una experiencia práctica y altamente relevante en el manejo de datos ambientales y de recursos naturales, que es el núcleo de la oferta.",
+      "Su formación en Ingeniería Mecánica le proporciona una base de pensamiento sistémico y resolución de problemas técnicos que es valiosa en un entorno de ingeniería y consultoría como TRAGSA."
+    ],
+    "red_flags": [
+      "El requisito académico es extremadamente específico (Licenciado/a o Graduado/a + Máster Oficial en Física o Ciencias Ambientales), y el candidato no cumple con este perfil base.",
+      "Existe una incompatibilidad geográfica total: el candidato prefiere Jerez de la Frontera, y la oferta está en Santa Cruz de Tenerife, lo cual es un obstáculo logístico mayor."
+    ],
+    "interview_prep": [
+      "Debe preparar ejemplos concretos de cómo aplicó sus habilidades de análisis de datos (Python/ML) para resolver problemas que simulen desafíos ambientales o meteorológicos, conectando su experiencia de ingeniería con el dominio científico de AEMET."
+    ]
+  },
+  {
+    "id": 348,
+    "title": "Licenciados/as o Graduados/as + Máster Oficial - Observadores/as a bordo de buques pesqueros arrastreros de palangre de superficie del Mediterráneo (Nacional)- 53546",
+    "company": "GRUPO TRAGSA",
+    "flag": "core",
+    "score": 0.1825,
+    "rating": "No aplicar",
+    "M_core": 0.0,
+    "M_sec": 0.0,
+    "F_exp": 0.55,
+    "F_fit": 0.3,
+    "apply_block": null,
+    "apply_block_reason": null,
+    "apply_recommendation": "maybe",
+    "relevance_validation": "corrected",
+    "relevance_corrected": "stretch",
+    "apply_signal": "maybe",
+    "processing_ms": 102659,
+    "verdict": "El candidato tiene un perfil analítico sólido y habilidades de gestión de datos que son directamente aplicables a la recolección, procesamiento e informe de datos pesqueros. Sin embargo, el fit de contexto es extremadamente bajo debido a la incompatibilidad entre su experiencia técnica/oficina y la exigencia de vivir y trabajar en un entorno marítimo. Solo debería considerarse si el candidato demuestra una motivación excepcional y un compromiso real con el estilo de vida a bordo.",
+    "hr_concerns": [
+      "La principal preocupación es la motivación y la resiliencia del candidato ante un entorno de trabajo aislado, físico y potencialmente duro (vida a bordo de un buque).",
+      "El 'gap' laboral de 3.7 años, combinado con un cambio de sector tan radical, requiere una explicación muy convincente sobre por qué ha pivotado hacia la ciencia marina.",
+      "Aunque sus habilidades de datos son altas, el reclutador debe evaluar si el candidato está dispuesto a priorizar la experiencia de campo sobre su comodidad geográfica."
+    ],
+    "strengths": [
+      "Posee una sólida base analítica y de modelado predictivo (Data Science), lo cual es directamente aplicable a la gestión y análisis de grandes volúmenes de datos de muestreo y capturas pesqueras.",
+      "Su experiencia en la elaboración de informes técnicos y la gestión de datos (Pandas, SQL) es altamente transferible a la documentación científica requerida en el puesto.",
+      "Su perfil de ingeniero y supervisor demuestra capacidad de adaptación a entornos operativos y de alta exigencia."
+    ],
+    "red_flags": [
+      "Existe una incompatibilidad geográfica y de estilo de vida muy alta: el candidato prefiere Jerez de la Frontera (terrestre), mientras que el puesto requiere vivir y trabajar en un entorno marítimo (a bordo de buques).",
+      "El perfil carece de conocimiento de dominio específico (biología marina, taxonomía, técnicas de muestreo pesquero), lo que es un requisito fundamental para la observación científica.",
+      "El cambio de carrera es extremadamente drástico: de Data Science/Ingeniería a la observación científica en alta mar, lo que plantea dudas sobre la motivación intrínseca para el sector."
+    ],
+    "interview_prep": [
+      "Preparar al candidato para que articule su interés en el sector marino y la ciencia de la conservación, más allá de la mera oportunidad de aplicar sus habilidades de data science.",
+      "Debe demostrar que entiende la naturaleza de la vida a bordo (horarios irregulares, aislamiento, trabajo físico) y que está dispuesto a comprometerse con esa modalidad, incluso si contradice su preferencia por Jerez.",
+      "Enfocarse en cómo sus habilidades de modelado pueden optimizar la *gestión* de los datos de muestreo, no solo en la recolección de datos."
+    ]
+  }
+]

@@ -46,9 +46,13 @@ python src/onboarding/keyword_generator --manage      # Gestionar manualmente
 python src/pipeline/run.py
 
 # Pipeline individual
-python src/pipeline/fetch.py      # Fetch ofertas
-python src/pipeline/evaluate.py    # Evaluar ofertas
-python src/telegram/send.py --mode daily  # Enviar Telegram
+python src/pipeline/fetch.py                  # Fetch ofertas
+python src/pipeline/evaluate.py               # Evaluar ofertas (default 10)
+python src/pipeline/evaluate.py --limit 0     # Evaluar todas las pendientes
+python src/telegram/send.py --mode daily      # Enviar Telegram
+
+# Dashboard
+python src/pipeline/generate_dashboard.py     # Generar reports/dashboard.html
 
 # Linter (siempre antes de terminar tarea)
 ruff check src/ && ruff format src/
