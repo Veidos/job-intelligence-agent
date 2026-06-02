@@ -126,16 +126,29 @@ The primary interface is a local web dashboard. Serves at `http://localhost:8080
 python src/dashboard/server.py
 ```
 
-### Sections
+### Sections (redesign v2, ADR-015)
 
-| Section | Description |
-|---------|-------------|
-| **📊 Pipeline** | KPIs: total offers, evaluated, pending, companies, feedbacks, applications, average score |
-| **📋 Evaluaciones** | All evaluated offers in a sortable/filterable table. Click for detail modal with scoring breakdown, skills table, HR verdict, inline feedback form, and application tracker. |
-| **🏢 Empresas** | 68 enriched companies. Click to filter offers by company. |
-| **💬 Aplicaciones** | Timeline grouped by week. Track applications through states: applied → interviewing → rejected → offer → accepted. |
-| **📈 Estadísticos** | Charts: score distribution histogram, recommendation by relevance, signal by recommendation, score trend over time. |
-| **⚙️ Runs** | Pipeline run history from `search_runs`. |
+4 hierarchical sections, no admin/user mixing:
+
+| # | Section | Purpose | Key Features |
+|---|---------|---------|-------------|
+| 1 | **🔍 Ofertas** (default) | Explore opportunities | 9-column table (Score, Título, Empresa, Modalidad, Publicado, Salario, Recomendación, Señal, Bloqueo). Modal with collapsible description + scoring breakdown + skills + sticky CTA footer. |
+| 2 | **💼 Aplicaciones** | Track applications | List with inline `<select>` status. Expandable notes/contact/date panel. "Ver oferta" button. |
+| 3 | **🏢 Empresas** | Company intelligence | Table + 2 charts (top 5 by offers, sector distribution). |
+| 4 | **📊 Monitor** | System health | Narrative sections: Resumen (KPIs) → Calidad de ofertas (score histogram) → Precisión del modelo (recommendation/signal charts) → Actividad (score trend + runs). |
+
+### Design decisions (v2)
+
+| Decision | Rationale |
+|----------|-----------|
+| Ofertas as default landing | Candidate explores offers first, not pipeline stats |
+| 9 columns, no M_core/M_sec/F_exp/F_fit | Internal scoring hidden; collapsible breakdown in modal |
+| filterBlocked default = off | Show blocked only on demand; green default feels oppressive |
+| Sticky modal footer "Añadir a aplicaciones" | CTA always visible without scrolling |
+| Description collapsible in modal | Full offer context without leaving dashboard |
+| Applications as list with inline status | <20 apps makes kanban sparse; denser than timeline |
+| Monitor narrative flow | Tells a story: Resumen → Calidad → Precisión → Actividad |
+| Empresa charts client-side | Chart.js from `/api/companies`; no backend changes |
 
 ### API REST
 

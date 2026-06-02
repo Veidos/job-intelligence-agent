@@ -279,56 +279,42 @@
 - Chart.js vía CDN, datos embebidos como `const DATA = [...]` JSON (92 registros)
 - **OBSOLETO desde T-5f:** Reemplazado por Flask web dashboard
 
-## Flask Dashboard (T-5f, junio 2026)
+## Flask Dashboard — Rediseño profesional (T-5g, junio 2026)
 
-### Arquitectura
-- **Framework:** Flask (¿por qué no FastAPI? Porque es un dashboard local de 9 endpoints, no una API pública. Flask + Jinja2 es el nivel de complejidad correcto.)
-- **No usa ORM:** SQLite directo vía `sqlite3` — las consultas son simples (SELECT, INSERT, DELETE) y no hay migrations complejas.
-- **SPA con Jinja2:** El backend sirve HTML+JS en una sola página (`dashboard.html`), los datos se cargan vía fetch() desde 9 endpoints API REST.
-- **Chart.js v4 vía CDN** para gráficos (igual que el dashboard legacy).
-- **Static file serving:** Flask sirve `app.js` y `style.css` desde `src/dashboard/static/`.
+### Arquitectura (sin cambios desde T-5f)
+- **Framework:** Flask (local, sin ORM, SQLite directo vía `sqlite3`)
+- **SPA con Jinja2:** Backend sirve HTML+JS, datos vía fetch() desde 9 endpoints API REST.
+- **Chart.js v4 vía CDN** para gráficos.
+- **Static file serving:** `app.js` y `style.css` desde `src/dashboard/static/`.
 
-### 6 Secciones
-1. **📊 Pipeline** — KPIs (total, evaluadas, pendientes, empresas, feedbacks, aplicaciones, avg score) + doughnut distribución
-2. **📋 Evaluaciones** — Tabla sortable/filterable (score, M_core, M_sec, F_exp, F_fit, recomendación, señal, empresa, título). Modal detalle: breakdown scores + skills table + HR verdict + inline feedback form + application tracker
-3. **🏢 Empresas** — 68 empresas con sector, tamaño, flags, avg score. Click → filtra ofertas.
-4. **💬 Aplicaciones** — Timeline semanal (CSS puro, no FullCalendar). Estados: applied → interviewing → rejected → offer → accepted.
-5. **📈 Estadísticos** — 4 charts: score distribution (histogram), recommendation by relevance (stacked bar), signal by recommendation (clustered bar), score trend (line)
-6. **⚙️ Runs** — Pipeline runs desde `search_runs`
+### 4 Secciones (rediseño T-5g, ADR-015)
+0 sections -> 4 sections with hierarchy:
+1. **🔍 Ofertas** (default landing) — Tabla 9 columnas (Score, Título, Empresa, Modalidad, Publicado, Salario, Recomendación, Señal, Bloqueo). Sin M_core/M_sec/F_exp/F_fit. Modal con descripción colapsable + skills + breakdown scoring + sticky footer CTA.
+2. **💼 Aplicaciones** — Lista con inline `<select>` de estado (applied/interviewing/offer/rejected/archived). Expandable card con notas/contacto/next_action_date. Botón "Ver oferta" → `openModal()`.
+3. **🏢 Empresas** — Tabla + 2 charts (top 5 by offers, by sector)
+4. **📊 Monitor** — Narrative: Resumen (KPIs) → Calidad de ofertas (score histogram) → Precisión del modelo (recomendación×relevancia, señal×recomendación) → Actividad (score trend + pipeline runs)
 
-### API REST
-| Endpoint | Description |
-|----------|-------------|
-| GET `/api/stats` | Pipeline KPIs |
-| GET `/api/offers?min_score=&rec=&signal=&rel=&search=&company_id=&limit=` | Filtered offers |
-| GET `/api/offers/<id>` | Full detail + feedback + application |
-| GET `/api/companies` | Companies with stats |
-| GET/POST `/api/feedback` | List/create feedback |
-| GET/POST `/api/applications` | List/upsert applications |
-| DELETE `/api/applications/<id>` | Remove application |
-| GET `/api/runs` | Pipeline history |
+### Cambios clave del rediseño (T-5g vs T-5f)
+| Aspecto | Antes (T-5f) | Después (T-5g) |
+|---------|-------------|----------------|
+| Landing page | 📊 Pipeline (monitor) | 🔍 Ofertas (exploración) |
+| Navegación | 6 secciones planas | 4 secciones jerárquicas |
+| Columnas tabla | 12 (incluye M_core, M_sec, F_exp, F_fit) | 9 (solo usuario: score, título, empresa, modalidad, publicado, salario, recomendación, señal, bloqueo) |
+| Modal footer | Vacío (scrolleabas hasta el final para guardar) | Sticky 2-state: "Añadir a aplicaciones" / "En aplicaciones · Ver →" |
+| Descripción oferta | No disponible en modal | Collapsible `<details>` desde `description_clean` |
+| Link InfoJobs | No disponible | Botón "Ver en InfoJobs" en modal |
+| Aplicaciones | Timeline semanal CSS grid | Lista con estado inline `<select>` |
+| Empresas | Solo tabla | Tabla + 2 charts |
+| Monitor | Pipeline KPIs + Estadísticos + Runs (3 tabs separados) | Unificado en 1 sección con 4 subsections narrativas |
+| Kanban | No existía | Explícitamente descartado (bajo volumen de apps) |
+| filterBlocked | Por defecto activado (verde opresivo) | Por defecto desactivado (opt-in) |
+| Fallback modal | Solo funcionaba si oferta estaba en OFFERS array | Fallback a APP_DATA desde Aplicaciones |
 
-### Tabla applications
-- Columnas: `offer_id`, `applied_at`, `status` (applied/interviewing/rejected/offer/accepted/archived), `notes`, `contact_name`, `next_action_date`
-- Tabla separada de `user_feedback` porque representan conceptos diferentes: feedback es evaluación del usuario sobre la calidad del match; applications es estado de seguimiento de candidatura.
-- `contact_name` y `next_action_date` añadidos desde el principio por el principio "cheap now, expensive later" — es fácil ignorarlos si no se usan, difícil añadirlos después cuando ya hay datos.
-- Timeline renderiza como CSS grid semanal (no FullCalendar). MVP suficiente.
-
-### Decisiones de diseño
-- **Dashboard reemplaza Telegram como interfaz principal.** Telegram se mantiene como canal secundario (opcional). El pipeline termina en el dashboard.
-- **location_match no se muestra en el dashboard.** No filtra en la práctica (es puramente informativo y correlaciona 1:1 con work_mode).
-- **Flask elegido sobre FastAPI** por simplicidad — 9 endpoints locales no justifican Pydantic + ASGI.
-- **Aplicaciones como tabla separada** de offer_evaluations porque es estado controlado por el usuario, no por el pipeline.
-- **Sin FullCalendar** — timeline CSS semanal es más ligero y suficiente para MVP.
-- **`_normalize_none()` en evaluate.py** corrige string "null"/"None" que gemma4 a veces emite en lugar de JSON null (IDs 301, 303, 318 tenían literal "null" en apply_block antes del fix).
-
-### Temas de estilo
-- Dark theme completo (css custom, sin framework)
-- Modal de detalle con scroll, 3 columnas en desktop
-- Tabla sticky header + row hover
-- Badge verde "Sin bloqueo" para apply_block NULL
-- Timeline: tarjetas con colores por estado, agrupadas por semana
-- Responsive (se apila en móvil)
+### Bug fixes en T-5g
+- **Skills "Undefined"** — `JSON.parse` envuelto en try/catch; Ollama emite literal `"null"` a veces.
+- **Salary wrapping** — `white-space: nowrap` en celdas de salario.
+- **Modal crash desde Aplicaciones** — `openModal()` ahora busca en APP_DATA si la oferta no está en OFFERS.
+- **Sticky footer** — z-index + posicionamiento para que "Añadir a aplicaciones" sea siempre visible.
 
 ## Bug: sort crash por columnas sin flecha (junio 2026)
 
@@ -411,3 +397,11 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
   360, 361, 362 (15 ofertas). Algunas con apply_block (titulación académica) porque
   el LLM lo detectó en la descripción; otras sin bloqueo porque el requisito solo
   está en los metadatos que Apify no capturó.
+
+## Promise.all async bug en dashboard (junio 2026)
+
+- `loadStats()` y `loadOffers()` en `app.js` hacían `fetch()` pero **no devolvían la promesa**.
+- `Promise.all([loadStats(), loadOffers()])` recibía `[undefined, undefined]`, resolvía
+  instantáneamente, y el doughnut chart del Pipeline se creaba con `DATA = []` → `[0,0,0]`.
+- Fix: añadir `return` antes de cada `fetch()`. El gráfico apareció al recibir datos reales.
+- Lección: toda función async que se use en `Promise.all` debe hacer `return` de la promesa.

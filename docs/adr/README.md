@@ -45,3 +45,4 @@ decision is made.
 | 012 | evaluate.py — candidate_years span, education as skills, partial save | 2026-05-30 | active |
 | 013 | Score Rebalance v2 — F_exp sin gap, location_match determinista | 2026-06-01 | active |
 | 014 | Flask Dashboard como Interfaz Principal | 2026-06-02 | active |
+| 015 | Dashboard Professional Redesign — 4-Section Navigation | 2026-06-02 | active |

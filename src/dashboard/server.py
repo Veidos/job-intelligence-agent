@@ -403,6 +403,11 @@ def static_files(filename):
     return send_from_directory(str(STATIC_DIR), filename)
 
 
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
+
+
 @app.route("/")
 def index():
     html = (TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")

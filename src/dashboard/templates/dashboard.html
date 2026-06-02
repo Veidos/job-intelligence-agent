@@ -3,136 +3,180 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Job Intelligence Dashboard</title>
+<title>Job Intelligence</title>
 <link rel="stylesheet" href="/static/style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
 <nav id="nav">
-  <div class="nav-brand"> Job Intelligence</div>
+  <div class="nav-brand">Job Intelligence</div>
   <div class="nav-links">
-    <a href="#" class="nav-link active" data-section="pipeline">📊 Pipeline</a>
-    <a href="#" class="nav-link" data-section="evaluaciones">📋 Evaluaciones</a>
-    <a href="#" class="nav-link" data-section="empresas">🏢 Empresas</a>
-    <a href="#" class="nav-link" data-section="aplicaciones">💬 Aplicaciones</a>
-    <a href="#" class="nav-link" data-section="estadisticos">📈 Estadísticos</a>
-    <a href="#" class="nav-link" data-section="runs">⚙️ Runs</a>
+    <a href="#" class="nav-link active" data-section="ofertas">Ofertas</a>
+    <a href="#" class="nav-link" data-section="aplicaciones">Aplicaciones</a>
+    <a href="#" class="nav-link" data-section="empresas">Empresas</a>
+    <a href="#" class="nav-link" data-section="monitor">Monitor</a>
   </div>
 </nav>
 
 <main id="main">
-  <!-- ═══════════════════════ PIPELINE ═══════════════════════ -->
-  <section id="section-pipeline" class="section active">
-    <h2>📊 Pipeline</h2>
-    <div class="kpi-grid" id="kpiGrid"></div>
-    <div class="kpi-chart-row">
-      <div class="chart-box"><canvas id="chartRecDist"></canvas></div>
-    </div>
-  </section>
 
-  <!-- ═══════════════════════ EVALUACIONES ═══════════════════════ -->
-  <section id="section-evaluaciones" class="section">
-    <h2>📋 Evaluaciones <span id="offerCount" class="count-badge"></span></h2>
-    <div class="filters">
-      <input type="number" id="filterScore" placeholder="Score mín." min="0" max="100">
-      <select id="filterRec"><option value="">Todas</option>
-        <option value="Aplicar">Aplicar</option><option value="Con expectativas bajas">Bajas</option><option value="No aplicar">No</option></select>
-      <select id="filterSignal"><option value="">Cualquier señal</option>
-        <option value="yes">Yes</option><option value="maybe">Maybe</option><option value="no">No</option></select>
-      <select id="filterRel"><option value="">Cualquier relevance</option>
-        <option value="core">Core</option><option value="adjacent">Adjacent</option><option value="stretch">Stretch</option><option value="temporal">Temporal</option></select>
-      <label><input type="checkbox" id="filterBlocked" checked> Mostrar bloqueadas</label>
-      <input type="text" id="filterSearch" placeholder="Buscar título o empresa...">
+  <!-- === OFERTAS === -->
+  <section id="section-ofertas" class="section active">
+    <div class="section-header">
+      <h2>Ofertas</h2>
+      <span id="offerCount" class="count-badge"></span>
+    </div>
+    <div class="filters" id="offerFilters">
+      <div class="filter-group">
+        <label>Score m&iacute;n</label>
+        <input type="number" id="filterScore" min="0" max="100" value="0" class="filter-input-narrow">
+      </div>
+      <div class="filter-group">
+        <label>Recomendaci&oacute;n</label>
+        <select id="filterRec" class="filter-select">
+          <option value="">Todas</option>
+          <option value="Aplicar">Aplicar</option>
+          <option value="Con expectativas bajas">Bajas</option>
+          <option value="No aplicar">No</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Relevance</label>
+        <select id="filterRel" class="filter-select">
+          <option value="">Todas</option>
+          <option value="core">Core</option>
+          <option value="adjacent">Adjacent</option>
+          <option value="stretch">Stretch</option>
+          <option value="temporal">Temporal</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Modalidad</label>
+        <div class="filter-checkboxes">
+          <label class="check-label"><input type="checkbox" id="filterRemote" checked> Remoto</label>
+          <label class="check-label"><input type="checkbox" id="filterHybrid" checked> H&iacute;brido</label>
+          <label class="check-label"><input type="checkbox" id="filterOnsite" checked> Presencial</label>
+        </div>
+      </div>
+      <div class="filter-group stretch">
+        <label>Buscar</label>
+        <input type="text" id="filterSearch" placeholder="T&iacute;tulo o empresa..." class="filter-input-wide">
+      </div>
+      <div class="filter-group">
+        <label class="check-label"><input type="checkbox" id="filterBlocked"> Mostrar bloqueadas</label>
+      </div>
     </div>
     <div class="table-wrap">
-      <table id="offersTable">
-        <thead><tr>
-          <th data-col="match_score" class="sortable num">Score <span class="arrow">▼</span></th>
-          <th data-col="M_core" class="sortable num">M_core</th>
-          <th data-col="M_sec" class="sortable num">M_sec</th>
-          <th data-col="F_exp" class="sortable num">F_exp</th>
-          <th data-col="F_fit" class="sortable num">F_fit</th>
-          <th data-col="title" class="sortable">Título</th>
-          <th data-col="company_name" class="sortable">Empresa</th>
-          <th data-col="role_normalized" class="sortable">Rol</th>
-          <th data-col="relevance_flag" class="sortable">Relevance</th>
-          <th data-col="published_at" class="sortable num">📅 Publicado</th>
-          <th data-col="salary_display" class="sortable">💰 Salario</th>
-          <th data-col="location" class="sortable">Ubicación</th>
-          <th data-col="work_mode" class="sortable">Modalidad</th>
-          <th data-col="llm_apply_signal" class="sortable">Señal</th>
-          <th data-col="recommendation" class="sortable">Recomendación</th>
-          <th data-col="apply_block" class="sortable">Bloqueo</th>
-        </tr></thead>
-        <tbody id="tbody"></tbody>
+      <table>
+        <thead>
+          <tr>
+            <th data-col="match_score" class="sortable num">Score<span class="arrow"></span></th>
+            <th data-col="title" class="sortable">T&iacute;tulo<span class="arrow"></span></th>
+            <th data-col="company_name" class="sortable">Empresa<span class="arrow"></span></th>
+            <th data-col="work_mode" class="sortable">Modalidad<span class="arrow"></span></th>
+            <th data-col="published_at" class="sortable num">Publicado<span class="arrow"></span></th>
+            <th data-col="salary_display" class="sortable num">Salario<span class="arrow"></span></th>
+            <th data-col="recommendation" class="sortable">Recomendaci&oacute;n<span class="arrow"></span></th>
+            <th data-col="llm_apply_signal" class="sortable">Se&ntilde;al<span class="arrow"></span></th>
+            <th data-col="apply_block" class="sortable">Bloqueo<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="offersTbody"></tbody>
       </table>
     </div>
   </section>
 
-  <!-- ═══════════════════════ EMPRESAS ═══════════════════════ -->
+  <!-- === APLICACIONES === -->
+  <section id="section-aplicaciones" class="section">
+    <div class="section-header">
+      <h2>Aplicaciones</h2>
+      <span id="appCount" class="count-badge"></span>
+    </div>
+    <div id="appList"></div>
+  </section>
+
+  <!-- === EMPRESAS === -->
   <section id="section-empresas" class="section">
-    <h2>🏢 Empresas</h2>
+    <div class="section-header">
+      <h2>Empresas</h2>
+    </div>
+    <div class="charts-grid" style="margin-bottom:14px;">
+      <div class="chart-box"><canvas id="chartEmpTop5"></canvas></div>
+      <div class="chart-box"><canvas id="chartEmpSector"></canvas></div>
+    </div>
     <div class="table-wrap">
-      <table id="companiesTable">
-        <thead><tr>
-          <th class="sortable" data-col="name">Nombre</th>
-          <th class="sortable" data-col="sector">Sector</th>
-          <th class="sortable" data-col="size_range">Tamaño</th>
-          <th class="sortable num" data-col="offer_count">Ofertas</th>
-          <th class="sortable num" data-col="avg_score">Score medio</th>
-          <th data-col="green_flags">🟢 Flags</th>
-          <th data-col="red_flags">🔴 Flags</th>
-        </tr></thead>
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" data-col="name">Nombre<span class="arrow"></span></th>
+            <th class="sortable" data-col="sector">Sector<span class="arrow"></span></th>
+            <th class="sortable" data-col="size_range">Tama&ntilde;o<span class="arrow"></span></th>
+            <th class="sortable num" data-col="offer_count">Ofertas<span class="arrow"></span></th>
+            <th class="sortable num" data-col="avg_score">Score<span class="arrow"></span></th>
+            <th>Flags</th>
+          </tr>
+        </thead>
         <tbody id="companiesTbody"></tbody>
       </table>
     </div>
   </section>
 
-  <!-- ═══════════════════════ APLICACIONES ═══════════════════════ -->
-  <section id="section-aplicaciones" class="section">
-    <h2>💬 Aplicaciones</h2>
-    <div class="timeline" id="timeline"></div>
-  </section>
+  <!-- === MONITOR === -->
+  <section id="section-monitor" class="section">
+    <div class="section-header">
+      <h2>Monitor</h2>
+    </div>
+    <h3 class="monitor-section-title">Resumen</h3>
+    <div class="kpi-grid" id="kpiGrid"></div>
 
-  <!-- ═══════════════════════ ESTADÍSTICOS ═══════════════════════ -->
-  <section id="section-estadisticos" class="section">
-    <h2>📈 Estadísticos</h2>
+    <h3 class="monitor-section-title">Calidad de ofertas</h3>
+    <div class="monitor-charts-row">
+      <div class="chart-box chart-box-narrow"><canvas id="chartRecDist"></canvas></div>
+    </div>
     <div class="charts-grid">
       <div class="chart-box"><canvas id="chartScoreDist"></canvas></div>
+    </div>
+
+    <h3 class="monitor-section-title">Precisi&oacute;n del modelo</h3>
+    <div class="charts-grid">
       <div class="chart-box"><canvas id="chartRecByRel"></canvas></div>
       <div class="chart-box"><canvas id="chartSignalByRec"></canvas></div>
-      <div class="chart-box"><canvas id="chartScoreTrend"></canvas></div>
     </div>
+
+    <h3 class="monitor-section-title">Actividad</h3>
+    <div class="chart-box" style="margin-bottom:14px;"><canvas id="chartScoreTrend"></canvas></div>
+    <details class="runs-section">
+      <summary>Ejecuciones del pipeline</summary>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-col="ran_at">Fecha<span class="arrow"></span></th>
+              <th class="sortable num" data-col="offers_fetched">Fetch<span class="arrow"></span></th>
+              <th class="sortable num" data-col="new_offers">Nuevas<span class="arrow"></span></th>
+              <th class="sortable num" data-col="evaluated">Eval.<span class="arrow"></span></th>
+              <th data-col="errors">Errores</th>
+              <th class="sortable num" data-col="duration_ms">Duraci&oacute;n<span class="arrow"></span></th>
+              <th class="sortable" data-col="status">Estado<span class="arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="runsTbody"></tbody>
+        </table>
+      </div>
+    </details>
   </section>
 
-  <!-- ═══════════════════════ RUNS ═══════════════════════ -->
-  <section id="section-runs" class="section">
-    <h2>⚙️ Pipeline Runs</h2>
-    <div class="table-wrap">
-      <table id="runsTable">
-        <thead><tr>
-          <th class="sortable" data-col="ran_at">Fecha</th>
-          <th class="sortable num" data-col="offers_fetched">Fetch</th>
-          <th class="sortable num" data-col="new_offers">Nuevas</th>
-          <th class="sortable num" data-col="evaluated">Evaluadas</th>
-          <th data-col="errors">Errores</th>
-          <th class="sortable num" data-col="duration_ms">Duración</th>
-          <th class="sortable" data-col="status">Estado</th>
-        </tr></thead>
-        <tbody id="runsTbody"></tbody>
-      </table>
-    </div>
-  </section>
 </main>
 
-<!-- ═══════════════ MODAL DETALLE OFERTA ═══════════════ -->
-<div id="backdrop" class="backdrop" onclick="closeModal()"></div>
-<div id="modal" class="modal">
+<!-- === MODAL === -->
+<div class="backdrop" id="backdrop" onclick="closeModal()"></div>
+<div class="modal" id="modal">
   <div class="modal-header">
-    <h3 id="modalTitle"></h3>
-    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalTitle"></div>
+    <button class="modal-close" onclick="closeModal()">&times;</button>
   </div>
   <div class="modal-body" id="modalBody"></div>
+  <div class="modal-footer" id="modalFooter"></div>
 </div>
 
 <script src="/static/app.js"></script>
