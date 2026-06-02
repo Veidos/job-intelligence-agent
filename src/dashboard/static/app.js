@@ -645,6 +645,10 @@ function renderCompanyCharts(data) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: { left: 10, right: 20, top: 5, bottom: 5 },
+      },
       plugins: {
         legend: { display: false },
         title: { display: true, text: 'Top 5 empresas por ofertas', color: '#e4e4e7' },
@@ -669,7 +673,7 @@ function renderCompanyCharts(data) {
     options: {
       responsive: true,
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#e4e4e7', font: { size: 11 } } },
+        legend: { position: 'right', labels: { color: '#e4e4e7', font: { size: 11 } } },
         title: { display: true, text: 'Empresas por sector', color: '#e4e4e7' },
       },
     },
