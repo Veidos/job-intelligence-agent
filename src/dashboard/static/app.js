@@ -510,7 +510,7 @@ function renderAppCard(a) {
   return `
     <div class="app-card" data-app-id="${a.id}">
       <div class="app-card-header" onclick="toggleAppDetails(${a.id})">
-        <select onclick="event.stopPropagation()" onchange="updateAppStatus(${a.id}, this.value)">
+        <select id="appStatus${a.id}" onclick="event.stopPropagation()" onchange="updateAppStatus(${a.id}, this.value)">
           ${statusOptions}
         </select>
         <div class="app-card-info">
@@ -526,7 +526,7 @@ function renderAppCard(a) {
           <input type="text" placeholder="Contacto — Ej: Maria G. — RRHH" id="appContact${a.id}" value="${a.contact_name || ''}">
           <input type="date" id="appNextAction${a.id}" value="${a.next_action_date || ''}" title="Pr\u00f3ximo follow-up o fecha de entrevista">
           <button class="btn-ghost" onclick="openModal(${a.offer_id});event.stopPropagation()" title="Ver detalle de la oferta">Ver oferta</button>
-          <button class="btn-primary" onclick="saveAppDetails(${a.id});event.stopPropagation()" style="white-space:nowrap">Guardar</button>
+          <button class="btn-primary" onclick="saveAppDetails(${a.id}, this);event.stopPropagation()" style="white-space:nowrap">Guardar</button>
           <button class="btn-delete" onclick="deleteApplication(${a.id});event.stopPropagation()">Eliminar</button>
         </div>
       </div>
@@ -549,17 +549,45 @@ function updateAppStatus(id, status) {
   }).then(() => loadStats());
 }
 
-function saveAppDetails(id) {
+function saveAppDetails(id, btn) {
   const a = APP_DATA.find(x => x.id === id);
-  if (!a) return;
+  if (!a || !btn) return;
+
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+
+  const statusEl = $(`appStatus${id}`);
+  const status = statusEl ? statusEl.value : a.status;
   const notes = $(`appNotes${id}`).value;
   const contact = $(`appContact${id}`).value;
   const nextAction = $(`appNextAction${id}`).value;
+
   fetch('/api/applications', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ offer_id: a.offer_id, status: a.status, notes, contact_name: contact, next_action_date: nextAction }),
-  }).then(() => loadStats());
+    body: JSON.stringify({ offer_id: a.offer_id, status, notes, contact_name: contact, next_action_date: nextAction }),
+  }).then(r => {
+    if (!r.ok) throw new Error('Error del servidor');
+    return r.json();
+  }).then(() => {
+    btn.textContent = '\u2713 Guardado';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = 'Guardar';
+      btn.style.color = '';
+      btn.disabled = false;
+    }, 2000);
+    loadStats();
+  }).catch(err => {
+    console.error('Error al guardar detalles:', err);
+    btn.textContent = 'Error';
+    btn.style.color = 'var(--red)';
+    setTimeout(() => {
+      btn.textContent = 'Guardar';
+      btn.style.color = '';
+      btn.disabled = false;
+    }, 2000);
+  });
 }
 
 function deleteApplication(id) {
