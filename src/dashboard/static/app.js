@@ -260,7 +260,14 @@ function openModal(id) {
       const parsed = JSON.parse(o.scoring_detail || '{}');
       sd = (parsed && typeof parsed === 'object') ? parsed : {};
     } catch (_) { sd = {}; }
-    const skills = sd.skill_detail || [];
+    const rawSkills = sd.skill_detail || {};
+    const skillCats = Array.isArray(rawSkills)
+      ? [{label: 'Skills', items: rawSkills}]
+      : Object.entries(rawSkills).map(([cat, items]) => ({
+          label: cat === 'core' ? 'Core' : cat === 'secondary' ? 'Secundarias' : cat,
+          items: items || []
+        }));
+    const totalSkills = skillCats.reduce((sum, c) => sum + c.items.length, 0);
 
     $('modalBody').innerHTML = `
       <div class="modal-info-grid">
@@ -363,21 +370,24 @@ function openModal(id) {
       </details>
 
       <details class="modal-section">
-        <summary>Skills (${skills.length})</summary>
-        ${skills.length ? `
+        <summary>Skills (${totalSkills})</summary>
+        ${totalSkills ? `
           <table class="skills-table">
             <thead><tr>
-              <th>Skill</th><th>Requerido</th><th>Candidato</th><th>Match</th><th>L</th>
+              <th>Skill</th><th>Req.</th><th>Cand.</th><th>Match</th><th>L</th>
             </tr></thead>
             <tbody>
-              ${skills.map(s => `
-                <tr>
-                  <td>${s.name}</td>
-                  <td>${s.level_required || '\u2014'}</td>
-                  <td>${s.candidate_level || '\u2014'}</td>
-                  <td>${s.present ? '\u2705' : '\u274C'}</td>
-                  <td>${s.L != null ? s.L.toFixed(2) : '\u2014'}</td>
-                </tr>
+              ${skillCats.map(cat => `
+                <tr class="skill-cat"><td colspan="5">${cat.label}</td></tr>
+                ${cat.items.map(s => `
+                  <tr>
+                    <td>${s.skill || s.name || ''}</td>
+                    <td>${s.level_required || '\u2014'}</td>
+                    <td>${s.candidate_level || '\u2014'}</td>
+                    <td>${s.present ? '\u2705' : '\u274C'}</td>
+                    <td>${s.L != null ? s.L.toFixed(2) : '\u2014'}</td>
+                  </tr>
+                `).join('')}
               `).join('')}
             </tbody>
           </table>

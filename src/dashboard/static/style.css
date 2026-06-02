@@ -292,6 +292,10 @@ tr td:first-child { padding-left: 14px; }
   font-weight: 500; border-bottom: 1px solid var(--border);
 }
 .skills-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.skills-table tr.skill-cat td {
+  font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--text2); background: var(--bg); padding: 5px 8px 2px;
+}
 
 /* ── Feedback in modal ── */
 .feedback-form { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
