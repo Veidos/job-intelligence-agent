@@ -3,7 +3,8 @@
 > **Próximo paso:** T-6 — send.py mensaje Telegram correcto
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
 > T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
-> Dashboard: `reports/evaluations-v2.html` — generate con `src/pipeline/generate_dashboard.py`
+> T-5f ✅ — Flask dashboard con 6 secciones, API REST, feedback inline, applications timeline
+> Dashboard: `http://localhost:8080` — `python src/dashboard/server.py`
 > Ver docs/TESTING.md para el checklist completo.
 
 ## FASE 1 — Cimientos
@@ -51,6 +52,16 @@
   [x] Logging persistente (RotatingFileHandler en run.py y bot.py)
   [x] Tests para feedback (test_feedback.py)
 
+## FASE 6 — Dashboard
+  [x] Flask server.py con 6 secciones + Chart.js
+  [x] Tabla applications (status, notes, contact_name, next_action_date)
+  [x] API REST: stats, offers, companies, feedback, applications, runs
+  [x] Modal detalle con scoring breakdown + inline feedback + application tracker
+  [x] Timeline de aplicaciones agrupada por semana
+  [x] Filtros por score, recomendación, señal, tipo, texto libre
+  [x] Empresas clickeables → filtran ofertas
+  [x] T-10 Dashboard test checklist en TESTING.md
+
 ## TESTS
 [x] tests/conftest.py con fixtures DB (temp file + rollback)
 [x] Fixtures: sample_perfil_text, sample_offer (6 variants)
@@ -86,6 +97,8 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-5c — Re-evaluar 92 ofertas con nueva fórmula (avg 41.4, 10 "Aplicar")
   - [x] Scoring rebalance + location_match determinista
   - [x] Zombie columns cleanup (7 columnas eliminadas)
+- [x] T-5f — Flask dashboard con 6 secciones + API REST + applications + feedback inline
+- [x] T-10 — Dashboard test checklist en TESTING.md
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores
 - [ ] T-8 — Feedback bot funcional y natural

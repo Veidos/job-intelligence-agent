@@ -34,14 +34,6 @@ y envía un resumen diario por Telegram.
 ## COMANDOS PRINCIPALES
 
 ```bash
-# Onboarding (primera vez)
-python src/onboarding/run.py --cv assets/cv.pdf
-
-# Keywords de búsqueda (post-onboarding)
-python src/onboarding/keyword_generator              # Generar desde PERFIL.md
-python src/onboarding/keyword_generator --dry-run     # Vista previa sin guardar
-python src/onboarding/keyword_generator --manage      # Gestionar manualmente
-
 # Pipeline completo
 python src/pipeline/run.py
 
@@ -49,9 +41,13 @@ python src/pipeline/run.py
 python src/pipeline/fetch.py                  # Fetch ofertas
 python src/pipeline/evaluate.py               # Evaluar ofertas (default 10)
 python src/pipeline/evaluate.py --limit 0     # Evaluar todas las pendientes
-python src/telegram/send.py --mode daily      # Enviar Telegram
+python src/telegram/send.py --mode daily      # (Opcional) Enviar Telegram
 
-# Dashboard
+# Dashboard web (FLASK) — nueva interfaz principal
+python src/dashboard/server.py                # Servir http://localhost:8080
+python src/dashboard/server.py --port 9090    # Puerto personalizado
+
+# Dashboard legacy (obsoleto, usar Flask)
 python src/pipeline/generate_dashboard.py     # Generar reports/evaluations-v2.html
 
 # Linter (siempre antes de terminar tarea)

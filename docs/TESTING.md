@@ -210,6 +210,46 @@ pytest tests/ -v
 
 ---
 
+## 10. Dashboard (server.py)
+
+| # | Tipo | Ítem | Criterio de éxito |
+|---|---|---|---|
+| 10.1 | 🤖 | Servidor arranca en localhost:8080 | HTTP 200 en `curl http://localhost:8080` |
+| 10.2 | 🤖 | Página HTML se sirve sin errores | Contiene `<div id="app">` o similar |
+| 10.3 | 🤖 | `/api/stats` devuelve JSON válido | `total_offers` presente |
+| 10.4 | 🤖 | `/api/offers` filtra por query params | `?min_score=50` reduce resultados |
+| 10.5 | 🤖 | `/api/offers/<id>` devuelve detalle completo | Incluye `scoring_detail`, `skills_required`, `feedback`, `application` |
+| 10.6 | 🤖 | `/api/companies` devuelve datos | `offer_count` y `avg_score` calculados |
+| 10.7 | 🤖 | `/api/applications` POST crea registro | Nuevo registro visible en GET |
+| 10.8 | 🤖 | `/api/applications/<id>` DELETE funciona | Registro desaparece |
+| 10.9 | 🤖 | `/api/feedback` POST crea feedback | Aparece en `user_feedback` |
+| 10.10 | 🤖 | `/api/runs` devuelve historial | Lista con timestamps |
+| 10.11 | 👤 | Dashboard 6 secciones visibles | Scroll desde KPIs hasta Runs |
+| 10.12 | 👤 | Modal de detalle funciona | Click en oferta abre modal con datos completos |
+| 10.13 | 👤 | Filtros de tabla operan correctamente | Score min, recomendación, señal, tipo, texto libre |
+| 10.14 | 👤 | Empresas clickable filtra ofertas | Click en empresa muestra solo sus ofertas |
+| 10.15 | 👤 | Timeline muestra aplicaciones agrupadas por semana | Agrupación semanal con estados |
+
+```bash
+# Arrancar servidor (en background o segunda terminal)
+PYTHONPATH=. python src/dashboard/server.py &
+sleep 2
+
+# Verificar endpoints
+curl -s http://localhost:8080 | head -20
+curl -s http://localhost:8080/api/stats
+curl -s "http://localhost:8080/api/offers?min_score=50&limit=3"
+curl -s http://localhost:8080/api/companies | python -c "import sys,json; d=json.load(sys.stdin); print(f'{len(d)} companies')"
+curl -s http://localhost:8080/api/runs | python -c "import sys,json; d=json.load(sys.stdin); print(f'{len(d)} runs')"
+
+# Matar servidor
+kill %1
+```
+
+**Reporte:** `reports/testing/10-dashboard.html`
+
+---
+
 ## Criterio de completitud
 
 Phase 3 se considera completa cuando:

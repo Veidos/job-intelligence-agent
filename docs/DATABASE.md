@@ -14,6 +14,7 @@
 | `offers` | Ofertas crudas de InfoJobs (source_id UNIQUE) |
 | `companies` | Datos e inteligencia de empresa |
 | `offer_evaluations` | Scoring técnico + HR (ambos gemma4:e4b, temperaturas 0.1 y 0.0) |
+| `applications` | Seguimiento de candidaturas del usuario (estados, contacto, próxima acción) |
 | `cv_versions` | Historial de versiones del CV |
 | `search_runs` | Historial de ejecuciones del pipeline |
 | `market_signals` | Señales semanales del mercado |
@@ -22,6 +23,19 @@
 | `user_feedback` | Feedback diario del candidato |
 | `user_psychology` | Resumen semanal evolutivo |
 | `search_config` | Configuración geográfica y de roles |
+
+### `applications`
+
+Estado controlado por el usuario (no por el pipeline). El dashboard permite crear, actualizar y eliminar.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `offer_id` | INTEGER FK→offers | Oferta asociada |
+| `applied_at` | DATETIME | Cuándo se aplicó |
+| `status` | TEXT | applied / interviewing / rejected / offer / accepted / archived |
+| `notes` | TEXT | Notas libres |
+| `contact_name` | TEXT | Reclutador o hiring manager |
+| `next_action_date` | TEXT | Fecha ISO de próximo seguimiento |
 
 ## Reglas de Datos
 

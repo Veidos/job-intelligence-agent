@@ -273,16 +273,62 @@
 - Fix: `.lower()` en ambos lados de la comparación
 - Impacto práctico mínimo para este perfil, pero preventivo para batches futuros
 
-## Dashboard de evaluaciones (static HTML + Chart.js)
+## Dashboard de evaluaciones (legacy static HTML)
 
-- Patrón establecido: `src/pipeline/generate_dashboard.py` → `reports/evaluations-v2.html`
-- Sin dependencias nuevas: Chart.js vía CDN, mismo patrón que reportes HTML existentes
-- Datos embebidos como `const DATA = [...]` JSON (92 registros)
-- KPIs, doughnut chart (distribución recomendación), grouped bar (recomendación × señal)
-- Tabla sortable con M_core, M_sec, F_exp, F_fit visibles en columnas
-- Panel lateral con fórmula de scoring, tabla de skills (level_required, candidate_level, present, L)
-- Filtros: score mínimo, recomendación, señal, relevance_flag, toggle bloqueadas
-- URLs prefijadas con `https:` desde `//...` relativas
+- Patrón legacy: `src/pipeline/generate_dashboard.py` → `reports/evaluations-v2.html`
+- Chart.js vía CDN, datos embebidos como `const DATA = [...]` JSON (92 registros)
+- **OBSOLETO desde T-5f:** Reemplazado por Flask web dashboard
+
+## Flask Dashboard (T-5f, junio 2026)
+
+### Arquitectura
+- **Framework:** Flask (¿por qué no FastAPI? Porque es un dashboard local de 9 endpoints, no una API pública. Flask + Jinja2 es el nivel de complejidad correcto.)
+- **No usa ORM:** SQLite directo vía `sqlite3` — las consultas son simples (SELECT, INSERT, DELETE) y no hay migrations complejas.
+- **SPA con Jinja2:** El backend sirve HTML+JS en una sola página (`dashboard.html`), los datos se cargan vía fetch() desde 9 endpoints API REST.
+- **Chart.js v4 vía CDN** para gráficos (igual que el dashboard legacy).
+- **Static file serving:** Flask sirve `app.js` y `style.css` desde `src/dashboard/static/`.
+
+### 6 Secciones
+1. **📊 Pipeline** — KPIs (total, evaluadas, pendientes, empresas, feedbacks, aplicaciones, avg score) + doughnut distribución
+2. **📋 Evaluaciones** — Tabla sortable/filterable (score, M_core, M_sec, F_exp, F_fit, recomendación, señal, empresa, título). Modal detalle: breakdown scores + skills table + HR verdict + inline feedback form + application tracker
+3. **🏢 Empresas** — 68 empresas con sector, tamaño, flags, avg score. Click → filtra ofertas.
+4. **💬 Aplicaciones** — Timeline semanal (CSS puro, no FullCalendar). Estados: applied → interviewing → rejected → offer → accepted.
+5. **📈 Estadísticos** — 4 charts: score distribution (histogram), recommendation by relevance (stacked bar), signal by recommendation (clustered bar), score trend (line)
+6. **⚙️ Runs** — Pipeline runs desde `search_runs`
+
+### API REST
+| Endpoint | Description |
+|----------|-------------|
+| GET `/api/stats` | Pipeline KPIs |
+| GET `/api/offers?min_score=&rec=&signal=&rel=&search=&company_id=&limit=` | Filtered offers |
+| GET `/api/offers/<id>` | Full detail + feedback + application |
+| GET `/api/companies` | Companies with stats |
+| GET/POST `/api/feedback` | List/create feedback |
+| GET/POST `/api/applications` | List/upsert applications |
+| DELETE `/api/applications/<id>` | Remove application |
+| GET `/api/runs` | Pipeline history |
+
+### Tabla applications
+- Columnas: `offer_id`, `applied_at`, `status` (applied/interviewing/rejected/offer/accepted/archived), `notes`, `contact_name`, `next_action_date`
+- Tabla separada de `user_feedback` porque representan conceptos diferentes: feedback es evaluación del usuario sobre la calidad del match; applications es estado de seguimiento de candidatura.
+- `contact_name` y `next_action_date` añadidos desde el principio por el principio "cheap now, expensive later" — es fácil ignorarlos si no se usan, difícil añadirlos después cuando ya hay datos.
+- Timeline renderiza como CSS grid semanal (no FullCalendar). MVP suficiente.
+
+### Decisiones de diseño
+- **Dashboard reemplaza Telegram como interfaz principal.** Telegram se mantiene como canal secundario (opcional). El pipeline termina en el dashboard.
+- **location_match no se muestra en el dashboard.** No filtra en la práctica (es puramente informativo y correlaciona 1:1 con work_mode).
+- **Flask elegido sobre FastAPI** por simplicidad — 9 endpoints locales no justifican Pydantic + ASGI.
+- **Aplicaciones como tabla separada** de offer_evaluations porque es estado controlado por el usuario, no por el pipeline.
+- **Sin FullCalendar** — timeline CSS semanal es más ligero y suficiente para MVP.
+- **`_normalize_none()` en evaluate.py** corrige string "null"/"None" que gemma4 a veces emite en lugar de JSON null (IDs 301, 303, 318 tenían literal "null" en apply_block antes del fix).
+
+### Temas de estilo
+- Dark theme completo (css custom, sin framework)
+- Modal de detalle con scroll, 3 columnas en desktop
+- Tabla sticky header + row hover
+- Badge verde "Sin bloqueo" para apply_block NULL
+- Timeline: tarjetas con colores por estado, agrupadas por semana
+- Responsive (se apila en móvil)
 
 ## Bug: sort crash por columnas sin flecha (junio 2026)
 
@@ -315,13 +361,13 @@
 | Nuevas funciones | — | `load_location_from_perfil`, `compute_location_score` |
 | MONTH_NAMES | duplicados ene/es | merge sin duplicados |
 
-### Efecto esperado en scores
+### Efecto real en scores (T-5c)
 
 Con candidate_years=4.3 y candidate_city="Jerez de la Frontera, Spain":
-- F_exp sube de 0.55 a ~1.0 para 89/92 ofertas (antes capado por gap)
-- location_match ahora contribuye con 0.2–1.0 dependiendo de work_mode/ciudad
-- Scores deberían subir ~10–15 puntos de media (de 29.8 a ~40-45)
-- Pendiente: re-evaluar 92 ofertas con la nueva fórmula
+- avg score: 29.8 → 41.4 (efectivo: ~11.6 puntos de subida)
+- 10 ofertas "Aplicar" (score 57–74), 51 "Con expectativas bajas" (35–54), 31 "No aplicar" (<35)
+- F_exp ya no es el bottleneck — ahora M_core es el limitante (0.0 → máximo score 35)
+- location_match funciona: 60 presencial → 20, 28 híbrido → 70, 4 teletrabajo → 100
 
 ## Zombie columns cleanup (junio 2026)
 

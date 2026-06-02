@@ -22,7 +22,8 @@
 | **4. Classify** | `role_classifier.py` | Classifies each offer by real requirements, assigns `relevance_flag` |
 | **5. Enrich company** | `fetch_company.py` | Adds company data and reviews to each offer |
 | **6. Score** | `evaluate.py` | Deterministic formula matches each offer to your CV profile |
-| **7. Deliver** | `send.py` | Top 3 ranked offers (score ≥ 0.35) sent to Telegram every morning |
+| **7. Dashboard** | `server.py` | Web dashboard at `http://localhost:8080` — view, filter, give feedback, track applications |
+| **8. Optional** | `send.py` | Top 3 ranked offers can also be sent to Telegram |
 
 ```mermaid
 flowchart TD
@@ -31,11 +32,15 @@ flowchart TD
     C --> D[role_classifier.py]
     D --> E[fetch_company.py]
     E --> F[evaluate.py\ngemma4:e4b]
-    F --> G[send.py]
-    G --> H([📱 Telegram])
-    H --> I([💬 Feedback\n/f1 /f2 /f3])
+    F --> G[server.py\nFlask Dashboard]
+    G --> H([🌐 http://localhost:8080])
+    H --> I([💬 Feedback inline])
     I --> C
-    J([CV / PERFIL.md]) -.-> F
+    F --> J[send.py]
+    J --> K([📱 Telegram])
+    K --> L([💬 Feedback\n/f1 /f2 /f3])
+    L --> C
+    M([CV / PERFIL.md]) -.-> F
 ```
 
 ---
@@ -69,9 +74,41 @@ See full design in [`docs/adr/005-classifier-evolucion-v1-a-v6.md`](docs/adr/005
 
 ---
 
-## Feedback System
+## Dashboard (Web UI)
 
-After each daily Telegram message, optionally reply with `/f1`, `/f2`, `/f3` (per-offer feedback) or `/dia` (daily emotional context). Feedback is stored and used as psychological context for future evaluations — it never filters offers.
+The primary interface is a local web dashboard at `http://localhost:8080`:
+
+```bash
+python src/dashboard/server.py
+```
+
+**Sections:**
+- **📊 Pipeline** — KPIs: total offers, evaluated, pending, companies, feedbacks, applications
+- **📋 Evaluaciones** — Sortable table with all 92 offers, filters by score/recommendation/signal/relevance. Click any offer for a detail modal with scoring breakdown, skills table, HR verdict, feedback form, and application tracker.
+- **🏢 Empresas** — Companies with sector, size, green/red flags, average score. Click to filter offers.
+- **💬 Aplicaciones** — Timeline of your job applications (applied → interviewing → rejected → offer → accepted).
+- **📈 Estadísticos** — Charts: score distribution, recommendation by relevance, signal by recommendation, score trend.
+- **⚙️ Runs** — Pipeline run history with timestamps, errors, duration.
+
+**API REST** (used by the dashboard, also usable directly):
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/stats` | GET | Pipeline KPIs |
+| `/api/offers` | GET | Offers with evaluations (filterable) |
+| `/api/offers/<id>` | GET | Full offer detail + feedback + application |
+| `/api/companies` | GET | Companies with stats |
+| `/api/feedback` | GET/POST | List or create feedback |
+| `/api/applications` | GET/POST | List or create/update applications |
+| `/api/applications/<id>` | DELETE | Remove an application |
+| `/api/runs` | GET | Pipeline run history |
+
+## Telegram (optional)
+
+After each daily pipeline run, top 3 ranked offers (score >= 35) can be sent to Telegram with `/f1`, `/f2`, `/f3` for per-offer feedback or `/dia` for daily context. Feedback flows into the dashboard.
+
+```bash
+python src/telegram/send.py --mode daily
+```
 
 See [`docs/PIPELINE.md#4-send`](docs/PIPELINE.md#4-send).
 
@@ -92,22 +129,28 @@ The system accumulates data over time to surface strategic signals:
 | Layer | Technology |
 |-------|------------|
 | Language | Python 3.14+ |
-| Database | SQLite (WAL mode) |
-| ORM | SQLAlchemy 2.0 |
+| Database | SQLite (WAL mode, raw sqlite3) |
 | Local LLM | Ollama (`gemma4:e4b`) |
 | Job data source | Apify — InfoJobs Spain Jobs Scraper |
-| Notifications | Telegram Bot API |
+| Dashboard | Flask (local web, no ORM) |
+| Notifications | Telegram Bot API (optional) |
 | Linting | Ruff |
 | Scheduling | cron |
 
 ## Project Structure
 
 ```
-src/            → Application code (pipeline, onboarding, telegram, utils)
-docs/           → Documentation (ADR, pipeline, setup, database, rating)
-tests/          → Unit, integration, and cassette-based tests (171 total)
+src/            → Application code
+  pipeline/     → fetch, evaluate, classify, company enrichment
+  dashboard/    → Flask web server (server.py + templates + static)
+  telegram/     → Bot, send, feedback processor
+  onboarding/   → CV extraction, interview, keyword generation
+  db/           → Schema, init, migration
+  utils/        → Ollama client, helpers
+docs/           → ADR, pipeline, setup, database, rating
+tests/          → Unit, integration, cassette-based (171 total)
 data/           → SQLite database (gitignored)
-scripts/        → Report generators, cron setup, bot scripts
+reports/        → Static HTML dashboards (legacy)
 ```
 
 See [`docs/PIPELINE.md`](docs/PIPELINE.md) for the full pipeline flow and module details.
@@ -129,8 +172,9 @@ git clone https://github.com/Veidos/job-intelligence-agent.git
 cd job-intelligence-agent
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+pip install flask
 cp .env.example .env
-# Fill in: APIFY_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# Fill in: APIFY_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (Telegram optional)
 python src/db/init_db.py
 ```
 
@@ -148,6 +192,16 @@ PYTHONPATH=. python -m src.onboarding.keyword_generator    # Generate from PERFI
 PYTHONPATH=. python -m src.onboarding.keyword_generator --manage  # Manual curation
 ```
 
+### Dashboard
+
+```bash
+# Start the web dashboard (http://localhost:8080)
+PYTHONPATH=. python src/dashboard/server.py
+
+# Custom port
+PYTHONPATH=. python src/dashboard/server.py --port 9090
+```
+
 ### Run the pipeline
 
 ```bash
@@ -158,7 +212,7 @@ PYTHONPATH=. python src/pipeline/run.py
 PYTHONPATH=. python src/pipeline/fetch.py
 PYTHONPATH=. python src/pipeline/role_classifier.py
 PYTHONPATH=. python src/pipeline/evaluate.py
-PYTHONPATH=. python src/telegram/send.py --mode daily
+PYTHONPATH=. python src/telegram/send.py --mode daily  # Optional
 
 # Keyword management
 PYTHONPATH=. python -m src.onboarding.keyword_generator --manage
@@ -199,10 +253,10 @@ Send time, number of daily offers, and minimum score are configurable via Telegr
 ```
 Phase 1 — Foundation        ✅ T-0 validated
 Phase 2 — Onboarding        ✅ T-1 validated
-Phase 3 — Base pipeline     🟡 Coded (validation pending)
+Phase 3 — Base pipeline     ✅ 92 offers evaluated
 Phase 4 — Intelligence      ⬜ Pending
 Phase 5 — Automation        🟡 Coded (validation pending)
-Phase 6 — Data Analysis     ⬜ Planned
+Phase 6 — Dashboard          ✅ Flask web UI with feedback + applications
 ```
 
 See full breakdown in [`docs/TESTING.md`](docs/TESTING.md).
@@ -217,12 +271,12 @@ See full breakdown in [`docs/TESTING.md`](docs/TESTING.md).
 | `PLANS.md` | Project phases and task status (Ledger Method) |
 | `MEMORIES.md` | Accumulated system learnings |
 | `PERFIL.md` | Candidate profile — source of truth for evaluations |
-| `docs/PIPELINE.md` | Complete pipeline flow (fetch → classify → evaluate → send) |
-| `docs/SETUP.md` | Installation, commands, cron |
+| `docs/PIPELINE.md` | Complete pipeline flow (fetch → classify → evaluate → dashboard) |
+| `docs/SETUP.md` | Installation, commands, cron, dashboard |
 | `docs/DATABASE.md` | Tables, rules, schema |
 | `docs/RATING.md` | Detailed scoring system reference |
 | `docs/CONVENTIONS.md` | Code style, naming, conventions |
-| `docs/adr/` | Architecture Decision Records (10 active) |
+| `docs/adr/` | Architecture Decision Records (13 active) |
 
 > `PERFIL.md` is in `.gitignore`. Never auto-regenerate without explicit user confirmation.
 

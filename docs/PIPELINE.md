@@ -16,6 +16,7 @@ or whenever `PERFIL.md` changes significantly.
 
 ```
 run.py: fetch → classify → evaluate → send
+dashboard: server.py → http://localhost:8080 (web UI with feedback + applications)
 ```
 
 Additionally, a static dashboard can be generated for inspection:
@@ -117,9 +118,51 @@ with a single context prompt.**
 
 See full scoring in [`docs/RATING.md`](docs/RATING.md).
 
-## 4. Send (send.py)
+## 4. Dashboard (server.py)
 
-Sends the daily summary via Telegram.
+The primary interface is a local web dashboard. Serves at `http://localhost:8080`.
+
+```bash
+python src/dashboard/server.py
+```
+
+### Sections
+
+| Section | Description |
+|---------|-------------|
+| **📊 Pipeline** | KPIs: total offers, evaluated, pending, companies, feedbacks, applications, average score |
+| **📋 Evaluaciones** | All evaluated offers in a sortable/filterable table. Click for detail modal with scoring breakdown, skills table, HR verdict, inline feedback form, and application tracker. |
+| **🏢 Empresas** | 68 enriched companies. Click to filter offers by company. |
+| **💬 Aplicaciones** | Timeline grouped by week. Track applications through states: applied → interviewing → rejected → offer → accepted. |
+| **📈 Estadísticos** | Charts: score distribution histogram, recommendation by relevance, signal by recommendation, score trend over time. |
+| **⚙️ Runs** | Pipeline run history from `search_runs`. |
+
+### API REST
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Dashboard HTML |
+| `/api/stats` | GET | Pipeline KPIs |
+| `/api/offers?min_score=&rec=&signal=&rel=&search=&company_id=&limit=` | GET | Offers with filters |
+| `/api/offers/<id>` | GET | Full detail + feedback + application |
+| `/api/companies` | GET | Companies with offer count and avg score |
+| `/api/feedback` | GET | All feedback (last 200) |
+| `/api/feedback` | POST | Create feedback `{offer_id, raw_text}` |
+| `/api/applications` | GET | All applications (last 500) |
+| `/api/applications` | POST | Upsert application `{offer_id, status, notes, contact_name, next_action_date}` |
+| `/api/applications/<id>` | DELETE | Remove application |
+| `/api/runs` | GET | Pipeline run history |
+
+### Tech
+
+- **Framework:** Flask (local, no ORM)
+- **Charts:** Chart.js v4 via CDN
+- **Styles:** Custom CSS theme (dark)
+- **No external dependencies** beyond Flask and Chart.js CDN
+
+## 5. Send (send.py) — optional
+
+Sends the daily summary via Telegram. Optional — the dashboard is the primary interface.
 
 **Selection logic:**
 - Score minimum: 0.35
@@ -166,6 +209,16 @@ python src/pipeline/run.py --skip-fetch
 
 # Simulación (no envía a Telegram)
 python src/pipeline/run.py --dry-run
+```
+
+### dashboard
+
+```bash
+# Arrancar servidor web (http://localhost:8080)
+python src/dashboard/server.py
+
+# Puerto personalizado
+python src/dashboard/server.py --port 9090
 ```
 
 ### Otros
