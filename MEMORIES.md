@@ -321,6 +321,18 @@
 
 **Lección aprendida (skills):** `generate_dashboard.py` (legacy) iteraba `Object.keys(sd).forEach(cat => ...)` y funcionaba correctamente. Al reescribir app.js para T-5g, se asumió que `skill_detail` era un array (como en otros proyectos similares), pero la DB almacena un objeto categorizado. El old dashboard manejaba esto; el nuevo no — hasta ahora.
 
+### Segunda ronda de hotfixes (app.js, commits 6274985..9de94e7)
+
+| # | Bug | Síntoma | Causa raíz | Fix | Commit |
+|---|-----|---------|------------|-----|--------|
+| 5 | **Save modal sin error handling** | Botón "Añadir a aplicaciones" se quedaba en "Guardando..." o no cambiaba — usuario no sabía si se guardó | `saveApplication()` sin `.catch()` — si `fetch` o `r.json()` fallaban, el error se tragaba en silencio | Añadir `r.ok` validation + `.catch()` que restaura el botón y loggea el error a console | `6274985` |
+| 6 | **Footer vacío pre-fetch** | Botón de guardar nunca aparecía si el fetch a `/api/offers/<id>` tardaba o fallaba | `$('modalFooter').innerHTML = ''` borraba el footer; el botón se renderizaba solo en el `.then()` del fetch | Footer con botón INMEDIATO mediante `data-offer-id` antes del fetch. Fetch solo actualiza a estado "saved" vía `outerHTML`. Click handler migrado de inline `onclick` a `addEventListener` delegado en `modalFooter` | `4043451` |
+| 7 | **saveAppDetails status stale** | Cambiar estado en `<select>` (Applied→Interviewing) y luego pulsar Guardar sobrescribía el cambio con el estado viejo | `saveAppDetails()` enviaba `status: a.status` (APP_DATA cacheado) en vez del valor actual del `<select>` | Añadir `id="appStatus${a.id}"` al `<select>`. `saveAppDetails(id, btn)` lee `statusEl.value` del DOM. Feedback visual con 3 estados: Guardando... → ✓ Guardado (verde, 2s) / Error (rojo, 2s). Incluye `r.ok` validation + `.catch()` | `8340c5f` |
+| 8 | **Confirm delete confuso** | "¿Eliminar esta aplicación?" sugería que se borraba la oferta entera, no solo el seguimiento | Mensaje ambiguo — el usuario no distinguía entre `DELETE FROM applications` (tracking) y borrar la oferta | "¿Eliminar este seguimiento? La oferta no se perderá." | `be1507b` |
+| 9 | **Charts descentrados** | Top 5 horizontal: barras desplazadas a la derecha por etiquetas largas (ej. "Etalentum Selección"). Sector doughnut: leyenda apelotonada abajo | Sin `layout.padding` en el bar chart. `position: 'bottom'` comprime etiquetas si hay muchos sectores | `maintainAspectRatio: false` + `layout.padding: { left:10, right:20 }` en bar chart horizontal. Legend `position: 'right'` en doughnut de sectores | `9de94e7` |
+
+**Principio establecido (#6):** El botón de acción principal nunca debe depender de un fetch para renderizarse. El `offer_id` ya está disponible localmente en `OFFERS`. El footer con el botón se renderiza sincrónicamente; el fetch solo actualiza el estado (saved/unsaved).
+
 ## Bug: sort crash por columnas sin flecha (junio 2026)
 
 - Columnas sin `<span class="arrow"></span>` → `querySelector('.arrow')` devuelve `null`

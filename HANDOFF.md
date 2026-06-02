@@ -3,12 +3,13 @@
 **Última actualización:** 2026-06-02
 **Fase activa:** T-5g — Rediseño profesional dashboard (ADR-015)
 
-**Último completado (hotfixes post-T-5g, commit 6248c9c + 1ff3fce):**
-- Fix fechas NaN: nuevo helper `_parseDate()` que no duplica sufijo `Z` — `dateFmt()`, `fullDate()`, sort publicado, chart trend corregidos
-- Fix skills agrupados por categoría: `skill_detail` es objeto `{core: [...], secondary: [...]}`, no array plano. Normalizado con `Object.entries()` + filas `.skill-cat` con label Core/Secundarias
-- Fix modal fallback: `Object.assign(d, o)` ahora es condicional (solo cuando `!d.salary_display`) y parsea JSON strings a arrays
-- Fix runs vacío: mensaje "Sin ejecuciones registradas" en vez de tabla vacía
-- Todo en app.js + style.css, sin cambios en server.py
+**Último completado (segunda ronda hotfixes, commits 6274985..9de94e7):**
+- Fix save modal sin error handling: `.catch()` + `r.ok` validation en `saveApplication()`
+- Fix footer vacío pre-fetch: botón save renderizado ANTES del fetch con `data-offer-id` + `addEventListener` delegado en `modalFooter`
+- Fix saveAppDetails status stale: status leído del DOM (`appStatus${id}`) en vez de APP_DATA cacheado. Feedback visual: Guardando... → ✓ Guardado (verde 2s) / Error (rojo 2s)
+- Fix confirm delete: "¿Eliminar este seguimiento? La oferta no se perderá."
+- Fix charts descentrados: `layout.padding` + `maintainAspectRatio: false` en top5 horizontal. Leyenda sector doughnut `position: 'right'`
+- Todo en app.js, sin cambios en server.py
 - 171 tests passing, ruff clean
 
 **Próximo paso:** T-6 (send.py) — validar mensaje Telegram correcto
