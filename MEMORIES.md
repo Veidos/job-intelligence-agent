@@ -415,6 +415,15 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
   el LLM lo detectó en la descripción; otras sin bloqueo porque el requisito solo
   está en los metadatos que Apify no capturó.
 
+## Dashboard enrichment plan (T-5h, planificado 2026-06-03)
+
+- Sesión de brainstorming aprobada para enriquecer dashboard con:
+  1. **Branding** — "JIA (Job Intelligence Agent)" en header, favicon, tagline, título HTML
+  2. **Microcopy** — Tooltips en KPIs, texto explicativo por sección, estados vacíos con contexto, badge total evaluadas vs pendientes
+  3. **KPIs nuevos** — Skills más demandados (bar chart desde skill_detail), gap de skills del candidato, distribución salarial (histograma), ratio aplicación/entrevista (funnel), tasa de acierto del modelo, actividad semanal (bar chart)
+  4. **Interactividad** — Click en chart filtra tabla Ofertas, KPIs clickeables navegan a sección, tooltips con datos concretos
+  5. **Sin cambios en server.py** — Todo frontend: app.js + style.css + dashboard.html
+
 ## Promise.all async bug en dashboard (junio 2026)
 
 - `loadStats()` y `loadOffers()` en `app.js` hacían `fetch()` pero **no devolvían la promesa**.

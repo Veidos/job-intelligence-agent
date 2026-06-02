@@ -12,7 +12,15 @@
 - Todo en app.js, sin cambios en server.py
 - 171 tests passing, ruff clean
 
-**Próximo paso:** T-6 (send.py) — validar mensaje Telegram correcto
+**Próximo paso:** T-5h — Enriquecimiento del dashboard (branding + microcopy + KPIs + interactividad)
+
+**Objetivos de la sesión:**
+
+1. **Branding** — Nombre "JIA" (Job Intelligence Agent) en header, favicon, tagline, título HTML
+2. **Microcopy** — Tooltips en KPIs, texto explicativo por sección, estados vacíos con contexto
+3. **KPIs nuevos** — Skills más demandados (bar chart), gap de skills del candidato, distribución salarial (histograma), ratio aplicación/entrevista (funnel), tasa de acierto del modelo (matriz), actividad semanal (bar chart)
+4. **Interactividad** — Click en chart filtra tabla de Ofertas, KPIs clickeables navegan a sección
+5. **Todo frontend** — Solo app.js + style.css + dashboard.html (branding/microcopy). Sin server.py
+
 **Bloqueados:** ninguno
 **Tests:** 171 passing
-**Decisión pendiente:** Tras evaluar send.py, decidir si se pasa a T-7 (run.py ciclo completo)
