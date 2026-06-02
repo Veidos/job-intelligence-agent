@@ -32,18 +32,24 @@ function pct(v) {
   return v != null ? (v * 100).toFixed(0) : '\u2014';
 }
 
+function _parseDate(d) {
+  if (!d) return null;
+  const s = d.replace(' ', 'T');
+  return new Date(s.endsWith('Z') ? s : s + 'Z');
+}
+
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
 function dateFmt(d) {
-  if (!d) return '';
-  const dt = new Date(d + 'Z');
-  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  return `${dt.getDate()} ${months[dt.getMonth()]}`;
+  const dt = _parseDate(d);
+  if (!dt) return '';
+  return `${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
 }
 
 function fullDate(d) {
-  if (!d) return '';
-  const dt = new Date(d + 'Z');
-  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+  const dt = _parseDate(d);
+  if (!dt) return '';
+  return `${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 function workModeLabel(w) {
@@ -150,8 +156,8 @@ function getFilteredData() {
       return sortAsc ? va - vb : vb - va;
     }
     if (sortCol === 'published_at') {
-      va = va ? new Date(va + 'Z').getTime() : 0;
-      vb = vb ? new Date(vb + 'Z').getTime() : 0;
+      va = _parseDate(va)?.getTime() ?? 0;
+      vb = _parseDate(vb)?.getTime() ?? 0;
       return sortAsc ? va - vb : vb - va;
     }
     if (sortCol === 'apply_block') {
@@ -232,15 +238,20 @@ function openModal(id) {
     <div class="modal-title-text">${d.title}</div>
     <div class="modal-title-company">${d.company_name}</div>
   `;
-  $('modalBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2)">Cargando...</div>';
+    $('modalBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2)">Cargando...</div>';
   $('modalFooter').innerHTML = '';
 
   fetch(`/api/offers/${id}`).then(r => r.json()).then(data => {
     const o = data.offer;
     const app = data.application;
+    // Merge full data into d (covers fallback from APP_DATA)
+    Object.assign(d, o);
     const fb = data.feedback || [];
     let sd = {};
-    try { sd = JSON.parse(o.scoring_detail) || {}; } catch (_) {}
+    try {
+      const parsed = JSON.parse(o.scoring_detail || '{}');
+      sd = (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (_) { sd = {}; }
     const skills = sd.skill_detail || [];
 
     $('modalBody').innerHTML = `
@@ -640,6 +651,10 @@ function loadStats() {
 function loadRuns() {
   fetch('/api/runs').then(r => r.json()).then(data => {
     const tbody = $('runsTbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Sin ejecuciones registradas</td></tr>';
+      return;
+    }
     tbody.innerHTML = data.map(r => `
       <tr>
         <td><span style="color:var(--text2);font-size:12px">${r.ran_at || ''}</span></td>
@@ -748,7 +763,7 @@ function renderCharts() {
   });
 
   // Score trend
-  const sorted = [...data].filter(d => d.evaluated_at).sort((a, b) => new Date(a.evaluated_at + 'Z') - new Date(b.evaluated_at + 'Z'));
+  const sorted = [...data].filter(d => d.evaluated_at).sort((a, b) => (_parseDate(a.evaluated_at)?.getTime() ?? 0) - (_parseDate(b.evaluated_at)?.getTime() ?? 0));
   const trendLabels = sorted.map(d => dateFmt(d.evaluated_at));
   const trendData = sorted.map(d => d.match_score || 0);
   destroyChart('chartScoreTrend');
