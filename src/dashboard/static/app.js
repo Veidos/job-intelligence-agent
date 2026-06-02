@@ -445,12 +445,21 @@ function saveApplication(offerId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ offer_id: offerId, status: 'applied' }),
-  }).then(r => r.json()).then(() => {
+  }).then(r => {
+    if (!r.ok) throw new Error('Error del servidor');
+    return r.json();
+  }).then(() => {
     $('modalFooter').innerHTML = `
       <span class="footer-status">\u2713 En aplicaciones</span>
       <button class="btn-ghost" onclick="goToApplications()">Ver en Aplicaciones \u2192</button>
     `;
     loadStats();
+  }).catch(err => {
+    console.error('Error al guardar aplicaci\u00f3n:', err);
+    if (btn) {
+      btn.textContent = '\uD83D\uDCBE A\u00f1adir a aplicaciones';
+      btn.disabled = false;
+    }
   });
 }
 
