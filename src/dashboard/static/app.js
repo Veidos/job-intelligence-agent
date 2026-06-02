@@ -239,7 +239,11 @@ function openModal(id) {
     <div class="modal-title-company">${d.company_name}</div>
   `;
     $('modalBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2)">Cargando...</div>';
-  $('modalFooter').innerHTML = '';
+  // Footer con botón inmediato — no depende del fetch
+  $('modalFooter').innerHTML = `
+    <button class="btn-primary" id="btnSaveApp" data-offer-id="${id}">
+      \uD83D\uDCBE A\u00f1adir a aplicaciones
+    </button>`;
 
   fetch(`/api/offers/${id}`).then(r => r.json()).then(data => {
     const o = data.offer;
@@ -412,21 +416,18 @@ function openModal(id) {
       </div>
     `;
 
-    // Footer — 2-state button
+    // Actualizar estado del botón si ya está guardada
     if (app) {
-      $('modalFooter').innerHTML = `
-        <span class="footer-status">\u2713 En aplicaciones</span>
-        <button class="btn-ghost" onclick="goToApplications()">Ver en Aplicaciones \u2192</button>
-      `;
-    } else {
-      $('modalFooter').innerHTML = `
-        <button class="btn-primary" id="btnSaveApp" onclick="saveApplication(${id})">
-          \uD83D\uDCBE A\u00f1adir a aplicaciones
-        </button>
-      `;
+      const btn = $('btnSaveApp');
+      if (btn) {
+        btn.outerHTML = `
+          <span class="footer-status">\u2713 En aplicaciones</span>
+          <button class="btn-ghost" onclick="goToApplications()">Ver en Aplicaciones \u2192</button>`;
+      }
     }
   }).catch(() => {
     $('modalBody').innerHTML = '<p style="text-align:center;padding:20px;color:var(--red)">Error al cargar detalle</p>';
+    // El botón sigue visible — el usuario puede intentar guardar igual
   });
 }
 
@@ -814,6 +815,15 @@ function renderCharts() {
 function destroyChart(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
 }
+
+/* ── Delegated save button ── */
+document.getElementById('modalFooter').addEventListener('click', e => {
+  const btn = e.target.closest('#btnSaveApp');
+  if (btn) {
+    const offerId = parseInt(btn.dataset.offerId);
+    if (!isNaN(offerId)) saveApplication(offerId);
+  }
+});
 
 /* ── Init ── */
 Promise.all([loadStats(), loadOffers()]).then(() => {
