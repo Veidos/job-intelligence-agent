@@ -310,11 +310,16 @@
 | filterBlocked | Por defecto activado (verde opresivo) | Por defecto desactivado (opt-in) |
 | Fallback modal | Solo funcionaba si oferta estaba en OFFERS array | Fallback a APP_DATA desde Aplicaciones |
 
-### Bug fixes en T-5g
-- **Skills "Undefined"** — `JSON.parse` envuelto en try/catch; Ollama emite literal `"null"` a veces.
-- **Salary wrapping** — `white-space: nowrap` en celdas de salario.
-- **Modal crash desde Aplicaciones** — `openModal()` ahora busca en APP_DATA si la oferta no está en OFFERS.
-- **Sticky footer** — z-index + posicionamiento para que "Añadir a aplicaciones" sea siempre visible.
+### Hotfixes post-T-5g (4 bugs en app.js, commit 6248c9c)
+
+| # | Bug | Síntoma | Causa raíz | Fix |
+|---|-----|---------|------------|-----|
+| 1 | **Fechas NaN** | `Publicado: NaN undefined NaN` | `dateFmt(d + 'Z')` duplicaba `Z` cuando `published_at` ya termina en `Z` → `Invalid Date` | Helper `_parseDate()` que normaliza formato: `s.replace(' ', 'T')` + solo añade `Z` si no termina ya. Afectaba `dateFmt()`, `fullDate()`, sort por fecha, y chart score trend. |
+| 2 | **Skills "Undefined"** | `Skills (undefined)`, luego `Sin datos de skills` aunque hay 92 ofertas con skills | `skill_detail` en DB es objeto `{core: [...], secondary: [...]}`, no array. `sd.skill_detail \|\| []` devuelve el objeto (truthy) → `.length` es `undefined` | Normalizar con `Object.entries(skill_detail)` → `skillCats` (categorías con label `"Core"`/`"Secundarias"`) + `totalSkills` con `reduce`. Template itera categorías con fila `.skill-cat` + items anidados. |
+| 3 | **Modal fallback crash** | `Error al cargar detalle` al abrir oferta desde Aplicaciones | `Object.assign(d, o)` unconditional pisoteaba `d.strengths` (array JS) con `o.strengths` (JSON string SQL). Luego `d.strengths.map()` → `TypeError`. | Merge condicional: solo cuando `!d.salary_display` (fallback desde APP_DATA), y parsea `['strengths','hr_concerns','red_flags','interview_prep']` de string a array. |
+| 4 | **Runs vacío sin mensaje** | Tabla vacía con puras rayas | `/api/runs` devuelve `[]` (0 registros en DB), template no contemplaba este caso | `if (!data.length)` → mostrar `<tr><td colspan="7" class="empty">Sin ejecuciones registradas</td></tr>` |
+
+**Lección aprendida (skills):** `generate_dashboard.py` (legacy) iteraba `Object.keys(sd).forEach(cat => ...)` y funcionaba correctamente. Al reescribir app.js para T-5g, se asumió que `skill_detail` era un array (como en otros proyectos similares), pero la DB almacena un objeto categorizado. El old dashboard manejaba esto; el nuevo no — hasta ahora.
 
 ## Bug: sort crash por columnas sin flecha (junio 2026)
 
