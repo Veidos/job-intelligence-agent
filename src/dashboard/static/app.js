@@ -244,8 +244,16 @@ function openModal(id) {
   fetch(`/api/offers/${id}`).then(r => r.json()).then(data => {
     const o = data.offer;
     const app = data.application;
-    // Merge full data into d (covers fallback from APP_DATA)
-    Object.assign(d, o);
+    // If d is a fallback (from APP_DATA, no salary_display), merge raw SQL row
+    // and parse JSON string fields that come as strings from /api/offers/<id>
+    if (!d.salary_display && o) {
+      Object.assign(d, o);
+      ['strengths','hr_concerns','red_flags','interview_prep'].forEach(f => {
+        if (typeof d[f] === 'string') {
+          try { d[f] = JSON.parse(d[f]); } catch (_) { d[f] = []; }
+        }
+      });
+    }
     const fb = data.feedback || [];
     let sd = {};
     try {
