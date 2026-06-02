@@ -93,7 +93,7 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-5 — evaluate.py sin errores en tests
 - [x] T-5b — evaluate.py real contra 92 ofertas (Batch 1 + 2 + 82 restantes), 0 errores
 - [x] Dashboard de evaluaciones — `reports/evaluations-v2.html` (static HTML + Chart.js)
-- [x] Scoring rebalance: F_exp sin gap, location_match determinista (ADR-016, código listo)
+- [x] Scoring rebalance: F_exp sin gap, location_match determinista (ADR-013, código listo)
 - [x] T-5c — Re-evaluar 92 ofertas con nueva fórmula (avg 41.4, 10 "Aplicar")
   - [x] Scoring rebalance + location_match determinista
   - [x] Zombie columns cleanup (7 columnas eliminadas)

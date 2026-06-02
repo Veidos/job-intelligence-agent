@@ -43,3 +43,5 @@ decision is made.
 | 010 | Documentation and Session Handoff System | 2026-05-27 | active |
 | 011 | Employer ID desde companyLink tras cambio de API InfoJobs | 2026-05-28 | active |
 | 012 | evaluate.py — candidate_years span, education as skills, partial save | 2026-05-30 | active |
+| 013 | Score Rebalance v2 — F_exp sin gap, location_match determinista | 2026-06-01 | active |
+| 014 | Flask Dashboard como Interfaz Principal | 2026-06-02 | active |

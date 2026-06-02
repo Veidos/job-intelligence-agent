@@ -74,7 +74,7 @@ The span approach (ADR-012) uses all employment dates to calculate total profess
 experience, avoiding overcounting overlapping employments. For the current profile:
 May 2018 → Sep 2022 = 4.3 years.
 
-### Gap — context qualitativo (ADR-016)
+### Gap — context qualitativo (ADR-013)
 
 Employment gap is NOT part of the numeric score. It is passed as context to the
 HR LLM (Step 4), which evaluates whether the gap is a real barrier for each

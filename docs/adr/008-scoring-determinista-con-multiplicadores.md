@@ -30,7 +30,7 @@ The new flow per offer:
 
 1. `evaluate_technical()` — gemma4 detects only skill presence/level (temp 0.0). Returns no numbers.
 2. `compute_skill_score()` — Python computes `M_core` and `M_sec` with `level_multiplier(candidate_level, required_level) = min(cand/req, 1.0)`. If `required_level=None` → 1.0.
-3. `compute_experience_score()` — Python computes `F_exp = years_match` (gap is qualitative context for HR — see ADR-016).
+3. `compute_experience_score()` — Python computes `F_exp = years_match` (gap is qualitative context for HR — see ADR-013).
 4. `evaluate_hr()` — gemma4 returns only `context_fit` (0.0-1.0), no numeric scores.
 5. Final score: `S = 0.45*M_core + 0.15*M_sec + 0.25*F_exp + 0.15*F_fit`
 6. `evaluate_final()` — same as before, validates relevance_flag and blockers.
@@ -89,7 +89,7 @@ No narrative LLM penalty. The gap is applied as a multiplicative factor over `ye
 - **`education_match` and `location_match` are set to 0.** The previous model weighted 10 pts for education and 5 pts for location with imprecise rules. These factors are now qualitative context within `context_fit` from HR. *(Note: `education_match` was later dropped as a zombie column.)*
 - **`trajectory_coherence`, `recency_relevance`, `penalty` are set to 0.** The work gap is applied as a deterministic multiplier, not as subtraction. Trajectory coherence is qualitative context. *(Note: all three were later dropped as zombie columns. `penalty` replaced by `scoring_detail` with desglose M_core/M_sec/F_exp/F_fit.)*
 - **`location_match` is now computed deterministically** (remoto=1.0, híbrido=0.7, misma ciudad=0.5, fuera=0.2) and influences `F_fit`.
-- **Employment gap was moved to qualitative HR context** (ADR-016). No numeric penalty in F_exp.
+- **Employment gap was moved to qualitative HR context** (ADR-013). No numeric penalty in F_exp.
 - **Final score in 0.0-1.0**, not 0-100. `match_score` in DB is stored as `round(score * 100)` for compatibility with existing queries.
 - **171 tests updated and passing.**
 

@@ -339,7 +339,7 @@
   publicado como "20 May" en vez de "05-20" ISO slice
 - Renombrado `reports/dashboard.html` → `reports/evaluations-v1.html` (v1 legacy) y `reports/evaluations-v2.html` (actual)
 
-## Scoring rebalance — ADR-016 (junio 2026)
+## Scoring rebalance — ADR-013 (junio 2026)
 
 ### Problema diagnosticado
 
