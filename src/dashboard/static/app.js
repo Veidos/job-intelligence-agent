@@ -593,7 +593,7 @@ function saveAppDetails(id, btn) {
 function deleteApplication(id) {
   const a = APP_DATA.find(x => x.id === id);
   if (!a) return;
-  if (!confirm('\u00bfEliminar esta aplicaci\u00f3n?')) return;
+  if (!confirm('\u00bfEliminar este seguimiento? La oferta no se perder\u00e1.')) return;
   fetch(`/api/applications/${id}`, { method: 'DELETE' }).then(() => {
     loadApplications();
     loadStats();
