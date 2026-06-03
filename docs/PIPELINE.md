@@ -132,10 +132,10 @@ python src/dashboard/server.py
 
 | # | Section | Purpose | Key Features |
 |---|---------|---------|-------------|
-| 1 | **🔍 Ofertas** (default) | Explore opportunities | 9-column table (Score, Título, Empresa, Modalidad, Publicado, Salario, Recomendación, Señal, Bloqueo). Modal with collapsible description + scoring breakdown + skills + sticky CTA footer. |
+| 1 | **🔍 Ofertas** (default) | Explore opportunities | 10-column table (Score, Título, Empresa, Ubicación, Modalidad, Publicado, Salario, Recomendación, Señal, Bloqueo). Sparkline semanal en header. Modal with collapsible description + scoring breakdown + skills + sticky CTA footer. |
 | 2 | **💼 Aplicaciones** | Track applications | List with inline `<select>` status. Expandable notes/contact/date panel. "Ver oferta" button. |
 | 3 | **🏢 Empresas** | Company intelligence | Table + 2 charts (top 5 by offers, sector distribution). |
-| 4 | **📊 Monitor** | System health | Narrative sections: Resumen (KPIs) → Calidad de ofertas (score histogram) → Precisión del modelo (recommendation/signal charts) → Actividad (score trend + runs). |
+| 4 | **📊 Monitor** | System health | Narrative sections: Resumen (KPIs) → Calidad de ofertas (score dist, salary dist, rec dist) → Distribución geográfica y modalidad (city stacked, work mode bar) → Mercado de skills (core, secondary, gap) → Precisión del modelo (recommendation×relevance, signal×rec, model accuracy) → Actividad (weekly activity, score trend, pipeline runs) → Embudo de aplicaciones. |
 
 ### Design decisions (v2)
 

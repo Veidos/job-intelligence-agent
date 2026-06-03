@@ -432,12 +432,17 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - `if (!data.length) return` check antes de crear chart
 - Títulos descriptivos en español en los charts (no confiar solo en tooltips)
 
-- Sesión de brainstorming aprobada para enriquecer dashboard con:
-  1. **Branding** — "JIA (Job Intelligence Agent)" en header, favicon, tagline, título HTML
-  2. **Microcopy** — Tooltips en KPIs, texto explicativo por sección, estados vacíos con contexto, badge total evaluadas vs pendientes
-  3. **KPIs nuevos** — Skills más demandados (bar chart desde skill_detail), gap de skills del candidato, distribución salarial (histograma), ratio aplicación/entrevista (funnel), tasa de acierto del modelo, actividad semanal (bar chart)
-  4. **Interactividad** — Click en chart filtra tabla Ofertas, KPIs clickeables navegan a sección, tooltips con datos concretos
-  5. **Sin cambios en server.py** — Todo frontend: app.js + style.css + dashboard.html
+### Skills split por categoría (hotfix junio 2026)
+- `skill_detail` en BD es `{"core": [...], "secondary": [...]}` — **no hay campo `category`** en cada skill
+- `computeSkillsData()` original aplanaba ambos arrays con `Object.values(sd).flat()` → "Master Oficial" aparecía en core y secondary, duplicando frecuencia y contaminando el top
+- Fix: iterar `sd.core` y `sd.secondary` por separado → 3 charts: Core (técnicos), Secondary (soft/requisitos), Gap (solo core, accionable)
+- Stacked bar ciudad×modalidad: más informativo que bar simple de ciudades o doughnut de modalidad. Un chart responde "cuántas ofertas hay en Madrid y de qué tipo"
+- Todos los charts del dashboard son ahora barras (0 doughnuts). Consistencia visual > variedad de tipos
+
+### Ubicación como columna en tabla de Ofertas
+- `city` ya estaba en `/api/offers` endpoint pero no se mostraba en la tabla
+- Añadir columna Ubicación (entre Empresa y Modalidad) fue 1 th + 1 td + sort handler
+- Sin cambios en server.py — el dato ya viajaba en la respuesta
 
 ## Promise.all async bug en dashboard (junio 2026)
 
