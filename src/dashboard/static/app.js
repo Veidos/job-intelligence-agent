@@ -1050,7 +1050,7 @@ function renderWeeklySparkline(offers) {
     },
     options: {
       responsive: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { title: () => 'Ofertas publicadas' } } },
       scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
       animation: false,
     },
