@@ -173,6 +173,7 @@ tr td:first-child { padding-left: 14px; }
   border-radius: var(--radius); padding: 14px; min-height: 180px;
 }
 .chart-box-narrow { max-width: 340px; }
+.chart-box-tall { min-height: 320px; }
 .monitor-charts-row { margin-bottom: 16px; }
 .charts-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
