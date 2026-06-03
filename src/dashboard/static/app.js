@@ -826,7 +826,9 @@ function renderCharts() {
   });
 
   // Nuevos charts T-5h
-  renderSkillsCharts(data);
+  renderSkillsCore(data);
+  renderSkillsSecondary(data);
+  renderSkillsGap(data);
   renderSalaryDist(data);
   renderWeeklyActivity(data);
   renderWeeklySparkline(data);
@@ -869,64 +871,95 @@ document.getElementById('modalFooter').addEventListener('click', e => {
 
 /* ── Skills helpers ── */
 function computeSkillsData(offers) {
-  const demand = {}, gap = {};
+  const core = {}, secondary = {}, gap = {};
   offers.forEach(o => {
     const sd = o.skill_detail || {};
-    const cats = Array.isArray(sd) ? sd : Object.values(sd).flat();
-    cats.forEach(s => {
-      if (!s) return;
-      const name = s.skill || s.name;
-      if (!name) return;
-      demand[name] = (demand[name] || 0) + 1;
-      if (!s.present) gap[name] = (gap[name] || 0) + 1;
-    });
+    if (sd.core) {
+      sd.core.forEach(s => {
+        if (!s) return;
+        const name = s.skill || s.name;
+        if (!name) return;
+        core[name] = (core[name] || 0) + 1;
+        if (!s.present) gap[name] = (gap[name] || 0) + 1;
+      });
+    }
+    if (sd.secondary) {
+      sd.secondary.forEach(s => {
+        if (!s) return;
+        const name = s.skill || s.name;
+        if (!name) return;
+        secondary[name] = (secondary[name] || 0) + 1;
+      });
+    }
   });
   const sort = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  return { demand: sort(demand), gap: sort(gap) };
+  return { core: sort(core), secondary: sort(secondary), gap: sort(gap) };
 }
 
-function renderSkillsCharts(offers) {
-  const { demand, gap } = computeSkillsData(offers);
-
-  destroyChart('chartSkillsDemand');
-  if (demand.length) {
-    charts.chartSkillsDemand = new Chart($('chartSkillsDemand'), {
-      type: 'bar',
-      data: {
-        labels: demand.map(x => x[0]),
-        datasets: [{ label: 'Frecuencia', data: demand.map(x => x[1]), backgroundColor: '#6366f1' }],
+function renderSkillsCore(offers) {
+  const { core } = computeSkillsData(offers);
+  destroyChart('chartSkillsCore');
+  if (!core.length) return;
+  charts.chartSkillsCore = new Chart($('chartSkillsCore'), {
+    type: 'bar',
+    data: {
+      labels: core.map(x => x[0]),
+      datasets: [{ label: 'Frecuencia', data: core.map(x => x[1]), backgroundColor: '#6366f1' }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 16 } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Skills core m\u00e1s demandados', color: '#e4e4e7' },
       },
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        layout: { padding: { right: 16 } },
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: 'Skills m\u00e1s demandados en ofertas evaluadas', color: '#e4e4e7' },
-        },
-        scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
-      },
-    });
-  }
+      scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+    },
+  });
+}
 
+function renderSkillsSecondary(offers) {
+  const { secondary } = computeSkillsData(offers);
+  destroyChart('chartSkillsSecondary');
+  if (!secondary.length) return;
+  charts.chartSkillsSecondary = new Chart($('chartSkillsSecondary'), {
+    type: 'bar',
+    data: {
+      labels: secondary.map(x => x[0]),
+      datasets: [{ label: 'Frecuencia', data: secondary.map(x => x[1]), backgroundColor: '#a855f7' }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 16 } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Skills secundarios / soft m\u00e1s frecuentes', color: '#e4e4e7' },
+      },
+      scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+    },
+  });
+}
+
+function renderSkillsGap(offers) {
+  const { gap } = computeSkillsData(offers);
   destroyChart('chartSkillsGap');
-  if (gap.length) {
-    charts.chartSkillsGap = new Chart($('chartSkillsGap'), {
-      type: 'bar',
-      data: {
-        labels: gap.map(x => x[0]),
-        datasets: [{ label: 'Ausente en', data: gap.map(x => x[1]), backgroundColor: '#ef4444' }],
+  if (!gap.length) return;
+  charts.chartSkillsGap = new Chart($('chartSkillsGap'), {
+    type: 'bar',
+    data: {
+      labels: gap.map(x => x[0]),
+      datasets: [{ label: 'Ausente en', data: gap.map(x => x[1]), backgroundColor: '#ef4444' }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 16 } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Skills core que te faltan (gap accionable)', color: '#e4e4e7' },
       },
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        layout: { padding: { right: 16 } },
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: 'Skills requeridos que no tienes (en ofertas evaluadas)', color: '#e4e4e7' },
-        },
-        scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
-      },
-    });
-  }
+      scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+    },
+  });
 }
 
 /* ── Salary distribution ── */
