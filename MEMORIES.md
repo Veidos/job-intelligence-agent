@@ -415,7 +415,22 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
   el LLM lo detectó en la descripción; otras sin bloqueo porque el requisito solo
   está en los metadatos que Apify no capturó.
 
-## Dashboard enrichment plan (T-5h, planificado 2026-06-03)
+## Dashboard enrichment — KPIs nuevos (T-5h Fase 1, junio 2026)
+
+### Restricción rota: "Sin server.py"
+- HANDOFF.md exigía "solo frontend" pero `skill_detail` no se exponía en `/api/offers`
+- Solución: +3 campos en el dict (`salary_min`, `salary_max`, `skill_detail`) — payload adicional negligible para localhost
+- Lección: la regla "sin server.py" era válida para branding/microcopy pero no para KPIs que necesitan datos estructurados que el endpoint ya consulta pero descarta
+
+### Decisiones técnicas
+- `s.skill || s.name` — skills pueden venir con cualquiera de los dos campos, el modal builder ya lo manejaba pero la nueva función de agregación no
+- `v == null` en salary dist — `!v` filtra salary=0 (falsy en JS), necesario null check explícito
+- Sparkline con `responsive: false` + `width/height` explícito en CSS + canvas — Chart.js no infiere tamaño sin contenedor con dimensiones
+
+### Patrón para nuevos charts
+- Seguir `destroyChart()` + `charts[name] = new Chart(...)` — evitar memory leaks
+- `if (!data.length) return` check antes de crear chart
+- Títulos descriptivos en español en los charts (no confiar solo en tooltips)
 
 - Sesión de brainstorming aprobada para enriquecer dashboard con:
   1. **Branding** — "JIA (Job Intelligence Agent)" en header, favicon, tagline, título HTML

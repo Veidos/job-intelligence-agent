@@ -1,13 +1,11 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** T-5h — Enriquecimiento dashboard (branding + microcopy + KPIs + interactividad)
+> **Próximo paso:** T-5h — Branding JIA + microcopy + tooltips KPIs (Fase 2 de 4)
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
 > T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
 > T-5f ✅ — Flask dashboard con 6 secciones, API REST, feedback inline, applications timeline
 > T-5g ✅ — Rediseño profesional dashboard: 4 secciones, tabla 9 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo, filterBlocked off por defecto (ADR-015)
-> T-5h ⏳ — Branding JIA, microcopy, nuevos KPIs (skills gap, salary dist, funnel), interactividad (click chart → filtra tabla)
-> Dashboard: `http://localhost:8080` — `python src/dashboard/server.py`
-> Ver docs/TESTING.md para el checklist completo.
+> T-5h ⏳ — KPIs implementados: skills demand/gap, salary dist, weekly activity, sparkline, app funnel, model accuracy. Pendiente: branding + microcopy + interactividad
 
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo
@@ -103,7 +101,7 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-5f — Flask dashboard con 6 secciones + API REST + applications + feedback inline
 - [x] T-10 — Dashboard test checklist en TESTING.md
 - [x] T-5g — Rediseño profesional dashboard: 4 secciones, tabla 9 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo (ADR-015)
-- [ ] T-5h — Enriquecimiento dashboard: branding JIA, microcopy, nuevos KPIs, interactividad
+- [x] T-5h — KPIs implementados (skills demand/gap, salary dist, weekly activity + sparkline, app funnel, model accuracy). server.py expone skill_detail + salary_min/max
 - [ ] T-6 — send.py — mensaje Telegram correcto
 - [ ] T-7 — run.py ciclo completo real sin errores
 - [ ] T-8 — Feedback bot funcional y natural

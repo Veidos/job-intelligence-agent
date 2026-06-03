@@ -42,6 +42,12 @@ body {
 .nav-link:hover { color: var(--text); background: var(--surface2); }
 .nav-link.active { color: var(--text); border-bottom-color: var(--accent); }
 
+/* ── Ofertas meta (sparkline) ── */
+.ofertas-meta { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.sparkline-wrap { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.sparkline-wrap canvas { width: 120px; height: 28px; }
+.sparkline-label { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
 /* ── Main ── */
 #main { padding: 24px; max-width: 1440px; margin: 0 auto; }
 .section { display: none; }

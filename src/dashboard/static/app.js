@@ -18,7 +18,10 @@ document.querySelectorAll('.nav-link').forEach(el => {
     $(`section-${el.dataset.section}`).classList.add('active');
     if (el.dataset.section === 'aplicaciones') loadApplications();
     if (el.dataset.section === 'empresas') loadCompanies();
-    if (el.dataset.section === 'monitor') { loadStats(); renderCharts(); loadRuns(); }
+    if (el.dataset.section === 'monitor') {
+      loadStats(); renderCharts(); loadRuns();
+      fetch('/api/applications').then(r => r.json()).then(apps => renderAppFunnel(apps));
+    }
   });
 });
 
@@ -100,7 +103,7 @@ function loadOffers(filters) {
   return fetch(url).then(r => r.json()).then(data => {
     OFFERS = data;
     const isFullLoad = !filters || Object.keys(filters).length === 0;
-    if (isFullLoad) ALL_OFFERS = data;
+    if (isFullLoad) { ALL_OFFERS = data; renderWeeklySparkline(ALL_OFFERS); }
     recalcOffers();
   });
 }
@@ -822,6 +825,13 @@ function renderCharts() {
     },
   });
 
+  // Nuevos charts T-5h
+  renderSkillsCharts(data);
+  renderSalaryDist(data);
+  renderWeeklyActivity(data);
+  renderWeeklySparkline(data);
+  renderModelAccuracy(data);
+
   // Score trend
   const sorted = [...data].filter(d => d.evaluated_at).sort((a, b) => (_parseDate(a.evaluated_at)?.getTime() ?? 0) - (_parseDate(b.evaluated_at)?.getTime() ?? 0));
   const trendLabels = sorted.map(d => dateFmt(d.evaluated_at));
@@ -856,6 +866,224 @@ document.getElementById('modalFooter').addEventListener('click', e => {
     if (!isNaN(offerId)) saveApplication(offerId);
   }
 });
+
+/* ── Skills helpers ── */
+function computeSkillsData(offers) {
+  const demand = {}, gap = {};
+  offers.forEach(o => {
+    const sd = o.skill_detail || {};
+    const cats = Array.isArray(sd) ? sd : Object.values(sd).flat();
+    cats.forEach(s => {
+      if (!s) return;
+      const name = s.skill || s.name;
+      if (!name) return;
+      demand[name] = (demand[name] || 0) + 1;
+      if (!s.present) gap[name] = (gap[name] || 0) + 1;
+    });
+  });
+  const sort = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  return { demand: sort(demand), gap: sort(gap) };
+}
+
+function renderSkillsCharts(offers) {
+  const { demand, gap } = computeSkillsData(offers);
+
+  destroyChart('chartSkillsDemand');
+  if (demand.length) {
+    charts.chartSkillsDemand = new Chart($('chartSkillsDemand'), {
+      type: 'bar',
+      data: {
+        labels: demand.map(x => x[0]),
+        datasets: [{ label: 'Frecuencia', data: demand.map(x => x[1]), backgroundColor: '#6366f1' }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 16 } },
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Skills m\u00e1s demandados en ofertas evaluadas', color: '#e4e4e7' },
+        },
+        scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+      },
+    });
+  }
+
+  destroyChart('chartSkillsGap');
+  if (gap.length) {
+    charts.chartSkillsGap = new Chart($('chartSkillsGap'), {
+      type: 'bar',
+      data: {
+        labels: gap.map(x => x[0]),
+        datasets: [{ label: 'Ausente en', data: gap.map(x => x[1]), backgroundColor: '#ef4444' }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 16 } },
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Skills requeridos que no tienes (en ofertas evaluadas)', color: '#e4e4e7' },
+        },
+        scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+      },
+    });
+  }
+}
+
+/* ── Salary distribution ── */
+function renderSalaryDist(offers) {
+  const bins = [0, 15000, 25000, 35000, 45000, 60000];
+  const labels = ['<15k', '15\u201325k', '25\u201335k', '35\u201345k', '45\u201360k', '60k+'];
+  const counts = new Array(labels.length).fill(0);
+  offers.forEach(o => {
+    const v = o.salary_min != null ? o.salary_min : o.salary_max;
+    if (v == null) return;
+    let i = bins.findIndex((b, idx) => idx === bins.length - 1 || v < bins[idx + 1]);
+    if (i === -1) i = labels.length - 1;
+    counts[i]++;
+  });
+
+  destroyChart('chartSalaryDist');
+  charts.chartSalaryDist = new Chart($('chartSalaryDist'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Ofertas', data: counts, backgroundColor: '#22c55e' }] },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Distribuci\u00f3n salarial (salary_min)', color: '#e4e4e7' },
+      },
+      scales: { x: { ticks: { color: '#8a8a95' } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
+    },
+  });
+}
+
+/* ── Weekly helper ── */
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return `${d.getFullYear()}-W${String(1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7)).padStart(2, '0')}`;
+}
+
+function renderWeeklyActivity(offers) {
+  const weeks = {};
+  offers.forEach(o => {
+    const dt = _parseDate(o.published_at);
+    if (!dt) return;
+    const w = getISOWeek(dt);
+    weeks[w] = (weeks[w] || 0) + 1;
+  });
+  const sorted = Object.entries(weeks).sort((a, b) => a[0].localeCompare(b[0]));
+
+  destroyChart('chartWeeklyActivity');
+  if (!sorted.length) return;
+  charts.chartWeeklyActivity = new Chart($('chartWeeklyActivity'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(x => x[0]),
+      datasets: [{ label: 'Ofertas publicadas', data: sorted.map(x => x[1]), backgroundColor: '#3b82f6' }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Ofertas publicadas por semana', color: '#e4e4e7' },
+      },
+      scales: { x: { ticks: { color: '#8a8a95', maxRotation: 45 } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
+    },
+  });
+}
+
+/* ── Sparkline en header de Ofertas ── */
+function renderWeeklySparkline(offers) {
+  const weeks = {};
+  offers.forEach(o => {
+    const dt = _parseDate(o.published_at);
+    if (!dt) return;
+    const w = getISOWeek(dt);
+    weeks[w] = (weeks[w] || 0) + 1;
+  });
+  const sorted = Object.entries(weeks).sort((a, b) => a[0].localeCompare(b[0])).slice(-8);
+  const canvas = $('chartWeeklySparkline');
+  if (!canvas || !sorted.length) return;
+
+  destroyChart('chartWeeklySparkline');
+  charts.chartWeeklySparkline = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(x => x[0].replace(/^\d{4}-W/, '')),
+      datasets: [{ data: sorted.map(x => x[1]), backgroundColor: 'rgba(99,102,241,0.5)', borderRadius: 2 }],
+    },
+    options: {
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+      animation: false,
+    },
+  });
+}
+
+/* ── App funnel ── */
+function renderAppFunnel(apps) {
+  const STATUS_LABELS = { applied: 'Applied', interviewing: 'Interviewing', offer: 'Offer', rejected: 'Rejected', archived: 'Archived' };
+  const counts = {};
+  apps.forEach(a => { counts[a.status] = (counts[a.status] || 0) + 1; });
+  const order = ['applied', 'interviewing', 'offer', 'rejected', 'archived'];
+  const labels = order.filter(s => counts[s]).map(s => STATUS_LABELS[s]);
+  const data = order.filter(s => counts[s]).map(s => counts[s]);
+  const colors = { applied: '#6366f1', interviewing: '#3b82f6', offer: '#22c55e', rejected: '#ef4444', archived: '#8a8a95' };
+  const bgColors = order.filter(s => counts[s]).map(s => colors[s] || '#8a8a95');
+
+  destroyChart('chartAppFunnel');
+  if (!data.length) return;
+  charts.chartAppFunnel = new Chart($('chartAppFunnel'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Aplicaciones', data, backgroundColor: bgColors }] },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Estado de aplicaciones', color: '#e4e4e7' },
+      },
+      scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95' } } },
+    },
+  });
+}
+
+/* ── Model accuracy grouped bar ── */
+function renderModelAccuracy(offers) {
+  const recs = ['Aplicar', 'Con expectativas bajas', 'No aplicar'];
+  const signals = ['yes', 'maybe', 'no'];
+  const matrix = {};
+  recs.forEach(r => { matrix[r] = { yes: 0, maybe: 0, no: 0 }; });
+  offers.forEach(o => {
+    const r = o.recommendation;
+    const s = o.llm_apply_signal || 'no';
+    if (matrix[r] && signals.includes(s)) matrix[r][s]++;
+  });
+
+  destroyChart('chartModelAccuracy');
+  charts.chartModelAccuracy = new Chart($('chartModelAccuracy'), {
+    type: 'bar',
+    data: {
+      labels: recs,
+      datasets: [
+        { label: 'Signal: yes',   data: recs.map(r => matrix[r].yes),   backgroundColor: '#22c55e' },
+        { label: 'Signal: maybe', data: recs.map(r => matrix[r].maybe), backgroundColor: '#eab308' },
+        { label: 'Signal: no',    data: recs.map(r => matrix[r].no),    backgroundColor: '#ef4444' },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'Recomendaci\u00f3n \u00d7 Se\u00f1al LLM (coherencia modelo)', color: '#e4e4e7' },
+        legend: { labels: { color: '#e4e4e7' } },
+      },
+      scales: { x: { ticks: { color: '#8a8a95' } }, y: { beginAtZero: true, ticks: { color: '#8a8a95' } } },
+    },
+  });
+}
 
 /* ── Init ── */
 Promise.all([loadStats(), loadOffers()]).then(() => {
