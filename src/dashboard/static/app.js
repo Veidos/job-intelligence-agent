@@ -738,17 +738,21 @@ function renderCharts() {
   if (!ALL_OFFERS.length) return;
   const data = ALL_OFFERS;
 
-  // Doughnut: recommendation distribution
+  // Bar: recommendation distribution
   const recCounts = { 'Aplicar': 0, 'Con expectativas bajas': 0, 'No aplicar': 0 };
   data.forEach(d => { if (recCounts[d.recommendation] != null) recCounts[d.recommendation]++; });
   destroyChart('chartRecDist');
   charts.chartRecDist = new Chart($('chartRecDist'), {
-    type: 'doughnut',
+    type: 'bar',
     data: {
       labels: Object.keys(recCounts),
-      datasets: [{ data: Object.values(recCounts), backgroundColor: ['#22c55e', '#eab308', '#ef4444'] }],
+      datasets: [{ label: 'Ofertas', data: Object.values(recCounts), backgroundColor: ['#22c55e', '#eab308', '#ef4444'] }],
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#e4e4e7' } } } },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, title: { display: true, text: 'Distribuci\u00f3n por recomendaci\u00f3n', color: '#e4e4e7' } },
+      scales: { x: { ticks: { color: '#8a8a95' } }, y: { beginAtZero: true, ticks: { color: '#8a8a95' } } },
+    },
   });
 
   // Histogram: score distribution
@@ -834,7 +838,7 @@ function renderCharts() {
   renderWeeklyActivity(data);
   renderWeeklySparkline(data);
   renderModelAccuracy(data);
-  renderCityChart(data);
+  renderCityModeChart(data);
   renderWorkModeChart(data);
 
   // Score trend
@@ -1121,31 +1125,43 @@ function renderModelAccuracy(offers) {
   });
 }
 
-/* ── City distribution chart ── */
-function renderCityChart(offers) {
-  const freq = {};
+/* ── City × work mode stacked chart ── */
+function renderCityModeChart(offers) {
+  const cityMode = {};
   offers.forEach(o => {
     const c = o.city || 'Sin ubicaci\u00f3n';
-    freq[c] = (freq[c] || 0) + 1;
+    if (!cityMode[c]) cityMode[c] = { 'Presencial': 0, 'H\u00edbrido': 0, 'Remoto': 0 };
+    const m = workModeLabel(o.work_mode);
+    if (cityMode[c][m] != null) cityMode[c][m]++;
   });
-  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const sorted = Object.entries(cityMode)
+    .map(([city, modes]) => ({ city, total: Object.values(modes).reduce((a, b) => a + b, 0), modes }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
 
-  destroyChart('chartCityDist');
+  destroyChart('chartCityMode');
   if (!sorted.length) return;
-  charts.chartCityDist = new Chart($('chartCityDist'), {
+  charts.chartCityMode = new Chart($('chartCityMode'), {
     type: 'bar',
     data: {
-      labels: sorted.map(x => x[0]),
-      datasets: [{ label: 'Ofertas', data: sorted.map(x => x[1]), backgroundColor: '#3b82f6' }],
+      labels: sorted.map(x => x.city),
+      datasets: [
+        { label: 'Presencial', data: sorted.map(x => x.modes['Presencial']), backgroundColor: '#ef4444' },
+        { label: 'H\u00edbrido', data: sorted.map(x => x.modes['H\u00edbrido']), backgroundColor: '#eab308' },
+        { label: 'Remoto', data: sorted.map(x => x.modes['Remoto']), backgroundColor: '#22c55e' },
+      ],
     },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       layout: { padding: { right: 16 } },
       plugins: {
-        legend: { display: false },
-        title: { display: true, text: 'Ofertas por localidad', color: '#e4e4e7' },
+        title: { display: true, text: 'Ofertas por localidad y modalidad', color: '#e4e4e7' },
+        legend: { position: 'bottom', labels: { color: '#e4e4e7', font: { size: 11 } } },
       },
-      scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#8a8a95' }, beginAtZero: true },
+        y: { stacked: true, ticks: { color: '#8a8a95', font: { size: 11 } } },
+      },
     },
   });
 }
@@ -1163,17 +1179,18 @@ function renderWorkModeChart(offers) {
   destroyChart('chartWorkMode');
   if (!labels.length) return;
   charts.chartWorkMode = new Chart($('chartWorkMode'), {
-    type: 'doughnut',
+    type: 'bar',
     data: {
       labels,
-      datasets: [{ data: labels.map(l => freq[l]), backgroundColor: labels.map(l => colors[l] || '#6366f1') }],
+      datasets: [{ label: 'Ofertas', data: labels.map(l => freq[l]), backgroundColor: labels.map(l => colors[l] || '#6366f1') }],
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#e4e4e7' } },
+        legend: { display: false },
         title: { display: true, text: 'Modalidad de trabajo', color: '#e4e4e7' },
       },
+      scales: { x: { ticks: { color: '#8a8a95' } }, y: { beginAtZero: true, ticks: { color: '#8a8a95' } } },
     },
   });
 }
