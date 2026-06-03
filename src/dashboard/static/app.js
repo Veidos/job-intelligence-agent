@@ -892,7 +892,7 @@ function computeSkillsData(offers) {
       });
     }
   });
-  const sort = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const sort = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 10);
   return { core: sort(core), secondary: sort(secondary), gap: sort(gap) };
 }
 
