@@ -79,6 +79,7 @@
             <th data-col="match_score" class="sortable num">Score<span class="arrow"></span></th>
             <th data-col="title" class="sortable">T&iacute;tulo<span class="arrow"></span></th>
             <th data-col="company_name" class="sortable">Empresa<span class="arrow"></span></th>
+            <th data-col="city" class="sortable">Ubicaci&oacute;n<span class="arrow"></span></th>
             <th data-col="work_mode" class="sortable">Modalidad<span class="arrow"></span></th>
             <th data-col="published_at" class="sortable num">Publicado<span class="arrow"></span></th>
             <th data-col="salary_display" class="sortable num">Salario<span class="arrow"></span></th>
@@ -143,6 +144,12 @@
     <div class="charts-grid">
       <div class="chart-box"><canvas id="chartScoreDist"></canvas></div>
       <div class="chart-box"><canvas id="chartSalaryDist"></canvas></div>
+    </div>
+
+    <h3 class="monitor-section-title">Distribuci&oacute;n geogr&aacute;fica y modalidad</h3>
+    <div class="charts-grid">
+      <div class="chart-box chart-box-tall"><canvas id="chartCityDist"></canvas></div>
+      <div class="chart-box"><canvas id="chartWorkMode"></canvas></div>
     </div>
 
     <h3 class="monitor-section-title">Mercado de skills</h3>

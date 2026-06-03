@@ -141,7 +141,7 @@ function getFilteredData() {
 
   filtered.sort((a, b) => {
     let va = a[sortCol], vb = b[sortCol];
-    if (sortCol === 'title' || sortCol === 'company_name' || sortCol === 'work_mode' || sortCol === 'salary_display') {
+    if (sortCol === 'title' || sortCol === 'company_name' || sortCol === 'city' || sortCol === 'work_mode' || sortCol === 'salary_display') {
       va = (va || '').toLowerCase();
       vb = (vb || '').toLowerCase();
       return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
@@ -190,7 +190,7 @@ function sortTable(col) {
 function renderTable(data) {
   const tbody = $('offersTbody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty">No se encontraron ofertas con los filtros actuales</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">No se encontraron ofertas con los filtros actuales</td></tr>';
     return;
   }
   tbody.innerHTML = data.map(d => {
@@ -199,6 +199,7 @@ function renderTable(data) {
       <td class="num"><span class="cell-score ${cls(s)}">${s}</span></td>
       <td>${d.title || ''}</td>
       <td>${d.company_name || ''}</td>
+      <td>${d.city || '\u2014'}</td>
       <td>${workModeLabel(d.work_mode)}</td>
       <td class="num nowrap">${dateFmt(d.published_at)}</td>
       <td class="num nowrap">${d.salary_display || '\u2014'}</td>
@@ -833,6 +834,8 @@ function renderCharts() {
   renderWeeklyActivity(data);
   renderWeeklySparkline(data);
   renderModelAccuracy(data);
+  renderCityChart(data);
+  renderWorkModeChart(data);
 
   // Score trend
   const sorted = [...data].filter(d => d.evaluated_at).sort((a, b) => (_parseDate(a.evaluated_at)?.getTime() ?? 0) - (_parseDate(b.evaluated_at)?.getTime() ?? 0));
@@ -1114,6 +1117,63 @@ function renderModelAccuracy(offers) {
         legend: { labels: { color: '#e4e4e7' } },
       },
       scales: { x: { ticks: { color: '#8a8a95' } }, y: { beginAtZero: true, ticks: { color: '#8a8a95' } } },
+    },
+  });
+}
+
+/* ── City distribution chart ── */
+function renderCityChart(offers) {
+  const freq = {};
+  offers.forEach(o => {
+    const c = o.city || 'Sin ubicaci\u00f3n';
+    freq[c] = (freq[c] || 0) + 1;
+  });
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+  destroyChart('chartCityDist');
+  if (!sorted.length) return;
+  charts.chartCityDist = new Chart($('chartCityDist'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(x => x[0]),
+      datasets: [{ label: 'Ofertas', data: sorted.map(x => x[1]), backgroundColor: '#3b82f6' }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 16 } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Ofertas por localidad', color: '#e4e4e7' },
+      },
+      scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95', font: { size: 11 } } } },
+    },
+  });
+}
+
+/* ── Work mode chart ── */
+function renderWorkModeChart(offers) {
+  const freq = {};
+  offers.forEach(o => {
+    const m = workModeLabel(o.work_mode);
+    freq[m] = (freq[m] || 0) + 1;
+  });
+  const labels = Object.keys(freq);
+  const colors = { 'Presencial': '#ef4444', 'H\u00edbrido': '#eab308', 'Remoto': '#22c55e' };
+
+  destroyChart('chartWorkMode');
+  if (!labels.length) return;
+  charts.chartWorkMode = new Chart($('chartWorkMode'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: labels.map(l => freq[l]), backgroundColor: labels.map(l => colors[l] || '#6366f1') }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#e4e4e7' } },
+        title: { display: true, text: 'Modalidad de trabajo', color: '#e4e4e7' },
+      },
     },
   });
 }
