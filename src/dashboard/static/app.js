@@ -1156,7 +1156,7 @@ function renderCityModeChart(offers) {
       layout: { padding: { right: 16 } },
       plugins: {
         title: { display: true, text: 'Ofertas por localidad y modalidad', color: '#e4e4e7' },
-        legend: { position: 'bottom', labels: { color: '#e4e4e7', font: { size: 11 } } },
+        legend: { position: 'right', labels: { color: '#e4e4e7', font: { size: 11 } } },
       },
       scales: {
         x: { stacked: true, ticks: { color: '#8a8a95' }, beginAtZero: true },
@@ -1186,6 +1186,7 @@ function renderWorkModeChart(offers) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         title: { display: true, text: 'Modalidad de trabajo', color: '#e4e4e7' },
