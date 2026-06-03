@@ -83,12 +83,10 @@ python src/dashboard/server.py
 ```
 
 **Sections:**
-- **📊 Pipeline** — KPIs: total offers, evaluated, pending, companies, feedbacks, applications
-- **📋 Evaluaciones** — Sortable table with all 92 offers, filters by score/recommendation/signal/relevance. Click any offer for a detail modal with scoring breakdown, skills table, HR verdict, feedback form, and application tracker.
-- **🏢 Empresas** — Companies with sector, size, green/red flags, average score. Click to filter offers.
-- **💬 Aplicaciones** — Timeline of your job applications (applied → interviewing → rejected → offer → accepted).
-- **📈 Estadísticos** — Charts: score distribution, recommendation by relevance, signal by recommendation, score trend.
-- **⚙️ Runs** — Pipeline run history with timestamps, errors, duration.
+- **🔍 Ofertas** (default) — 10-column sortable table (Score, Título, Empresa, Ubicación, Modalidad, Publicado, Salario, Recomendación, Señal, Bloqueo). Sparkline semanal de actividad en el header. Filters by score, recommendation, relevance, work mode, text. Click any offer for a detail modal with scoring breakdown, skills table, HR verdict, feedback form, collapsible description, InfoJobs link, and application tracker.
+- **💼 Aplicaciones** — List with inline `<select>` status. Expandable notes/contact/date panel.
+- **🏢 Empresas** — Table + 2 charts (top 5 by offers, sector distribution). Click to filter offers.
+- **📊 Monitor** — Narrative flow: KPIs summary → Quality (score, salary, recommendation dist) → Geography (city stacked by work mode) → Skills market (core demand, secondary/soft, actionable gap) → Model accuracy (recommendation×signal matrix) → Activity (weekly volume, score trend, pipeline runs) → Application funnel.
 
 **API REST** (used by the dashboard, also usable directly):
 | Endpoint | Method | Description |
