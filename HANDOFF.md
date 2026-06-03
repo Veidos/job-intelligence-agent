@@ -16,7 +16,11 @@
 9. **Layout:** leyenda stacked bar derecha, workMode maintainAspectRatio false
 10. **chartCityMode** chart-box-tall para 10 labels sin colapsar
 
-**Próximo paso:** T-5h Fase 2 — Branding JIA + microcopy + tooltips KPIs + interactividad (click chart → filtra tabla)
+**Próximo paso (sesión siguiente):** T-6 → T-7 → T-9
+1. **T-6** — Verificar `send.py` real: `python src/telegram/send.py --mode daily` (confirmar formato mensaje Telegram)
+2. **T-7** — Verificar `run.py` real: `python src/pipeline/run.py --dry-run` (pipeline completo sin errores)
+3. **T-9** — Confirmar pytest 0 failed (actualmente 171 ✅)
+Luego: T-5h Fase 2 (branding + microcopy + interactividad)
 
 **Bloqueados:** ninguno
 **Tests:** 171 passing
