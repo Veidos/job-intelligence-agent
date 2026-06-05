@@ -55,7 +55,10 @@ def setup_logging() -> None:
 
 
 def run_pipeline(
-    skip_fetch: bool = False, dry_run: bool = False, limit: int = 30
+    skip_fetch: bool = False,
+    dry_run: bool = False,
+    limit: int = 30,
+    skip_cv_check: bool = False,
 ) -> None:
     setup_logging()
 
@@ -78,7 +81,10 @@ def run_pipeline(
     has_cv = CV_PATH.exists()
     has_perfil = PERFIL_PATH.exists()
 
-    if dry_run:
+    if skip_cv_check:
+        log.info("[CV] Check saltado (--skip-cv-check)")
+
+    elif dry_run:
         log.info("[CV] Saltado (--dry-run), se usa PERFIL.md actual")
 
     elif has_cv and _compute_file_hash(CV_PATH) != _read_hash(HASH_PATH):
@@ -203,10 +209,18 @@ if __name__ == "__main__":
     )
     parser.add_argument("--dry-run", action="store_true", help="No enviar a Telegram")
     parser.add_argument(
+        "--skip-cv-check", action="store_true", help="Saltar verificación de CV"
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=30,
         help="Máximo de ofertas a procesar (default: 30)",
     )
     args = parser.parse_args()
-    run_pipeline(skip_fetch=args.skip_fetch, dry_run=args.dry_run, limit=args.limit)
+    run_pipeline(
+        skip_fetch=args.skip_fetch,
+        dry_run=args.dry_run,
+        limit=args.limit,
+        skip_cv_check=args.skip_cv_check,
+    )

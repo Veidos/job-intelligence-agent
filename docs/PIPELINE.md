@@ -203,6 +203,10 @@ python src/pipeline/fetch.py --max-items 0
 # Fetch con límite personalizado
 python src/pipeline/fetch.py --max-items 50
 
+# Fetch con filtro temporal (default: 24h)
+python src/pipeline/fetch.py --since-date 7d        # Últimos 7 días
+python src/pipeline/fetch.py --since-date any        # Sin filtro de fecha
+
 # Solo enriquecer ofertas pendientes con LLM (sin llamar a Apify)
 python src/pipeline/fetch.py --enrich-only
 ```

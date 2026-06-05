@@ -57,6 +57,14 @@ def ensure_search_config(conn=None) -> dict:
             conn.close()
 
 
+SINCE_DATE_MAP = {
+    "24h": "_24_HOURS",
+    "7d": "_7_DAYS",
+    "15d": "_15_DAYS",
+    "any": None,
+}
+
+
 def build_search_urls(
     search_config: dict, profile: dict, since_date: str | None = None
 ) -> list[str]:
@@ -621,6 +629,12 @@ if __name__ == "__main__":
         help="Máximo de ofertas a obtener. 0 = sin límite (default: 30)",
     )
     parser.add_argument(
+        "--since-date",
+        choices=["24h", "7d", "15d", "any"],
+        default="24h",
+        help="Filtro temporal: 24h, 7d, 15d, any (default: 24h)",
+    )
+    parser.add_argument(
         "--enrich-only",
         action="store_true",
         help="Solo enriquecer ofertas pendientes con LLM, sin llamar a Apify",
@@ -636,8 +650,9 @@ if __name__ == "__main__":
 
     search_config = None  # lee desde DB via ensure_search_config()
     profile = {}
+    since = SINCE_DATE_MAP.get(args.since_date)
     inserted = run_fetch(
-        search_config, profile, since_date=None, max_items=args.max_items
+        search_config, profile, since_date=since, max_items=args.max_items
     )
     print(f"Ofertas insertadas: {inserted}")
 

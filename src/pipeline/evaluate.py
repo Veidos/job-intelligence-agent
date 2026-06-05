@@ -11,6 +11,8 @@ import sys
 import time
 from pathlib import Path
 
+from tqdm import tqdm
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv
@@ -786,12 +788,10 @@ def run_evaluate(limit: int = 10) -> dict:
 
     stats = {"evaluated": 0, "errors": 0, "scores": [], "total": len(offers)}
 
-    for idx, offer in enumerate(offers, 1):
+    for idx, offer in enumerate(tqdm(offers, desc="Evaluando", unit="oferta"), 1):
         t0 = time.monotonic()
         try:
-            if idx == 1 or idx % 10 == 0:
-                log.info("Progreso: %d/%d ofertas procesadas", idx - 1, len(offers))
-            log.info("[%d/%d] Evaluando: %s", idx, len(offers), offer["title"])
+            log.debug("[%d/%d] Evaluando: %s", idx, len(offers), offer["title"])
 
             # Parsear skills de la oferta (backward-compat con legacy flat array)
             offer_skills = parse_skills_required(offer.get("skills_required"))

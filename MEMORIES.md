@@ -46,7 +46,8 @@
 - `cleaner.py` limpia descripciones eliminando exceso de saltos de línea y espacios.
 
 ## URLs de InfoJobs
-- `sinceDate=LAST_DAY` no funciona en URLs de InfoJobs (parámetro no soportado).
+- InfoJobs acepta `sinceDate` con valores `_24_HOURS`, `_7_DAYS`, `_15_DAYS`.
+- `--since-date 24h` es el default en fetch.py para runs diarios (reduce coste de Apify).
 - Deduplicación se hace exclusivamente por `source_id` en DB (ya implementado).
 - Usar `sortBy=PUBLICATION_DATE` para priorizar ofertas recientes en los resultados.
 
@@ -78,7 +79,9 @@
 - Si responde sí: ejecuta onboarding completo (extracción + entrevista) y continúa pipeline
 - Si responde no o es headless (cron): pipeline detenido, warning pide onboarding manual
 - `--dry-run` salta el check completamente (no hay efectos laterales)
+- `--skip-cv-check` salta el check pero ejecuta el pipeline (útil en nohup/headless)
 - `.cv_hash` se guarda en raíz del proyecto (gitignored)
+- **Lección:** el check fallaba en modo headless/nohup porque `sys.stdin.isatty()` es False y el CV tenía un falso positivo (hash distinto sin cambios reales). `--skip-cv-check` añadido para estos casos.
 - Testeado: ambos flujos (TTY y headless) verificados el 2026-05-22
 
 ## Modelos Ollama — Decisión de diseño
