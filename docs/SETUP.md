@@ -4,7 +4,6 @@
 
 ```bash
 pip install -r requirements.txt
-pip install flask
 python src/db/init_db.py
 ```
 
