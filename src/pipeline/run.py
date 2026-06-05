@@ -59,6 +59,7 @@ def run_pipeline(
     dry_run: bool = False,
     limit: int = 30,
     skip_cv_check: bool = False,
+    since_date: str = "_24_HOURS",
 ) -> None:
     setup_logging()
 
@@ -139,7 +140,7 @@ def run_pipeline(
         log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
         from src.pipeline.fetch import run_fetch
 
-        new_offers = run_fetch()
+        new_offers = run_fetch(since_date=since_date)
         log.info("[1/4] Fetch — %d ofertas nuevas", new_offers)
 
     # PASO 2: Classify
@@ -217,10 +218,17 @@ if __name__ == "__main__":
         default=30,
         help="Máximo de ofertas a procesar (default: 30)",
     )
+    parser.add_argument(
+        "--since-date",
+        default="_24_HOURS",
+        choices=["_24_HOURS", "_7_DAYS", "_15_DAYS", "ANY"],
+        help="Filtro temporal (default: _24_HOURS)",
+    )
     args = parser.parse_args()
     run_pipeline(
         skip_fetch=args.skip_fetch,
         dry_run=args.dry_run,
         limit=args.limit,
         skip_cv_check=args.skip_cv_check,
+        since_date=args.since_date,
     )

@@ -46,8 +46,9 @@
 - `cleaner.py` limpia descripciones eliminando exceso de saltos de línea y espacios.
 
 ## URLs de InfoJobs
-- InfoJobs acepta `sinceDate` con valores `_24_HOURS`, `_7_DAYS`, `_15_DAYS`.
-- `--since-date 24h` es el default en fetch.py para runs diarios (reduce coste de Apify).
+- InfoJobs acepta `sinceDate` con valores `_24_HOURS`, `_7_DAYS`, `_15_DAYS`, `ANY`.
+- `--since-date _24_HOURS` es el default tanto en `fetch.py` como en `run.py`.
+- El valor viaja directo: CLI → `run_fetch(since_date=...)` → `build_search_urls()` → `&sinceDate=X`.
 - Deduplicación se hace exclusivamente por `source_id` en DB (ya implementado).
 - Usar `sortBy=PUBLICATION_DATE` para priorizar ofertas recientes en los resultados.
 

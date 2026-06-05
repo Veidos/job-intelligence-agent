@@ -5,7 +5,7 @@
 
 **Cambios de esta sesión:**
 
-1. **`--since-date` en fetch.py** — nuevo flag CLI (24h/7d/15d/any, default 24h) + `SINCE_DATE_MAP` constante. InfoJobs acepta `_24_HOURS`, `_7_DAYS`, `_15_DAYS`.
+1. **`--since-date` en fetch.py y run.py** — flag CLI con valores InfoJobs reales (`_24_HOURS`, `_7_DAYS`, `_15_DAYS`, `ANY`), default `_24_HOURS`. `run.py` lo pasa directamente a `run_fetch()`.
 2. **`tqdm` en evaluate.py** — barra de progreso con ETA en el loop de evaluación LLM.
 3. **`--skip-cv-check` en run.py** — salta el CV freshness check en modo headless/nohup.
 4. **MEMORIES.md** — documentación corregida de `sinceDate` + lección sobre falso positivo del CV check en headless.

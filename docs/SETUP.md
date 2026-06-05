@@ -19,7 +19,9 @@ python src/db/init_db.py
 | `python src/dashboard/server.py` | **Dashboard web en http://localhost:8080** |
 | `python src/dashboard/server.py --port 9090` | Dashboard en puerto personalizado |
 | `python src/pipeline/run.py` | Pipeline completo (fetch → classify → evaluate → send) |
-| `python src/pipeline/fetch.py` | Solo fetch de ofertas desde InfoJobs |
+| `python src/pipeline/fetch.py` | Solo fetch de ofertas (default últimas 24h) |
+| `python src/pipeline/fetch.py --since-date ANY` | Fetch sin filtro de fecha |
+| `python src/pipeline/run.py --since-date ANY` | Pipeline sin filtro de fecha |
 | `python src/pipeline/evaluate.py` | Solo evaluación de ofertas (default 10) |
 | `python src/pipeline/evaluate.py --limit 0` | Evaluar todas las ofertas pendientes |
 | `python src/pipeline/generate_dashboard.py` | Generar HTML legacy en reports/ (obsoleto, usar Flask) |
