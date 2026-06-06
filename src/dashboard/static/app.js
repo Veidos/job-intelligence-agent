@@ -913,7 +913,7 @@ function renderCharts() {
 
   // Score trend: agregado por d\u00eda
   const byDay = {};
-  data.filter(d => d.evaluated_at).forEach(d => {
+  data.filter(d => d.published_at).forEach(d => {
     const day = d.evaluated_at.slice(0, 10);
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(d.match_score || 0);
@@ -937,7 +937,7 @@ function renderCharts() {
     },
     options: {
       responsive: true,
-      plugins: { title: { display: true, text: 'Score promedio por d\u00eda', color: '#e4e4e7' } },
+      plugins: { title: { display: true, text: 'Score promedio por fecha de publicaci\u00f3n', color: '#e4e4e7' } },
       scales: { x: { ticks: { color: '#8a8a95', maxRotation: 45 } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
     },
   });
