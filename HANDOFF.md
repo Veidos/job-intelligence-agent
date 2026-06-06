@@ -1,15 +1,14 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
 **Última actualización:** 2026-06-06
-**Fase activa:** Dashboard mejorado — filterByCompany con reset, empresas sortable + Top 5 por score, Score Trend agregado por día.
+**Fase activa:** Verificación `--since-date _24_HOURS` + fix Bug 2 en `run.py`.
 
 **Cambios de esta sesión:**
 
-1. **Issue 1 — filterByCompany con reset:** Nueva función `clearCompanyFilter()`, badge "Filtrando por: [Empresa] ✕", `FILTER_COMPANY` global, `switchTab()` extraída.
-2. **Issue 2 — Empresas sortable + Top 5 score:** `sortCompanies()`, click handlers en `<th>`, chart `chartEmpTop5Score` con top 5 por avg_score.
-3. **Issue 3 — Score Trend por día:** Agregación diaria por `published_at` (primero tenía bug: agrupaba por `evaluated_at`), fix aplicado.
-4. **HTML:** +`#filterCompanyInfo`, +`<canvas id="chartEmpTop5Score">`.
-5. **Mobile responsive:** breakpoint 480px (nav scroll, 5 cols tabla, bottom sheet modal, touch targets 44px).
+1. **Verificado `_24_HOURS` en `build_search_urls()`:** Test unitario confirmó que `&sinceDate=_24_HOURS` aparece en todas las URLs generadas. El filtro viaja correctamente hasta Apify.
+2. **Bug 2 corregido — `run.py:159`:** `fetch_company.run()` devuelve `{enriched, linked, skipped, errors, pending}`, no `{new, updated, linked}`. Se cambió el log para usar las keys reales y se añadieron `errors` y `pending` al mensaje.
+
+**No se tocó `max_items`:** `run_fetch()` conserva su default 30. `--limit` de `run.py` solo controla evaluate y fetch_company.
 
 **Pendiente (futuro):**
 - T-5h Fase 2 (branding + microcopy)
@@ -18,4 +17,3 @@
 
 **Bloqueados:** ninguno
 **Tests:** 171 passing ✅
-**Documentación:** HANDOFF.md, MEMORIES.md, PIPELINE.md actualizados

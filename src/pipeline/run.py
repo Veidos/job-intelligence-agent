@@ -157,10 +157,11 @@ def run_pipeline(
     try:
         enrich_result = run_fetch_company(limit=limit)
         log.info(
-            "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d enlazadas",
-            enrich_result["new"],
-            enrich_result["updated"],
+            "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d errores, %d pendientes",
+            enrich_result["enriched"],
             enrich_result["linked"],
+            enrich_result["errors"],
+            enrich_result["pending"],
         )
     except Exception as e:
         log.warning("[2.5/4] Enrich — falló (DB necesita migración): %s", e)
