@@ -10,9 +10,11 @@ Uso:
 
 import argparse
 import hashlib
+import json
 import logging
 import logging.handlers
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -129,9 +131,15 @@ def run_pipeline(
         log.info("[CV] PERFIL.md actualizado — continuando")
     # ── fin CV check ──────────────────────────────────────────────
 
+    _start_run(time.monotonic())
+
     log.info("═══════════════════════════════════")
     log.info("  Job Intelligence Agent — Pipeline")
     log.info("═══════════════════════════════════")
+
+    errors: list[str] = []
+    new_offers = 0
+    evaluated = 0
 
     # PASO 1: Fetch
     if skip_fetch:
@@ -165,25 +173,77 @@ def run_pipeline(
         )
     except Exception as e:
         log.warning("[2.5/4] Enrich — falló (DB necesita migración): %s", e)
+        errors.append(f"enrich: {e}")
 
     # PASO 3: Evaluate
     log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
     from src.pipeline.evaluate import run_evaluate
 
     stats = run_evaluate(limit=limit)
+    evaluated = stats.get("evaluated", 0)
     log.info("[3/4] Evaluate — %s", stats)
 
     # PASO 4: Send
     if dry_run:
         log.info("[4/4] Send — saltado (--dry-run)")
     else:
-        log.info("[4/4] Send — enviando a Telegram...")
-        from src.telegram.send import send_daily
+        try:
+            log.info("[4/4] Send — enviando a Telegram...")
+            from src.telegram.send import send_daily
 
-        send_daily()
-        log.info("[4/4] Send — OK")
+            send_daily()
+            log.info("[4/4] Send — OK")
+        except Exception as e:
+            log.error("[4/4] Send — error: %s", e)
+            errors.append(f"send: {e}")
 
     log.info("Pipeline completado")
+    _persist_run(errors, new_offers, evaluated, skip_fetch, dry_run, limit, since_date)
+
+
+_run_start_time: float | None = None
+
+
+def _start_run(now: float) -> None:
+    global _run_start_time
+    _run_start_time = now
+
+
+def _persist_run(
+    errors: list[str],
+    new_offers: int,
+    evaluated: int,
+    skip_fetch: bool,
+    dry_run: bool,
+    limit: int,
+    since_date: str,
+) -> None:
+    from src.db.init_db import get_connection
+
+    elapsed = int((time.monotonic() - (_run_start_time or time.monotonic())) * 1000)
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO search_runs (query_params, offers_fetched, new_offers, evaluated, errors, duration_ms, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            json.dumps({
+                "skip_fetch": skip_fetch,
+                "dry_run": dry_run,
+                "since_date": since_date,
+                "limit": limit,
+            }),
+            0 if skip_fetch else new_offers,
+            new_offers,
+            evaluated,
+            "; ".join(errors) if errors else None,
+            elapsed,
+            "error" if errors else "ok",
+        ),
+    )
+    conn.commit()
+    conn.close()
 
 
 def _compute_file_hash(path: Path) -> str:
