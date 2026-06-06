@@ -369,3 +369,61 @@ tr td:first-child { padding-left: 14px; }
   .filter-group.stretch { min-width: unset; }
   .charts-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 480px) {
+  #nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 8px;
+  }
+  #nav::-webkit-scrollbar { display: none; }
+  .nav-brand { flex-shrink: 0; font-size: 13px; }
+  .nav-link { flex-shrink: 0; white-space: nowrap; padding: 0 10px; font-size: 13px; }
+
+  #section-ofertas th[data-col="city"],
+  #section-ofertas th[data-col="work_mode"],
+  #section-ofertas th[data-col="salary_display"],
+  #section-ofertas th[data-col="llm_apply_signal"],
+  #section-ofertas th[data-col="apply_block"] { display: none; }
+  #section-ofertas td:nth-child(4),
+  #section-ofertas td:nth-child(5),
+  #section-ofertas td:nth-child(7),
+  #section-ofertas td:nth-child(9),
+  #section-ofertas td:nth-child(10) { display: none; }
+
+  #section-empresas th:nth-child(2),
+  #section-empresas th:nth-child(3),
+  #section-empresas td:nth-child(2),
+  #section-empresas td:nth-child(3) { display: none; }
+
+  .ofertas-meta { flex-wrap: wrap; gap: 6px; }
+  .sparkline-wrap { margin-left: 0; width: 100%; }
+  #chartWeeklySparkline { width: 100% !important; }
+
+  .modal-info-grid { grid-template-columns: 1fr; }
+  .scoring-grid { grid-template-columns: 1fr 1fr; }
+  .verdict-row { flex-wrap: wrap; gap: 8px; }
+
+  #modal {
+    width: 100%; max-width: 100%; max-height: 90dvh;
+    border-radius: 12px 12px 0 0;
+    position: fixed; bottom: 0; left: 0; top: auto; transform: none;
+  }
+
+  .app-card-header { flex-wrap: wrap; gap: 6px; }
+  .detail-row { flex-wrap: wrap; gap: 6px; }
+  .detail-row input,
+  .detail-row button { width: 100%; }
+
+  .btn-primary,
+  .btn-ghost,
+  .btn-delete,
+  .nav-link,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  #section-monitor td:nth-child(1) { font-size: 11px; }
+}
