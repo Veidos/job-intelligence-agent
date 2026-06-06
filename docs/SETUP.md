@@ -7,6 +7,34 @@ pip install -r requirements.txt
 python src/db/init_db.py
 ```
 
+## Acceso Remoto (Tailscale)
+
+Para ver el dashboard desde el móvil fuera de casa:
+
+```bash
+# 1. Instalar Tailscale en el PC
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+
+# 2. Anotar la IP de Tailscale
+tailscale ip -4
+
+# 3. Instalar Tailscale en el móvil (App Store / Google Play)
+#    Autenticar con la misma cuenta
+
+# 4. Arrancar dashboard accesible desde Tailscale
+python src/dashboard/server.py --host 0.0.0.0 --port 8080
+
+# 5. (Opcional) Servicio permanente
+sudo cp scripts/job-dashboard.service /etc/systemd/system/
+sudo systemctl enable job-dashboard
+sudo systemctl start job-dashboard
+
+# Acceder desde el móvil: http://<tailscale-ip>:8080
+```
+
+Tailscale cifra el tráfico con WireGuard E2E. Solo tus dispositivos autenticados pueden alcanzar el dashboard.
+
 ## Comandos Principales
 
 | Comando | Descripción |

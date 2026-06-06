@@ -1,0 +1,15 @@
+[Unit]
+Description=Job Intelligence Dashboard
+After=network.target tailscaled.service
+
+[Service]
+Type=simple
+User=veidos
+WorkingDirectory=/home/veidos/proyectos/job-intelligence-agent
+EnvironmentFile=/home/veidos/proyectos/job-intelligence-agent/.env
+ExecStart=/home/veidos/proyectos/job-intelligence-agent/.venv/bin/python src/dashboard/server.py --host 0.0.0.0 --port 8080
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
