@@ -4,18 +4,25 @@ let ALL_OFFERS = [];
 let APP_DATA = [];
 let sortCol = 'match_score';
 let sortAsc = false;
+let FILTER_COMPANY = null;
+let compSortCol = 'offer_count';
+let compSortAsc = false;
 const charts = {};
 
 const $ = id => document.getElementById(id);
 
 /* ── Nav ── */
+function switchTab(name) {
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelector(`[data-section="${name}"]`).classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  $(`section-${name}`).classList.add('active');
+}
+
 document.querySelectorAll('.nav-link').forEach(el => {
   el.addEventListener('click', e => {
     e.preventDefault();
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    el.classList.add('active');
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    $(`section-${el.dataset.section}`).classList.add('active');
+    switchTab(el.dataset.section);
     if (el.dataset.section === 'aplicaciones') loadApplications();
     if (el.dataset.section === 'empresas') loadCompanies();
     if (el.dataset.section === 'monitor') {
@@ -98,6 +105,9 @@ function loadOffers(filters) {
   if (filters) {
     Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
   }
+  if (FILTER_COMPANY && !params.has('company_id')) {
+    params.set('company_id', FILTER_COMPANY.id);
+  }
   const qs = params.toString();
   if (qs) url += '?' + qs;
   return fetch(url).then(r => r.json()).then(data => {
@@ -112,6 +122,13 @@ function recalcOffers() {
   const filtered = getFilteredData();
   renderTable(filtered);
   $('offerCount').textContent = `${filtered.length} de ${OFFERS.length}`;
+  const info = $('filterCompanyInfo');
+  if (FILTER_COMPANY) {
+    info.style.display = '';
+    info.innerHTML = `Filtrando por: <strong>${FILTER_COMPANY.name}</strong> <button class="btn-ghost" onclick="clearCompanyFilter()" style="min-height:auto;min-width:auto;padding:2px 6px;font-size:13px;">✕</button>`;
+  } else {
+    info.style.display = 'none';
+  }
 }
 
 function getFilteredData() {
@@ -214,6 +231,20 @@ function renderTable(data) {
 document.querySelectorAll('#section-ofertas th.sortable').forEach(th => {
   th.addEventListener('click', () => sortTable(th.dataset.col));
 });
+document.querySelectorAll('#section-empresas th.sortable').forEach(th => {
+  th.addEventListener('click', () => sortCompanies(th.dataset.col));
+});
+
+function sortCompanies(col) {
+  if (compSortCol === col) compSortAsc = !compSortAsc;
+  else { compSortCol = col; compSortAsc = col === 'avg_score'; }
+  document.querySelectorAll('#section-empresas th.sortable').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === col);
+    const arrow = th.querySelector('.arrow');
+    if (arrow) arrow.textContent = th.dataset.col === col ? (compSortAsc ? '\u25B2' : '\u25BC') : '';
+  });
+  loadCompanies();
+}
 
 /* ── Filter events ── */
 ['filterScore', 'filterRec', 'filterRel', 'filterBlocked', 'filterSearch',
@@ -607,14 +638,23 @@ function deleteApplication(id) {
 /* ── Companies ── */
 function loadCompanies() {
   fetch('/api/companies').then(r => r.json()).then(data => {
+    data.sort((a, b) => {
+      let va = a[compSortCol], vb = b[compSortCol];
+      if (typeof va === 'string') va = (va || '').toLowerCase();
+      if (typeof vb === 'string') vb = (vb || '').toLowerCase();
+      if (va == null) va = -1;
+      if (vb == null) vb = -1;
+      return compSortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
     const tbody = $('companiesTbody');
     tbody.innerHTML = data.map(c => {
+      const escName = c.name.replace(/'/g, "\\'");
       const gf = JSON.parse(c.green_flags || '[]');
       const rf = JSON.parse(c.red_flags || '[]');
       const avg = c.avg_score;
       const gfHtml = gf.slice(0, 2).map(g => tag(g, 'green')).join(' ') + (gf.length > 2 ? ` +${gf.length - 2}` : '');
       const rfHtml = rf.slice(0, 2).map(r => tag(r, 'red')).join(' ') + (rf.length > 2 ? ` +${rf.length - 2}` : '');
-      return `<tr onclick="filterByCompany(${c.id})">
+      return `<tr onclick="filterByCompany(${c.id},'${escName}')">
         <td><strong>${c.name}</strong></td>
         <td>${c.sector || '\u2014'}</td>
         <td>${c.size_range || '\u2014'}</td>
@@ -682,17 +722,47 @@ function renderCompanyCharts(data) {
       },
     },
   });
+
+  const top5Score = [...data].sort((a, b) => (b.avg_score || 0) - (a.avg_score || 0)).slice(0, 5);
+  destroyChart('chartEmpTop5Score');
+  charts.chartEmpTop5Score = new Chart($('chartEmpTop5Score'), {
+    type: 'bar',
+    data: {
+      labels: top5Score.map(c => c.name),
+      datasets: [{
+        label: 'Score',
+        data: top5Score.map(c => c.avg_score || 0),
+        backgroundColor: '#22c55e',
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: { left: 10, right: 20, top: 5, bottom: 5 },
+      },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Top 5 empresas por score', color: '#e4e4e7' },
+      },
+      scales: {
+        x: { ticks: { color: '#8a8a95' }, beginAtZero: true, max: 100 },
+        y: { ticks: { color: '#8a8a95', font: { size: 11 } } },
+      },
+    },
+  });
 }
 
-function filterByCompany(companyId) {
-  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  document.querySelector('[data-section="ofertas"]').classList.add('active');
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  $('section-ofertas').classList.add('active');
-  fetch(`/api/offers?company_id=${companyId}`).then(r => r.json()).then(data => {
-    OFFERS = data;
-    recalcOffers();
-  });
+function filterByCompany(id, name) {
+  FILTER_COMPANY = { id, name };
+  switchTab('ofertas');
+  loadOffers();
+}
+
+function clearCompanyFilter() {
+  FILTER_COMPANY = null;
+  loadOffers();
 }
 
 /* ── Stats (Monitor) ── */
@@ -841,23 +911,33 @@ function renderCharts() {
   renderCityModeChart(data);
   renderWorkModeChart(data);
 
-  // Score trend
-  const sorted = [...data].filter(d => d.evaluated_at).sort((a, b) => (_parseDate(a.evaluated_at)?.getTime() ?? 0) - (_parseDate(b.evaluated_at)?.getTime() ?? 0));
-  const trendLabels = sorted.map(d => dateFmt(d.evaluated_at));
-  const trendData = sorted.map(d => d.match_score || 0);
+  // Score trend: agregado por d\u00eda
+  const byDay = {};
+  data.filter(d => d.evaluated_at).forEach(d => {
+    const day = d.evaluated_at.slice(0, 10);
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(d.match_score || 0);
+  });
+  const days = Object.keys(byDay).sort();
+  const trendLabels = days;
+  const trendData = days.map(d => {
+    const scores = byDay[d];
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  });
   destroyChart('chartScoreTrend');
   charts.chartScoreTrend = new Chart($('chartScoreTrend'), {
     type: 'line',
     data: {
       labels: trendLabels,
       datasets: [{
-        label: 'Score', data: trendData, borderColor: '#6366f1',
-        backgroundColor: 'rgba(99,102,241,.1)', fill: true, tension: .3, pointRadius: 3,
+        label: 'Score promedio', data: trendData, borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,.1)', fill: false, tension: .3, pointRadius: 4,
+        pointBackgroundColor: '#6366f1',
       }],
     },
     options: {
       responsive: true,
-      plugins: { title: { display: true, text: 'Score por fecha de evaluaci\u00f3n', color: '#e4e4e7' } },
+      plugins: { title: { display: true, text: 'Score promedio por d\u00eda', color: '#e4e4e7' } },
       scales: { x: { ticks: { color: '#8a8a95', maxRotation: 45 } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
     },
   });

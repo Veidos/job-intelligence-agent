@@ -1,25 +1,20 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
 **Última actualización:** 2026-06-06
-**Fase activa:** Pipeline completado (30 evaluadas, 0 errores, avg 0.42). Dashboard en http://localhost:8080 y accesible vía Tailscale (--host 0.0.0.0).
+**Fase activa:** Dashboard mejorado — filterByCompany con reset, empresas sortable + Top 5 por score, Score Trend agregado por día.
 
 **Cambios de esta sesión:**
 
-1. **`--since-date` en fetch.py y run.py** — flag CLI con valores InfoJobs reales (`_24_HOURS`, `_7_DAYS`, `_15_DAYS`, `ANY`), default `_24_HOURS`.
-2. **`tqdm` en evaluate.py** — barra de progreso con ETA en el loop de evaluación LLM.
-3. **`--skip-cv-check` en run.py** — salta el CV freshness check en modo headless/nohup.
-4. **requirements.txt** — `tqdm`, `flask` añadidos; `apify-client` duplicado eliminado.
-5. **Dashboard re-arrancado** en `0.0.0.0:8080` (accesible desde Tailscale).
-6. **`scripts/job-dashboard.service`** — servicio systemd para auto-arranque del dashboard.
-7. **docs/SETUP.md** — sección "Acceso Remoto (Tailscale)" añadida.
-8. **MEMORIES.md** — `sinceDate` real + lección CV check headless.
-
-**Pipeline ejecutado (PID 8496):** 30 ofertas evaluadas, avg 0.42, 0 errores. Una oferta en rango Priority (0.80). Telegram enviado ✅.
+1. **Issue 1 — filterByCompany con reset:** Nueva función `clearCompanyFilter()`, badge "Filtrando por: [Empresa] ✕", `FILTER_COMPANY` global, `switchTab()` extraída.
+2. **Issue 2 — Empresas sortable + Top 5 score:** `sortCompanies()`, click handlers en `<th>`, chart `chartEmpTop5Score` con top 5 por avg_score.
+3. **Issue 3 — Score Trend por día:** Agregación diaria (agrupa por `evaluated_at` → promedio), en vez de plotear cada oferta individual.
+4. **HTML:** +`#filterCompanyInfo`, +`<canvas id="chartEmpTop5Score">`.
+5. **Mobile responsive:** breakpoint 480px (nav scroll, 5 cols tabla, bottom sheet modal, touch targets 44px).
 
 **Pendiente (futuro):**
 - T-5h Fase 2 (branding + microcopy)
 - Fase 4 (role_discovery, market_signals, strategic_advisor)
-- Instalar Tailscale en PC + móvil (pendiente de ti)
+- Tailscale ya instalado por el usuario
 
 **Bloqueados:** ninguno
 **Tests:** 171 passing ✅
