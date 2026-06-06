@@ -7,7 +7,7 @@
 
 1. **Issue 1 — filterByCompany con reset:** Nueva función `clearCompanyFilter()`, badge "Filtrando por: [Empresa] ✕", `FILTER_COMPANY` global, `switchTab()` extraída.
 2. **Issue 2 — Empresas sortable + Top 5 score:** `sortCompanies()`, click handlers en `<th>`, chart `chartEmpTop5Score` con top 5 por avg_score.
-3. **Issue 3 — Score Trend por día:** Agregación diaria (agrupa por `evaluated_at` → promedio), en vez de plotear cada oferta individual.
+3. **Issue 3 — Score Trend por día:** Agregación diaria por `published_at` (primero tenía bug: agrupaba por `evaluated_at`), fix aplicado.
 4. **HTML:** +`#filterCompanyInfo`, +`<canvas id="chartEmpTop5Score">`.
 5. **Mobile responsive:** breakpoint 480px (nav scroll, 5 cols tabla, bottom sheet modal, touch targets 44px).
 

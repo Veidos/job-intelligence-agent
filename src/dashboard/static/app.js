@@ -914,7 +914,7 @@ function renderCharts() {
   // Score trend: agregado por d\u00eda
   const byDay = {};
   data.filter(d => d.published_at).forEach(d => {
-    const day = d.evaluated_at.slice(0, 10);
+    const day = d.published_at.slice(0, 10);
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(d.match_score || 0);
   });
