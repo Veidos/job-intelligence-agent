@@ -455,3 +455,17 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
   instantáneamente, y el doughnut chart del Pipeline se creaba con `DATA = []` → `[0,0,0]`.
 - Fix: añadir `return` antes de cada `fetch()`. El gráfico apareció al recibir datos reales.
 - Lección: toda función async que se use en `Promise.all` debe hacer `return` de la promesa.
+
+## Bug: fetch_company keys en run.py (junio 2026)
+
+- `run.py:run_pipeline()` loggeaba `enrich_result["new"]` y `enrich_result["updated"]`, pero `fetch_company.run()` devuelve `{enriched, linked, skipped, errors, pending}`.
+- El error quedaba silenciado por el `except Exception`.
+- Fix: cambiar las keys en el log a `enriched`, `linked`, `errors`, `pending`.
+
+## search_runs persistence (junio 2026)
+
+- `run_pipeline()` nunca escribía en `search_runs` — la tabla existía pero vacía.
+- Añadidas `_start_run()` y `_persist_run()` en `run.py`:
+  - Captura `query_params` (args en JSON), `offers_fetched`, `new_offers`, `evaluated`, `errors`, `duration_ms`, `status`
+  - Errores de pasos individuales se acumulan sin detener el pipeline
+  - `_persist_run()` recibe todos los parámetros explícitamente (no usa closures)

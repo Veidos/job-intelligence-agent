@@ -103,6 +103,6 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-5g — Rediseño profesional dashboard: 4 secciones, tabla 9 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo (ADR-015)
 - [x] T-5h — KPIs implementados (skills demand/gap, salary dist, weekly activity + sparkline, app funnel, model accuracy). server.py expone skill_detail + salary_min/max
 - [ ] T-6 — send.py — mensaje Telegram correcto
-- [ ] T-7 — run.py ciclo completo real sin errores
+- [x] T-7 — run.py ciclo completo real sin errores (2026-06-06: 30 evaluadas, 25 nuevas, 0 errores) ✅
 - [ ] T-8 — Feedback bot funcional y natural
 - [ ] T-9 — pytest 0 failed

@@ -24,6 +24,22 @@
 | `user_psychology` | Resumen semanal evolutivo |
 | `search_config` | Configuración geográfica y de roles |
 
+### `search_runs`
+
+Historial de ejecuciones del pipeline. `run_pipeline()` inserta un registro al completar cada ciclo.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | INTEGER PK | Autoincremental |
+| `ran_at` | DATETIME | Momento de la ejecución (default now) |
+| `query_params` | TEXT | JSON con args: skip_fetch, dry_run, since_date, limit |
+| `offers_fetched` | INTEGER | Ofertas devueltas por Apify (0 si skip-fetch) |
+| `new_offers` | INTEGER | Ofertas nuevas insertadas (tras dedup) |
+| `evaluated` | INTEGER | Ofertas evaluadas en este run |
+| `errors` | TEXT | Errores concatenados (; ) o NULL |
+| `duration_ms` | INTEGER | Milisegundos totales del pipeline |
+| `status` | TEXT | ok / error |
+
 ### `applications`
 
 Estado controlado por el usuario (no por el pipeline). El dashboard permite crear, actualizar y eliminar.

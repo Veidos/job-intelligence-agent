@@ -75,7 +75,9 @@ Ejecutar siempre antes de dar una tarea por terminada.
 El pipeline se ejecuta automáticamente cada día a las 9:00:
 
 ```
-0 9 * * * /home/veidos/proyectos/job-intelligence-agent/.venv/bin/python /home/veidos/proyectos/job-intelligence-agent/src/pipeline/run.py
+0 9 * * * /home/veidos/proyectos/job-intelligence-agent/.venv/bin/python /home/veidos/proyectos/job-intelligence-agent/src/pipeline/run.py --skip-cv-check
 ```
+
+`--skip-cv-check` necesario porque cron no tiene TTY. Sin él, si el CV cambia el pipeline se detiene automáticamente.
 
 **No modificar sin avisar.**
