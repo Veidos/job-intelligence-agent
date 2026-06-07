@@ -136,6 +136,8 @@ function getFilteredData() {
   const fRec = $('filterRec').value;
   const fRel = $('filterRel').value;
   const showBlocked = $('filterBlocked').checked;
+  const hideApplied = $('filterHideApplied').checked;
+  const appliedIds = new Set(APP_DATA.map(a => a.offer_id));
   const search = ($('filterSearch').value || '').toLowerCase();
 
   const wmRemote = $('filterRemote').checked;
@@ -151,6 +153,7 @@ function getFilteredData() {
     if (fRec && d.recommendation !== fRec) return false;
     if (fRel && d.relevance_flag !== fRel) return false;
     if (!showBlocked && d.apply_block && d.apply_block !== 'null') return false;
+    if (hideApplied && appliedIds.has(d.id)) return false;
     if (allowedModes.length && !allowedModes.includes(d.work_mode)) return false;
     if (search && !(d.title.toLowerCase().includes(search) || d.company_name.toLowerCase().includes(search))) return false;
     return true;
@@ -248,7 +251,7 @@ function sortCompanies(col) {
 
 /* ── Filter events ── */
 ['filterScore', 'filterRec', 'filterRel', 'filterBlocked', 'filterSearch',
- 'filterRemote', 'filterHybrid', 'filterOnsite'].forEach(id => {
+ 'filterRemote', 'filterHybrid', 'filterOnsite', 'filterHideApplied'].forEach(id => {
   const el = $(id);
   if (!el) return;
   el.addEventListener('input', recalcOffers);
