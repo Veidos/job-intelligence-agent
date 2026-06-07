@@ -492,6 +492,8 @@ function saveApplication(offerId) {
       <span class="footer-status">\u2713 En aplicaciones</span>
       <button class="btn-ghost" onclick="goToApplications()">Ver en Aplicaciones \u2192</button>
     `;
+    APP_DATA.push({ offer_id: offerId, status: 'applied' });
+    recalcOffers();
     loadStats();
   }).catch(err => {
     console.error('Error al guardar aplicaci\u00f3n:', err);
