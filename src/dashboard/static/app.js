@@ -495,6 +495,7 @@ function saveApplication(offerId) {
     APP_DATA.push({ offer_id: offerId, status: 'applied' });
     recalcOffers();
     loadStats();
+    recalcOffers();
   }).catch(err => {
     console.error('Error al guardar aplicaci\u00f3n:', err);
     if (btn) {
@@ -514,6 +515,7 @@ function saveFeedback(offerId) {
   }).then(r => r.json()).then(() => {
     $('feedbackText').value = '';
     loadStats();
+    recalcOffers();
   });
 }
 
@@ -618,6 +620,7 @@ function saveAppDetails(id, btn) {
       btn.disabled = false;
     }, 2000);
     loadStats();
+    recalcOffers();
   }).catch(err => {
     console.error('Error al guardar detalles:', err);
     btn.textContent = 'Error';
@@ -637,6 +640,7 @@ function deleteApplication(id) {
   fetch(`/api/applications/${id}`, { method: 'DELETE' }).then(() => {
     loadApplications();
     loadStats();
+    recalcOffers();
   });
 }
 
