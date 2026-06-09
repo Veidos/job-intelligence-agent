@@ -1,15 +1,20 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
-**Última actualización:** 2026-06-08
-**Fase activa:** Dashboard — Sistema de caducidad de ofertas + seguimiento de aplicaciones.
+**Última actualización:** 2026-06-09
+**Fase activa:** Documentación — Revisión y sincronización post-implementación.
 
 **Cambios de esta sesión:**
 
-1. **Pipeline ejecutado:** 30 ofertas nuevas, 30 evaluadas, 0 errores, avg 0.429, Telegram enviado. ✅
-2. **Sistema de caducidad de ofertas (30 días):** Nuevo filtro "Ocultar ofertas >30 días" checked por defecto en pestaña Ofertas. Badge de antigüedad (🟢🟡🟠🔴⚫) en columna "Publicado". Sin cambios en server.py. ✅
-3. **Sistema de seguimiento en Aplicaciones:** Badge de follow-up (Esperando/Follow-up/Insistir/Descartar) según días desde applied_at. Badge "🔔 Acción vencida" si next_action_date pasada. ✅
-4. **Tabla de Seguimiento en Monitor:** Nueva sección debajo del embudo con KPIs (Total/Follow-up/Urgentes/Vencidas) + tabla con columnas Seguimiento→Oferta→Estado→Apl. hace→Acción→Contacto→Score. Ordenada por urgencia. Botón 🔍 abre modal de detalle. Fetch compartido con renderAppFunnel (sin duplicación). ✅
-5. **Docs actualizados:** HANDOFF.md.
+1. **Docs revisados y sincronizados:** 13 issues corregidos:
+   - MEMORIES.md: qwen2.5 contradicción resuelta (qwen2.5:7b = MODEL_COMPANY), test count 171, columnas 9→10
+   - PLANS.md: T-6 marcado completado, columnas 9→10, test count 171
+   - PIPELINE.md: paso 2.5 (company enrichment) añadido, hideExpired/follow-up documentados
+   - RATING.md: location_match aclarado como columna independiente, NO parte de F_fit
+   - CONVENTIONS.md: Fase 6 (Dashboard/Applications) añadida
+   - SETUP.md: keyword_generator paths corregidos, --limit flag añadido
+   - AGENTS.md: qwen2.5:7b añadido a modelos, send_daily como auto-ejecutado por run.py
+   - HANDOFF.md: actualizada para esta sesión
+2. **Pipeline ejecutado (sesión anterior):** 30 ofertas nuevas, 30 evaluadas, 0 errores, avg 0.429, Telegram enviado. ✅
 
 **Próximo paso — Multi-perfil vía `PERFIL_PATH` env var:**
 

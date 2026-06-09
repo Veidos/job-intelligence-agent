@@ -85,6 +85,16 @@ PHASE 4 — Intelligence
 
 PHASE 5 — Automation
   Cron configuration, logging and monitoring, end-to-end tests
+
+PHASE 6 — Dashboard & Applications
+  Flask dashboard (server.py) with 4 sections
+  API REST (/api/offers, /api/applications, /api/companies, /api/stats)
+  Offer expiry filter (30 days) + age badges
+  Application follow-up system (7/14/21 dias) + overdue badges
+  Follow-up table in Monitor with urgency sort
+  Chart.js client-side rendering (salary, skills, weekly activity)
+  Modal with collapsible description + scoring breakdown + sticky CTA
+  All computed client-side from existing DB columns (no schema changes)
 ```
 
 Do not advance to the next phase without the previous one being tested and working.

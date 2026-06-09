@@ -40,17 +40,17 @@ Tailscale cifra el tráfico con WireGuard E2E. Solo tus dispositivos autenticado
 | Comando | Descripción |
 |---------|-------------|
 | `python src/onboarding/run.py --cv assets/cv.pdf` | Onboarding inicial (genera PERFIL.md) |
-| `python src/onboarding/keyword_generator` | Generar keywords de búsqueda desde PERFIL.md |
-| `python src/onboarding/keyword_generator --dry-run` | Vista previa de keywords sin guardar |
-| `python src/onboarding/keyword_generator --manage` | Gestionar keywords (conservar/añadir) |
+| `python -m src.onboarding.keyword_generator` | Generar keywords de búsqueda desde PERFIL.md |
+| `python -m src.onboarding.keyword_generator --dry-run` | Vista previa de keywords sin guardar |
+| `python -m src.onboarding.keyword_generator --manage` | Gestionar keywords (conservar/añadir) |
 | `python src/dashboard/server.py` | **Dashboard web en http://localhost:8080** |
 | `python src/dashboard/server.py --port 9090` | Dashboard en puerto personalizado |
 | `python src/pipeline/run.py` | Pipeline completo (fetch → classify → evaluate → send) |
+| `python src/pipeline/run.py --since-date ANY` | Pipeline sin filtro de fecha |
+| `python src/pipeline/run.py --limit 0` | Pipeline evaluando todas las pendientes |
 | `python src/pipeline/fetch.py` | Solo fetch de ofertas (default últimas 24h) |
 | `python src/pipeline/fetch.py --since-date ANY` | Fetch sin filtro de fecha |
-| `python src/pipeline/run.py --since-date ANY` | Pipeline sin filtro de fecha |
-| `python src/pipeline/evaluate.py` | Solo evaluación de ofertas (default 10) |
-| `python src/pipeline/evaluate.py --limit 0` | Evaluar todas las ofertas pendientes |
+| `python src/pipeline/evaluate.py` | Evaluar ofertas pendientes (default 10, --limit 0 = todas) |
 | `python src/pipeline/generate_dashboard.py` | Generar HTML legacy en reports/ (obsoleto, usar Flask) |
 | `python src/telegram/send.py --mode daily` | (Opcional) Enviar ofertas por Telegram |
 

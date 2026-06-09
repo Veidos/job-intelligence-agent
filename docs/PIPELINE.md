@@ -15,7 +15,7 @@ or whenever `PERFIL.md` changes significantly.
 ## Main Flow
 
 ```
-run.py: fetch → classify → evaluate → send
+run.py: fetch → classify → enrich companies → evaluate → send
 dashboard: server.py → http://localhost:8080 (web UI with feedback + applications)
 ```
 
@@ -91,6 +91,17 @@ Classifies each offer according to the role catalog.
    - `temporal`: viable bridge job
 4. Updates the catalog if new roles are detected
 
+## 2.5. Enrich Companies (fetch_company.py)
+
+Enriches company information using qwen2.5:7b (temperatura 0.0):
+
+1. Extracts company name from each offer (already in DB)
+2. Calls qwen2.5:7b to enrich: sector, company size, description, linkedin_url
+3. Upserts into `companies` table with `contact_person`, `contact_email`, `contact_phone`
+4. Links companies to offers via `offers.company_id`
+
+**If qwen2.5:7b fails:** company remains without enrichment; no retry logic.
+
 ## 3. Evaluate (evaluate.py)
 
 Evaluates each offer against the candidate profile. **Deterministic calculation
@@ -142,13 +153,17 @@ python src/dashboard/server.py
 | Decision | Rationale |
 |----------|-----------|
 | Ofertas as default landing | Candidate explores offers first, not pipeline stats |
-| 9 columns, no M_core/M_sec/F_exp/F_fit | Internal scoring hidden; collapsible breakdown in modal |
+| 10 columns (incl. Ubicación), no M_core/M_sec/F_exp/F_fit | Internal scoring hidden; collapsible breakdown in modal |
 | filterBlocked default = off | Show blocked only on demand; green default feels oppressive |
 | Sticky modal footer "Añadir a aplicaciones" | CTA always visible without scrolling |
 | Description collapsible in modal | Full offer context without leaving dashboard |
 | Applications as list with inline status | <20 apps makes kanban sparse; denser than timeline |
 | Monitor narrative flow | Tells a story: Resumen → Calidad → Precisión → Actividad |
 | Empresa charts client-side | Chart.js from `/api/companies`; no backend changes |
+| filterHideExpired default = on | Ocultar ofertas >30 días (checkbox en Ofertas) |
+| Age badge (🟢🟡🟠🔴⚫) | Días desde published_at, sin cambios en DB |
+| Follow-up badges (Esperando/Follow-up/Insistir/Descartar) | 7/14/21 días desde applied_at, badge + overdue (🔔) |
+| Follow-up table in Monitor | KPIs + tabla ordenada por urgencia (seguimiento próximo)
 
 ### API REST
 

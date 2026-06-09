@@ -4,7 +4,7 @@
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
 > T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
 > T-5f ✅ — Flask dashboard con 6 secciones, API REST, feedback inline, applications timeline
-> T-5g ✅ — Rediseño profesional dashboard: 4 secciones, tabla 9 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo, filterBlocked off por defecto (ADR-015)
+> T-5g ✅ — Rediseño profesional dashboard: 4 secciones, tabla 10 columnas (incluye Ubicación), modal sticky CTA, apps inline status, empresas charts, monitor narrativo, filterBlocked off por defecto (ADR-015)
 > T-5h ⏳ — KPIs implementados: skills demand/gap, salary dist, weekly activity, sparkline, app funnel, model accuracy. Pendiente: branding + microcopy + interactividad
 
 ## FASE 1 — Cimientos
@@ -61,7 +61,7 @@
   [x] Filtros por score, recomendación, señal, tipo, texto libre
   [x] Empresas clickeables → filtran ofertas
   [x] T-10 Dashboard test checklist en TESTING.md
-  [x] T-5g — Rediseño profesional: 4 secciones jerárquicas (Ofertas, Aplicaciones, Empresas, Monitor), tabla 9 columnas sin M_core/M_sec/F_exp/F_fit, modal con sticky CTA + descripción colapsable + enlace InfoJobs, apps con inline status, empresas charts, monitor narrativo, filterBlocked off por defecto, bugfixes skills/salary/fallback (ADR-015)
+  [x] T-5g — Rediseño profesional: 4 secciones jerárquicas (Ofertas, Aplicaciones, Empresas, Monitor), tabla 10 columnas (score, título, empresa, ubicación, modalidad, publicado, salario, recomendación, señal, bloqueo), modal con sticky CTA + descripción colapsable + enlace InfoJobs, apps con inline status, empresas charts, monitor narrativo, filterBlocked off por defecto, bugfixes skills/salary/fallback (ADR-015)
 
 ## TESTS
 [x] tests/conftest.py con fixtures DB (temp file + rollback)
@@ -100,9 +100,9 @@ Ver checklist completo en docs/TESTING.md
   - [x] Zombie columns cleanup (7 columnas eliminadas)
 - [x] T-5f — Flask dashboard con 6 secciones + API REST + applications + feedback inline
 - [x] T-10 — Dashboard test checklist en TESTING.md
-- [x] T-5g — Rediseño profesional dashboard: 4 secciones, tabla 9 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo (ADR-015)
+- [x] T-5g — Rediseño profesional dashboard: 4 secciones, tabla 10 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo (ADR-015)
 - [x] T-5h — KPIs implementados (skills demand/gap, salary dist, weekly activity + sparkline, app funnel, model accuracy). server.py expone skill_detail + salary_min/max
-- [ ] T-6 — send.py — mensaje Telegram correcto
+- [x] T-6 — send.py — mensaje Telegram correcto
 - [x] T-7 — run.py ciclo completo real sin errores (2026-06-06: 30 evaluadas, 25 nuevas, 0 errores) ✅
 - [ ] T-8 — Feedback bot funcional y natural
 - [ ] T-9 — pytest 0 failed

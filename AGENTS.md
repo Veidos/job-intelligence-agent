@@ -9,8 +9,8 @@
 ## CONTEXTO DEL PROYECTO
 
 Sistema de inteligencia de carrera que extrae ofertas de trabajo de InfoJobs,
-las evalúa contra el perfil del candidato usando dos modelos locales de Ollama,
-y envía un resumen diario por Telegram.
+las evalúa contra el perfil del candidato usando un modelo local de Ollama,
+enriquece empresas con otro modelo, y envía un resumen diario por Telegram.
 
 **Fuente única de verdad del candidato:** `PERFIL.md` en la raíz.
 **Leer SIEMPRE** antes de cualquier tarea de evaluación o análisis.
@@ -23,7 +23,7 @@ y envía un resumen diario por Telegram.
 |---------|-------------|
 | `HANDOFF.md` | Estado de sesión — LEER PRIMERO |
 | `docs/SETUP.md` | Instalación, comandos, cron |
-| `docs/PIPELINE.md` | Flujo completo fetch→classify→evaluate→send |
+| `docs/PIPELINE.md` | Flujo completo fetch→classify→enrich→evaluate→send |
 | `docs/DATABASE.md` | Tablas, reglas, schema SQL |
 | `docs/RATING.md` | Sistema de puntuación técnico + HR |
 | `docs/CONVENTIONS.md` | Estilo de código, fases de implementación |
@@ -41,7 +41,7 @@ python src/pipeline/run.py
 python src/pipeline/fetch.py                  # Fetch ofertas
 python src/pipeline/evaluate.py               # Evaluar ofertas (default 10)
 python src/pipeline/evaluate.py --limit 0     # Evaluar todas las pendientes
-python src/telegram/send.py --mode daily      # (Opcional) Enviar Telegram
+python src/telegram/send.py --mode daily      # (Opcional, run.py ya ejecuta send automáticamente)
 
 # Dashboard web (FLASK) — nueva interfaz principal
 python src/dashboard/server.py                # Servir http://localhost:8080
@@ -62,6 +62,7 @@ ruff check src/ && ruff format src/
 |--------|-----|-------------|-------|
 | `gemma4:e4b` | Técnico (bloque A, 60pts) | 0.1 | Scores deterministas, JSON estructurado |
 | `gemma4:e4b` | HR (bloque B, 40pts) | 0.0 | Veredicto + apply_signal deben ser consistentes |
+| `qwen2.5:7b` | Enriquecimiento empresas | 0.0 | Solo usado por fetch_company.py, no por evaluate.py |
 
 **Regla:** gemma4 nunca scores numéricos sin razonamiento.
 

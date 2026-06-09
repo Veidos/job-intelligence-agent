@@ -13,7 +13,7 @@ S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
 | 0.45 | `M_core` | Core skills from offer vs CV |
 | 0.15 | `M_sec` | Secondary skills from offer vs CV |
 | 0.25 | `F_exp` | Years of experience (sin gap — cualitativo en HR) |
-| 0.15 | `F_fit` | gemma4:e4b + location_match determinista |
+| 0.15 | `F_fit` | gemma4:e4b (context_fit cualitativo) |
 
 ## Skills: per-skill level
 
@@ -106,6 +106,11 @@ providing real signal for W_FIT = 0.15.
 
 `F_fit` is the only LLM value. gemma4:e4b evaluates `context_fit` (0–1)
 considering culture, location, work mode, and personal profile.
+
+> ℹ️ `location_match` is a **separate DB column** used for dashboard display
+> (Ubicación column). It is **NOT** part of the scoring formula. See
+> `F_fit` vs `location_match`: HR model considers location qualitatively;
+> `location_match` is a deterministic Python heuristic shown to the user.
 
 ## Final rating
 

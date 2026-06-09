@@ -4,21 +4,23 @@
 - Python 3.14+ requerido
 - pytest instalado para tests
 - Ollama ejecutándose localmente en http://localhost:11434
-- gemma4:e4b como único modelo (técnico + HR, qwen2.5 eliminado)
+- gemma4:e4b como modelo principal (técnico + HR, temperaturas 0.1 y 0.0)
+- qwen2.5:7b como MODEL_COMPANY para enriquecimiento de empresas (temperatura 0.0)
+- qwen2.5-coder:7b eliminado como modelo de extracción técnica (no razonaba bien en contexto amplio)
 
 ## Suite de tests
 - Estructura: tests/unit/ (funciones puras), tests/integration/ (DB + lógica)
 - Fixture principal: `test_db` — temp file con schema.sql, rollback por test
 - Fixture `test_conn` — wrapper sqlite3 compatible con save_evaluation
 - Fixtures de datos: `sample_perfil_text`, `sample_offer`, `sample_offer_senior`, `sample_offer_no_exp`, `sample_offer_temporal`, `sample_offer_with_impossible_requirements`
-- 167 tests: 107 unit, 30 cassette-based integration, 10 pipeline — todos passing
+- 171 tests: 121 unit/integration, 30 cassette-based integration, 10 pipeline — todos passing
 - Ollama cassettes: 13 JSON fixtures en tests/fixtures/ollama/ (no vcrpy)
 - test_classifier_cassettes.py: usa test_engine (Connection) no test_db (Cursor) — role_classifier usa conn.cursor()
 - test_evaluate_cassettes.py: cassettes directos (no wrapped), mock_ollama_call con side_effect para secuencias
 - test_fetch_cassettes.py: call_args.kwargs para extraer prompt (no call_args[0][1])
 - test_pipeline.py: flujo completo con stateful mocks (call_count++) para secuencias de llamadas
 - ruff fix eliminó 6 imports sin usar de test_pipeline.py
-- PLANS.md actualizado con 167 tests passing
+- PLANS.md actualizado con 171 tests passing
 
 ## Extracción de CV (cv_extractor.py)
 - Usa gemma4:e4b para extracción estructurada de CV
@@ -303,7 +305,7 @@
 |---------|-------------|----------------|
 | Landing page | 📊 Pipeline (monitor) | 🔍 Ofertas (exploración) |
 | Navegación | 6 secciones planas | 4 secciones jerárquicas |
-| Columnas tabla | 12 (incluye M_core, M_sec, F_exp, F_fit) | 9 (solo usuario: score, título, empresa, modalidad, publicado, salario, recomendación, señal, bloqueo) |
+| Columnas tabla | 12 (incluye M_core, M_sec, F_exp, F_fit) | 10 (score, título, empresa, ubicación, modalidad, publicado, salario, recomendación, señal, bloqueo) |
 | Modal footer | Vacío (scrolleabas hasta el final para guardar) | Sticky 2-state: "Añadir a aplicaciones" / "En aplicaciones · Ver →" |
 | Descripción oferta | No disponible en modal | Collapsible `<details>` desde `description_clean` |
 | Link InfoJobs | No disponible | Botón "Ver en InfoJobs" en modal |
