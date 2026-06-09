@@ -427,3 +427,25 @@ tr td:first-child { padding-left: 14px; }
 
   #section-monitor td:nth-child(1) { font-size: 11px; }
 }
+
+/* ── Age dot (columna Publicado) ── */
+.age-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 5px; vertical-align: middle;
+}
+.dot-green { background: var(--green); }
+.dot-yellow { background: var(--yellow); }
+.dot-orange { background: #f97316; }
+.dot-red { background: var(--red); }
+.dot-gray { background: var(--text2); }
+
+/* ── Follow-up badges (aplicaciones) ── */
+.fu-badge {
+  display: inline-block; padding: 1px 7px; border-radius: 3px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.fu-waiting { color: var(--green); background: rgba(34,197,94,.1); }
+.fu-soon { color: var(--yellow); background: rgba(234,179,8,.1); }
+.fu-urgent { color: #f97316; background: rgba(249,115,22,.1); }
+.fu-discard { color: var(--red); background: rgba(239,68,68,.1); }
+.fu-overdue { color: var(--red); background: rgba(239,68,68,.1); margin-left: 4px; }

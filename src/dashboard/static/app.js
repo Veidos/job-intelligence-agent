@@ -98,6 +98,46 @@ function workModeValue(w) {
   return w;
 }
 
+/* ── Age & follow-up helpers ── */
+function daysSince(dateStr) {
+  const dt = _parseDate(dateStr);
+  if (!dt) return null;
+  return Math.floor((Date.now() - dt.getTime()) / 86400000);
+}
+
+function getOfferAgeBadge(days) {
+  if (days == null) return '';
+  if (days <= 7) return `<span class="age-dot dot-green" title="Publicado hace ${days}d"></span>`;
+  if (days <= 14) return `<span class="age-dot dot-yellow" title="Publicado hace ${days}d"></span>`;
+  if (days <= 21) return `<span class="age-dot dot-orange" title="Publicado hace ${days}d"></span>`;
+  if (days <= 30) return `<span class="age-dot dot-red" title="Publicado hace ${days}d"></span>`;
+  return `<span class="age-dot dot-gray" title="Publicado hace ${days}d"></span>`;
+}
+
+function getFollowUpStatus(days) {
+  if (days == null) return null;
+  if (days <= 7) return { label: 'Esperando', cls: 'fu-waiting' };
+  if (days <= 14) return { label: 'Follow-up', cls: 'fu-soon' };
+  if (days <= 21) return { label: 'Insistir', cls: 'fu-urgent' };
+  return { label: 'Descartar', cls: 'fu-discard' };
+}
+
+function isExpired(publishedAt) {
+  const d = daysSince(publishedAt);
+  return d != null && d > 30;
+}
+
+function renderFollowUpBadge(a) {
+  const days = daysSince(a.applied_at);
+  const fu = getFollowUpStatus(days);
+  if (!fu) return '';
+  let html = `<span class="fu-badge ${fu.cls}">${fu.label}</span>`;
+  if (a.next_action_date && daysSince(a.next_action_date) > 0) {
+    html += `<span class="fu-badge fu-overdue">\uD83D\uDD14 Acci\u00f3n vencida</span>`;
+  }
+  return html;
+}
+
 /* ── Offers table ── */
 function loadOffers(filters) {
   let url = '/api/offers';
@@ -137,6 +177,7 @@ function getFilteredData() {
   const fRel = $('filterRel').value;
   const showBlocked = $('filterBlocked').checked;
   const hideApplied = $('filterHideApplied').checked;
+  const hideExpired = $('filterHideExpired').checked;
   const appliedIds = new Set(APP_DATA.map(a => a.offer_id));
   const search = ($('filterSearch').value || '').toLowerCase();
 
@@ -154,6 +195,7 @@ function getFilteredData() {
     if (fRel && d.relevance_flag !== fRel) return false;
     if (!showBlocked && d.apply_block && d.apply_block !== 'null') return false;
     if (hideApplied && appliedIds.has(d.id)) return false;
+    if (hideExpired && isExpired(d.published_at)) return false;
     if (allowedModes.length && !allowedModes.includes(d.work_mode)) return false;
     if (search && !(d.title.toLowerCase().includes(search) || d.company_name.toLowerCase().includes(search))) return false;
     return true;
@@ -221,7 +263,7 @@ function renderTable(data) {
       <td>${d.company_name || ''}</td>
       <td>${d.city || '\u2014'}</td>
       <td>${workModeLabel(d.work_mode)}</td>
-      <td class="num nowrap">${dateFmt(d.published_at)}</td>
+      <td class="num nowrap">${getOfferAgeBadge(daysSince(d.published_at))}${dateFmt(d.published_at)}</td>
       <td class="num nowrap">${d.salary_display || '\u2014'}</td>
       <td>${recTag(d.recommendation)}</td>
       <td>${signalTag(d.llm_apply_signal)}</td>
@@ -251,7 +293,7 @@ function sortCompanies(col) {
 
 /* ── Filter events ── */
 ['filterScore', 'filterRec', 'filterRel', 'filterBlocked', 'filterSearch',
- 'filterRemote', 'filterHybrid', 'filterOnsite', 'filterHideApplied'].forEach(id => {
+ 'filterRemote', 'filterHybrid', 'filterOnsite', 'filterHideApplied', 'filterHideExpired'].forEach(id => {
   const el = $(id);
   if (!el) return;
   el.addEventListener('input', recalcOffers);
@@ -561,6 +603,7 @@ function renderAppCard(a) {
         </div>
         ${a.match_score != null ? `<span class="cell-score ${cls(a.match_score)}">${a.match_score}</span>` : ''}
         <span class="app-card-date">${fullDate(a.applied_at)}</span>
+        ${renderFollowUpBadge(a)}
       </div>
       <div class="app-card-details" id="appDetails${a.id}">
         <textarea placeholder="Notas sobre el proceso (entrevistas, seguimiento...)" id="appNotes${a.id}">${a.notes || ''}</textarea>

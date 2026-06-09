@@ -1,16 +1,14 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
-**Última actualización:** 2026-06-06
-**Fase activa:** Verificación `--since-date _24_HOURS` + persistencia `search_runs` + filtro Ocultar aplicadas.
+**Última actualización:** 2026-06-08
+**Fase activa:** Dashboard — Sistema de caducidad de ofertas + seguimiento de aplicaciones.
 
 **Cambios de esta sesión:**
 
-1. **Verificado `_24_HOURS` en `build_search_urls()`:** ✅
-2. **Bug corregido — keys de `fetch_company` en `run.py`:** `enriched`/`linked`/`errors`/`pending`. ✅
-3. **Persistencia en `search_runs`:** Cada ejecución registrada con query_params, offers_fetched, evaluated, errors, duration_ms, status. ✅
-4. **Pipeline ejecutado:** 25 nuevas ofertas, 30 evaluadas, 0 errores, avg 0.39, Telegram enviado. ✅
-5. **Filtro "Ocultar aplicadas":** Checkbox checked por defecto. Auto-refresh al añadir/eliminar. Sin cambios en server.py. ✅
-6. **Docs actualizados:** PLANS.md (T-7 ✅), MEMORIES.md, DATABASE.md, SETUP.md.
+1. **Pipeline ejecutado:** 30 ofertas nuevas, 30 evaluadas, 0 errores, avg 0.429, Telegram enviado. ✅
+2. **Sistema de caducidad de ofertas (30 días):** Nuevo filtro "Ocultar ofertas >30 días" checked por defecto en pestaña Ofertas. Badge de antigüedad (🟢🟡🟠🔴⚫) en columna "Publicado". Sin cambios en server.py. ✅
+3. **Sistema de seguimiento en Aplicaciones:** Badge de follow-up (Esperando/Follow-up/Insistir/Descartar) según días desde applied_at. Badge "🔔 Acción vencida" si next_action_date pasada. ✅
+4. **Docs actualizados:** HANDOFF.md.
 
 **Próximo paso — Multi-perfil vía `PERFIL_PATH` env var:**
 
