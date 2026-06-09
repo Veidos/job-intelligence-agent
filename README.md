@@ -7,7 +7,7 @@
 ![Ollama](https://img.shields.io/badge/Ollama-gemma4:e4b-black?logo=ollama)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL%20mode-003B57?logo=sqlite)
 ![Tests](https://img.shields.io/badge/Tests-171%20passing-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-green)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 ![Cost](https://img.shields.io/badge/Cost-~$2.70%2Fmonth-lightgrey)
 
 ---
