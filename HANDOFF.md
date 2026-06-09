@@ -8,7 +8,8 @@
 1. **Pipeline ejecutado:** 30 ofertas nuevas, 30 evaluadas, 0 errores, avg 0.429, Telegram enviado. ✅
 2. **Sistema de caducidad de ofertas (30 días):** Nuevo filtro "Ocultar ofertas >30 días" checked por defecto en pestaña Ofertas. Badge de antigüedad (🟢🟡🟠🔴⚫) en columna "Publicado". Sin cambios en server.py. ✅
 3. **Sistema de seguimiento en Aplicaciones:** Badge de follow-up (Esperando/Follow-up/Insistir/Descartar) según días desde applied_at. Badge "🔔 Acción vencida" si next_action_date pasada. ✅
-4. **Docs actualizados:** HANDOFF.md.
+4. **Tabla de Seguimiento en Monitor:** Nueva sección debajo del embudo con KPIs (Total/Follow-up/Urgentes/Vencidas) + tabla con columnas Seguimiento→Oferta→Estado→Apl. hace→Acción→Contacto→Score. Ordenada por urgencia. Botón 🔍 abre modal de detalle. Fetch compartido con renderAppFunnel (sin duplicación). ✅
+5. **Docs actualizados:** HANDOFF.md.
 
 **Próximo paso — Multi-perfil vía `PERFIL_PATH` env var:**
 

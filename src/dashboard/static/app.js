@@ -27,7 +27,10 @@ document.querySelectorAll('.nav-link').forEach(el => {
     if (el.dataset.section === 'empresas') loadCompanies();
     if (el.dataset.section === 'monitor') {
       loadStats(); renderCharts(); loadRuns();
-      fetch('/api/applications').then(r => r.json()).then(apps => renderAppFunnel(apps));
+      fetch('/api/applications').then(r => r.json()).then(apps => {
+        renderAppFunnel(apps);
+        renderAppFollowUp(apps);
+      });
     }
   });
 });
@@ -1221,6 +1224,94 @@ function renderAppFunnel(apps) {
       scales: { x: { ticks: { color: '#8a8a95' }, beginAtZero: true }, y: { ticks: { color: '#8a8a95' } } },
     },
   });
+}
+
+/* ── App follow-up table (Monitor) ── */
+function renderAppFollowUp(apps) {
+  const container = $('appFollowUpTable');
+  const kpis = $('appFollowUpKpis');
+  if (!container || !kpis) return;
+
+  if (!apps.length) {
+    kpis.innerHTML = '';
+    container.innerHTML = '<div class="empty">Sin aplicaciones registradas</div>';
+    return;
+  }
+
+  const fuSoon = apps.filter(a => { const d = daysSince(a.applied_at); return d != null && d > 7 && d <= 14; }).length;
+  const fuUrgent = apps.filter(a => { const d = daysSince(a.applied_at); return d != null && d > 14; }).length;
+  const overdue = apps.filter(a => a.next_action_date && daysSince(a.next_action_date) > 0).length;
+
+  kpis.innerHTML = `
+    <div class="kpi-mini-card"><span class="kpi-val">${apps.length}</span> Total</div>
+    <div class="kpi-mini-card"><span class="kpi-val yellow">${fuSoon}</span> Follow-up</div>
+    <div class="kpi-mini-card"><span class="kpi-val orange">${fuUrgent}</span> Urgentes</div>
+    <div class="kpi-mini-card"><span class="kpi-val red">${overdue}</span> Vencidas</div>
+  `;
+
+  const sorted = [...apps].sort((a, b) => {
+    const aDays = daysSince(a.applied_at) || 0;
+    const bDays = daysSince(b.applied_at) || 0;
+    const aUrgency = aDays > 14 ? 3 : aDays > 7 ? 2 : 1;
+    const bUrgency = bDays > 14 ? 3 : bDays > 7 ? 2 : 1;
+    if (aUrgency !== bUrgency) return bUrgency - aUrgency;
+    const aOver = a.next_action_date && daysSince(a.next_action_date) > 0 ? 1 : 0;
+    const bOver = b.next_action_date && daysSince(b.next_action_date) > 0 ? 1 : 0;
+    if (aOver !== bOver) return bOver - aOver;
+    return bDays - aDays;
+  });
+
+  const STATUS_LABELS = { applied: 'Applied', interviewing: 'Interviewing', offer: 'Offer', rejected: 'Rejected', archived: 'Archived' };
+  const STATUS_COLORS = { applied: 'tag-blue', interviewing: 'tag-yellow', offer: 'tag-green', rejected: 'tag-red', archived: 'tag-gray' };
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Seguimiento</th>
+          <th>Oferta</th>
+          <th>Estado</th>
+          <th class="num">Apl. hace</th>
+          <th>Acci\u00f3n</th>
+          <th>Contacto</th>
+          <th class="num">Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map(a => {
+          const days = daysSince(a.applied_at);
+          const fu = getFollowUpStatus(days);
+          const fuHtml = fu ? `<span class="fu-badge ${fu.cls}">${fu.label}</span>` : '\u2014';
+          const statusCls = STATUS_COLORS[a.status] || 'tag-gray';
+          const statusHtml = `<span class="tag ${statusCls}">${STATUS_LABELS[a.status] || a.status}</span>`;
+          const daysAgo = days != null ? `${days}d` : '\u2014';
+
+          let actionHtml = '\u2014';
+          if (a.next_action_date) {
+            const aDays = daysSince(a.next_action_date);
+            actionHtml = `${fullDate(a.next_action_date)}${aDays != null && aDays > 0 ? ' <span class="fu-badge fu-overdue">\uD83D\uDD14 Vencida</span>' : ''}`;
+          }
+
+          const scoreHtml = a.match_score != null ? `<span class="cell-score ${cls(a.match_score)}">${a.match_score}</span>` : '\u2014';
+          const contactHtml = a.contact_name || '\u2014';
+
+          return `<tr>
+            <td>${fuHtml}</td>
+            <td>
+              <strong>${a.offer_title || ''}</strong>
+              <small>${a.company_name || ''}</small>
+              <button class="btn-link-icon" onclick="openModal(${a.offer_id})" title="Ver detalle">\uD83D\uDD0D</button>
+            </td>
+            <td>${statusHtml}</td>
+            <td class="num">${daysAgo}</td>
+            <td>${actionHtml}</td>
+            <td>${contactHtml}</td>
+            <td class="num">${scoreHtml}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 /* ── Model accuracy grouped bar ── */

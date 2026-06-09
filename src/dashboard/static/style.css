@@ -449,3 +449,28 @@ tr td:first-child { padding-left: 14px; }
 .fu-urgent { color: #f97316; background: rgba(249,115,22,.1); }
 .fu-discard { color: var(--red); background: rgba(239,68,68,.1); }
 .fu-overdue { color: var(--red); background: rgba(239,68,68,.1); margin-left: 4px; }
+
+/* ── Mini KPI row (follow-up) ── */
+.kpi-mini-row {
+  display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.kpi-mini-card {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 8px 14px;
+  font-size: 13px; color: var(--text2);
+}
+.kpi-mini-card .kpi-val {
+  font-weight: 700; font-size: 16px; color: var(--text);
+}
+.kpi-mini-card .kpi-val.yellow { color: var(--yellow); }
+.kpi-mini-card .kpi-val.orange { color: #f97316; }
+.kpi-mini-card .kpi-val.red { color: var(--red); }
+
+/* ── Link icon button ── */
+.btn-link-icon {
+  background: none; border: none; cursor: pointer;
+  padding: 0 2px; font-size: 13px; vertical-align: middle;
+  color: var(--accent);
+}
+.btn-link-icon:hover { opacity: .7; }
