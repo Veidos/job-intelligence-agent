@@ -608,6 +608,7 @@ class InfoJobsScraper:
         location: str = "",
         page_limit: int = 1,
         max_items: int = 0,
+        since_date: str | None = None,
     ) -> list[SearchStub]:
         """Busca ofertas y devuelve stubs de todas las páginas.
 
@@ -616,17 +617,19 @@ class InfoJobsScraper:
             location: Ubicación.
             page_limit: Máximo de páginas a recorrer.
             max_items: Máximo total de ofertas. 0 = sin límite.
+            since_date: Filtro temporal. Valores: _24_HOURS, _7_DAYS, _15_DAYS, ANY.
         """
         all_stubs: list[SearchStub] = []
 
         for page in range(1, page_limit + 1):
             params = {"page": page, "sortBy": "PUBLICATION_DATE"}
+            if since_date:
+                params["sinceDate"] = since_date
             if query:
                 params["keyword"] = query
             if location:
                 params["location"] = location
 
-            # Construir URL — mismo formato que build_search_urls() en fetch.py
             from urllib.parse import urlencode
 
             qs = urlencode(params)

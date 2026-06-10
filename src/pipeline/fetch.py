@@ -13,7 +13,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
 
 # Asegurar que la raíz del proyecto está en sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -65,51 +64,6 @@ def _extract_keywords_from_config(search_config: dict) -> list[str]:
         return json.loads(roles_raw) if isinstance(roles_raw, str) else roles_raw
     except (json.JSONDecodeError, TypeError):
         return []
-
-
-def build_search_urls(
-    search_config: dict, profile: dict, since_date: str | None = None
-) -> list[str]:
-    """Construye searchUrls válidas de InfoJobs.
-
-    Args:
-        search_config: Configuración de búsqueda (debe venir de ensure_search_config)
-        profile: Perfil del candidato
-        since_date: Filtro de fecha (ej: "LAST_WEEK"). None = sin filtro.
-    """
-    base = "https://www.infojobs.net/ofertas-trabajo/espana"
-    urls: list[str] = []
-
-    # Parse geo_hierarchy
-    geo_raw = search_config.get("geo_hierarchy")
-    if geo_raw:
-        try:
-            geo_hierarchy = json.loads(geo_raw) if isinstance(geo_raw, str) else geo_raw
-        except (json.JSONDecodeError, TypeError):
-            geo_hierarchy = ["nacional"]
-    else:
-        geo_hierarchy = ["nacional"]
-
-    active_geo_level = search_config.get("active_geo_level", 0)
-    current_geo = (
-        geo_hierarchy[active_geo_level]
-        if active_geo_level < len(geo_hierarchy)
-        else None
-    )
-
-    for query in _extract_keywords_from_config(search_config):
-        url = f"{base}?keyword={quote(query)}&sortBy=PUBLICATION_DATE"
-        if since_date:
-            url += f"&sinceDate={since_date}"
-        if current_geo and current_geo != "nacional":
-            if current_geo.isdigit():
-                url += f"&provinceIds={current_geo}"
-            else:
-                url += f"+{current_geo}"
-        urls.append(url)
-
-    log.info("searchUrls generadas (%d): %s", len(urls), urls)
-    return urls
 
 
 def parse_salary(salary_data: Any) -> tuple[float | None, float | None]:
@@ -588,7 +542,9 @@ def run_fetch_scraper(
     total_raw = 0
     try:
         for keyword in keywords:
-            stubs = scraper.search(query=keyword, page_limit=5, max_items=max_items)
+            stubs = scraper.search(
+                query=keyword, page_limit=5, max_items=max_items, since_date=since_date
+            )
             if not stubs:
                 log.info("  Sin ofertas para '%s'", keyword)
                 continue
@@ -642,7 +598,7 @@ if __name__ == "__main__":
         "--since-date",
         choices=["_24_HOURS", "_7_DAYS", "_15_DAYS", "ANY"],
         default=None,
-        help="Sin efecto en scraper propio (reservado para compatibilidad).",
+        help="Filtro temporal: _24_HOURS, _7_DAYS, _15_DAYS, ANY. None = sin filtro.",
     )
     parser.add_argument(
         "--enrich-only",
