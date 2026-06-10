@@ -1,0 +1,302 @@
+2026-06-09 20:38:10 [INFO] [Migrate] Verificando schema...
+2026-06-09 20:38:10 [INFO] Iniciando migración de schema...
+2026-06-09 20:38:10 [INFO] Tabla apify_raw_responses verificada
+2026-06-09 20:38:10 [INFO] Tabla applications verificada
+2026-06-09 20:38:10 [WARNING]   Error añadiendo user_settings.key: Cannot add a UNIQUE column
+2026-06-09 20:38:10 [INFO] Schema ya actualizado
+2026-06-09 20:38:10 [INFO] [CV] PERFIL.md actualizado — continuando
+2026-06-09 20:38:10 [INFO] ═══════════════════════════════════
+2026-06-09 20:38:10 [INFO]   Job Intelligence Agent — Pipeline
+2026-06-09 20:38:10 [INFO] ═══════════════════════════════════
+2026-06-09 20:38:10 [INFO] [1/4] Fetch — descargando ofertas de InfoJobs...
+2026-06-09 20:38:10 [INFO] searchUrls generadas (6): ['https://www.infojobs.net/ofertas-trabajo/espana?keyword=Data%20Analyst&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS', 'https://www.infojobs.net/ofertas-trabajo/espana?keyword=Analista%20de%20Datos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS', 'https://www.infojobs.net/ofertas-trabajo/espana?keyword=Data%20Scientist&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS', 'https://www.infojobs.net/ofertas-trabajo/espana?keyword=Cient%C3%ADfico%20de%20Datos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS', 'https://www.infojobs.net/ofertas-trabajo/espana?keyword=Business%20Intelligence%20Analyst&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS', 'https://www.infojobs.net/ofertas-trabajo/espana?keyword=Ingeniero%20de%20Procesos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS']
+2026-06-09 20:38:10 [INFO] Iniciando Apify actor para 6 URLs
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: 
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:11.499Z [33mACTOR: [39mPulling container image of build MDP7LDVgoPnbUq9SG from registry.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:35.589Z [33mACTOR: [39mCreating container.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:35.730Z [33mACTOR: [39mStarting container.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:35.731Z [33mACTOR: [39mRunning under "LIMITED_PERMISSIONS".
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:35.917Z Will run command: xvfb-run -a -s "-ac -screen 0 1920x1080x24+32 -nolisten tcp" /bin/sh -c npm start --silent
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:36.679Z [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.271Z Warning: Plugin is not derived from PuppeteerExtraPlugin, ignoring. PuppeteerNode {
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.273Z   _isPuppeteerCore: [33mtrue[39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.274Z   _changedBrowsers: [33mfalse[39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.276Z   connect: [36m[Function: bound bound connect][39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.278Z   defaultBrowserRevision: [32m'131.0.6778.87'[39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.280Z   configuration: { defaultBrowser: [32m'chrome'[39m },
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.282Z   launch: [36m[Function: bound launch][39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.283Z   executablePath: [36m[Function: bound executablePath][39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.285Z   defaultArgs: [36m[Function: bound defaultArgs][39m,
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.287Z   trimCache: [36m[Function: bound trimCache] AsyncFunction[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.289Z }
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.290Z [32mINFO[39m  System info[90m {"apifyVersion":"3.5.2","apifyClientVersion":"2.19.0","crawleeVersion":"3.15.3","osType":"Linux","nodeVersion":"v22.21.1"}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:37.749Z [32mINFO[39m [33m PuppeteerCrawler:[39m Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:38.554Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Data%20Analyst&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:38.803Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:43.909Z Scrolling time...2
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Crawled 0/1 pages, 0 failed requests, desired concurrency 2.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:48.439Z Scrolling time...3
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:52.906Z Scrolling time...4
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Crawled 0/1 pages, 0 failed requests, desired concurrency 3.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:38:57.692Z Scrolling time...5
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:01.995Z [32mINFO[39m [33m PuppeteerCrawler:[39m All requests from the queue have been processed, the crawler will shut down.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:02.629Z [32mINFO[39m [33m PuppeteerCrawler:[39m Final request statistics:[90m {"requestsFinished":1,"requestsFailed":0,"retryHistogram":[1],"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":23824,"requestsFinishedPerMinute":2,"requestsFailedPerMinute":0,"requestTotalDurationMillis":23824,"requestsTotal":1,"crawlerRuntimeMillis":25265}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:02.630Z [32mINFO[39m [33m PuppeteerCrawler:[39m Finished! Total 1 requests: 1 succeeded, 0 failed.[90m {"terminal":true}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:03.223Z [32mINFO[39m [33m PuppeteerCrawler:[39m Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:06.280Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Analista%20de%20Datos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:07.165Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:09.968Z [33mWARN[39m [33m PuppeteerCrawler:[39m Reclaiming failed request back to the list or queue. Execution context was destroyed, most likely because of a navigation.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Crawled 0/3 pages, 0 failed requests, desired concurrency 2.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:09.970Z     at async RealtorAgentScraper.scrollPage (file:///home/myuser/src/main.js:230:9)[90m {"id":"IW2nFKngq07exxP","url":"https://www.infojobs.net/ofertas-trabajo/espana?keyword=Analista%20de%20Datos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS","retryCount":1}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Crawled 0/3 pages, 0 failed requests, desired concurrency 1.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:20.467Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Analista%20de%20Datos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:25.875Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:29.669Z Scrolling time...2
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:34.137Z Scrolling time...3
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:37.829Z Scrolling time...4
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:41.774Z Scrolling time...5
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:44.864Z [32mINFO[39m [33m PuppeteerCrawler:[39m All requests from the queue have been processed, the crawler will shut down.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:45.464Z [32mINFO[39m [33m PuppeteerCrawler:[39m Final request statistics:[90m {"requestsFinished":1,"requestsFailed":0,"retryHistogram":[null,1],"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":33890,"requestsFinishedPerMinute":1,"requestsFailedPerMinute":0,"requestTotalDurationMillis":33890,"requestsTotal":1,"crawlerRuntimeMillis":42833}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:45.466Z [32mINFO[39m [33m PuppeteerCrawler:[39m Finished! Total 1 requests: 1 succeeded, 0 failed.[90m {"terminal":true}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:46.109Z [32mINFO[39m [33m PuppeteerCrawler:[39m Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:49.666Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Data%20Scientist&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:50.775Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Crawled 0/5 pages, 0 failed requests, desired concurrency 2.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:39:55.864Z Scrolling time...2
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:00.336Z Scrolling time...3
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Crawled 0/5 pages, 0 failed requests, desired concurrency 1.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:05.148Z Scrolling time...4
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:07.648Z Scrolling time...5
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:11.901Z [32mINFO[39m [33m PuppeteerCrawler:[39m All requests from the queue have been processed, the crawler will shut down.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:12.686Z [32mINFO[39m [33m PuppeteerCrawler:[39m Final request statistics:[90m {"requestsFinished":1,"requestsFailed":0,"retryHistogram":[1],"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":25361,"requestsFinishedPerMinute":2,"requestsFailedPerMinute":0,"requestTotalDurationMillis":25361,"requestsTotal":1,"crawlerRuntimeMillis":27219}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> Status: RUNNING, Message: Finished! Total 1 requests: 1 succeeded, 0 failed.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:12.688Z [32mINFO[39m [33m PuppeteerCrawler:[39m Finished! Total 1 requests: 1 succeeded, 0 failed.[90m {"terminal":true}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:13.738Z [32mINFO[39m [33m PuppeteerCrawler:[39m Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:17.667Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Cient%C3%ADfico%20de%20Datos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:18.670Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:23.068Z Scrolling time...2
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:28.240Z Scrolling time...3
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:31.554Z Scrolling time...4
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:36.523Z Scrolling time...5
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:41.865Z [32mINFO[39m [33m PuppeteerCrawler:[39m All requests from the queue have been processed, the crawler will shut down.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:42.475Z [32mINFO[39m [33m PuppeteerCrawler:[39m Final request statistics:[90m {"requestsFinished":1,"requestsFailed":0,"retryHistogram":[1],"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":27622,"requestsFinishedPerMinute":2,"requestsFailedPerMinute":0,"requestTotalDurationMillis":27622,"requestsTotal":1,"crawlerRuntimeMillis":29783}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:42.477Z [32mINFO[39m [33m PuppeteerCrawler:[39m Finished! Total 1 requests: 1 succeeded, 0 failed.[90m {"terminal":true}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:43.172Z [32mINFO[39m [33m PuppeteerCrawler:[39m Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:46.484Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Business%20Intelligence%20Analyst&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:47.465Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:51.724Z Scrolling time...2
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:56.535Z Scrolling time...3
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:40:59.382Z Scrolling time...4
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:02.637Z Scrolling time...5
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:06.496Z [32mINFO[39m [33m PuppeteerCrawler:[39m All requests from the queue have been processed, the crawler will shut down.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:07.135Z [32mINFO[39m [33m PuppeteerCrawler:[39m Final request statistics:[90m {"requestsFinished":1,"requestsFailed":0,"retryHistogram":[1],"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":22838,"requestsFinishedPerMinute":2,"requestsFailedPerMinute":0,"requestTotalDurationMillis":22838,"requestsTotal":1,"crawlerRuntimeMillis":24660}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:07.138Z [32mINFO[39m [33m PuppeteerCrawler:[39m Finished! Total 1 requests: 1 succeeded, 0 failed.[90m {"terminal":true}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:07.886Z [32mINFO[39m [33m PuppeteerCrawler:[39m Starting the crawler.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:11.579Z Processing https://www.infojobs.net/ofertas-trabajo/espana?keyword=Ingeniero%20de%20Procesos&sortBy=PUBLICATION_DATE&sinceDate=_24_HOURS...
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:12.467Z Scrolling time...1
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:17.966Z Scrolling time...2
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:22.667Z Saved 20 items
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:23.065Z Scrolling time...3
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:24.764Z Saved 10 items
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:26.989Z [32mINFO[39m [33m PuppeteerCrawler:[39m All requests from the queue have been processed, the crawler will shut down.
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:27.669Z [32mINFO[39m [33m PuppeteerCrawler:[39m Final request statistics:[90m {"requestsFinished":1,"requestsFailed":0,"retryHistogram":[1],"requestAvgFailedDurationMillis":null,"requestAvgFinishedDurationMillis":18802,"requestsFinishedPerMinute":3,"requestsFailedPerMinute":0,"requestTotalDurationMillis":18802,"requestsTotal":1,"crawlerRuntimeMillis":20531}[39m
+[36m[apify.infojobs-job-scraper runId:5ebVEpv340l1zruV1][0m -> 2026-06-09T18:41:27.671Z [32mINFO[39m [33m PuppeteerCrawler:[39m Finished! Total 1 requests: 1 succeeded, 0 failed.[90m {"terminal":true}[39m
+2026-06-09 20:41:34 [INFO] Apify run_id=0BIaSjTKcA6wss75o devolvió 30 items
+2026-06-09 20:41:34 [INFO] Raw responses persistidas: 30/30 (run_id=0BIaSjTKcA6wss75o)
+2026-06-09 20:41:34 [INFO] Enriqueciendo 30 ofertas con LLM...
+2026-06-09 20:42:36 [INFO]   ✓ [1/30] 03bff68c864e3685155c216beafc9a — enriquecida
+2026-06-09 20:43:46 [INFO]   ✓ [2/30] 71b15bd2ba431fa3cec101c3cc8162 — enriquecida
+2026-06-09 20:44:49 [INFO]   ✓ [3/30] cbf6c73e39478cbcf51f6073c9d861 — enriquecida
+2026-06-09 20:45:51 [WARNING] Respuesta no-JSON de gemma4:e4b, reintentando...
+2026-06-09 20:47:05 [INFO]   ✓ [4/30] 8482ae44a94a72ba504e6f6db6094c — enriquecida
+2026-06-09 20:48:09 [INFO]   ✓ [5/30] 195548968a45749b31f45baafdfdfa — enriquecida
+2026-06-09 20:49:13 [INFO]   ✓ [6/30] 9876dd65e247a394f719b77cf3947e — enriquecida
+2026-06-09 20:50:15 [INFO]   ✓ [7/30] 8c555b59af47f2afa33332ffad4a99 — enriquecida
+2026-06-09 20:51:15 [INFO]   ✓ [8/30] cb4c1a96be422bad55cc2109d12547 — enriquecida
+2026-06-09 20:52:19 [INFO]   ✓ [9/30] 466bf34d9d481b8159a145b47351f3 — enriquecida
+2026-06-09 20:53:25 [INFO]   ✓ [10/30] e89833014e44e1b3abbd4757fe1a61 — enriquecida
+2026-06-09 20:54:22 [INFO]   ✓ [11/30] a73b1cb43a46c5b6dc43a12fddcc8b — enriquecida
+2026-06-09 20:55:28 [INFO]   ✓ [12/30] 3237033c8e4c309b528672e86a594e — enriquecida
+2026-06-09 20:56:36 [INFO]   ✓ [13/30] e1e6ee74b74c00be7d323e69d89f8c — enriquecida
+2026-06-09 20:57:35 [INFO]   ✓ [14/30] 214e57b38d48e8ad48d35ddbfef594 — enriquecida
+2026-06-09 20:58:40 [INFO]   ✓ [15/30] c11e131cbd4c099b679b5a41e26117 — enriquecida
+2026-06-09 20:59:38 [INFO]   ✓ [16/30] 6ce257c253412e9880ae8ace28b4ab — enriquecida
+2026-06-09 21:00:40 [INFO]   ✓ [17/30] fee12761dd42dd9923aaa1be00ce19 — enriquecida
+2026-06-09 21:01:50 [INFO]   ✓ [18/30] f8ffb512004cdd8fd38c45ca35b372 — enriquecida
+2026-06-09 21:03:04 [INFO]   ✓ [19/30] 466af784f9447da12611c77b554105 — enriquecida
+2026-06-09 21:04:11 [INFO]   ✓ [20/30] f05f78b270428eb6423102d7b85205 — enriquecida
+2026-06-09 21:05:09 [INFO]   ✓ [21/30] 7eac51077440259780fdab977ec109 — enriquecida
+2026-06-09 21:06:16 [INFO]   ✓ [22/30] 6106375e7643f2a1e6bbc0de39a95c — enriquecida
+2026-06-09 21:07:16 [INFO]   ✓ [23/30] 811420c3b247168c9290a95358c9a0 — enriquecida
+2026-06-09 21:08:18 [INFO]   ✓ [24/30] d9fb21f1674abda18e70649b4dc893 — enriquecida
+2026-06-09 21:09:21 [INFO]   ✓ [25/30] 8908919bcc4ade8c61f0c0000900e8 — enriquecida
+2026-06-09 21:10:22 [INFO]   ✓ [26/30] 57ecef306544acb26e140e186a8f09 — enriquecida
+2026-06-09 21:11:27 [INFO]   ✓ [27/30] 22260c9e034ce0ba4a93b0eec573f7 — enriquecida
+2026-06-09 21:12:24 [INFO]   ✓ [28/30] c3dc97ccce416dbc4d761d5792d720 — enriquecida
+2026-06-09 21:13:33 [INFO]   ✓ [29/30] f6ae91e4a94afda504d87ea53da6c9 — enriquecida
+2026-06-09 21:14:30 [INFO]   ✓ [30/30] 454d7af9224b4b904d63697f9d270a — enriquecida
+2026-06-09 21:14:30 [INFO] Enriquecimiento completado: 30/30 ofertas
+2026-06-09 21:14:30 [INFO] Ofertas enriquecidas en este run: 30
+2026-06-09 21:14:30 [INFO] Fetch completado: 30 ofertas nuevas (de 30 items, run_id=0BIaSjTKcA6wss75o)
+2026-06-09 21:14:30 [INFO] [1/4] Fetch — 30 ofertas nuevas
+2026-06-09 21:14:30 [INFO] [2/4] Classify — clasificando roles...
+2026-06-09 21:14:30 [INFO] Starting role classifier (limit=all)
+2026-06-09 21:14:30 [INFO] Loaded role catalog with 63 roles
+2026-06-09 21:14:30 [INFO] Found 30 unclassified offers to process
+2026-06-09 21:14:30 [INFO] Processing offer 1/30: Ingeniero/a recién titulado/a (Inspecciones reglam
+2026-06-09 21:16:02 [INFO] Adding new role to catalog: inspector_reglamentario
+2026-06-09 21:16:02 [INFO] Updated role catalog with 64 roles
+2026-06-09 21:16:02 [INFO] Processing offer 2/30: Ingeniero/a - Sector Máquina Herramienta - Oficina
+2026-06-09 21:17:23 [INFO] Processing offer 3/30: Beca Experience&Talent: Ingeniero/a de Calidad Pro
+2026-06-09 21:18:37 [INFO] Processing offer 4/30: Ingeniero Técnico Logístico y de Equipos
+2026-06-09 21:19:57 [INFO] Processing offer 5/30: INGENIERO/A AUTOMATIZACION & IA (MADRID)
+2026-06-09 21:21:12 [INFO] Processing offer 6/30: INGENIERO/A DE PRODUCCIÓN - PERFIL ELÉCTRICO
+2026-06-09 21:22:17 [INFO] Processing offer 7/30: Ingeniero/a Industrial
+2026-06-09 21:23:36 [INFO] Processing offer 8/30: Ingeniero/a calidad - ámbito defensa
+2026-06-09 21:24:56 [INFO] Processing offer 9/30: Ingeniero/a calidad - especialidad motores (ámbito
+2026-06-09 21:26:02 [INFO] Adding new role to catalog: aerospace_quality_engineer_defense
+2026-06-09 21:26:02 [INFO] Updated role catalog with 65 roles
+2026-06-09 21:26:02 [INFO] Processing offer 10/30: INGENIERO/A JUNIOR PARA OFICINA TÉCNICA
+2026-06-09 21:27:08 [INFO] Progress: 10/30 offers processed
+2026-06-09 21:27:08 [INFO] Processing offer 11/30: Ingeniero/a Industrial (Primer empleo)
+2026-06-09 21:28:19 [INFO] Processing offer 12/30: JEFE TALLER MONTAJE EQUIPOS ELECTRONICOS
+2026-06-09 21:29:43 [INFO] Adding new role to catalog: industrial_process_manager
+2026-06-09 21:29:43 [INFO] Updated role catalog with 66 roles
+2026-06-09 21:29:43 [INFO] Processing offer 13/30: Responsable de PRL
+2026-06-09 21:31:07 [INFO] Processing offer 14/30: Ingeniera/o de calidad envase plástico
+2026-06-09 21:32:24 [INFO] Processing offer 15/30: Platform Engineer - DevOps (Kubernetes/OpenShift) 
+2026-06-09 21:33:38 [INFO] Adding new role to catalog: devops_engineer
+2026-06-09 21:33:38 [INFO] Updated role catalog with 67 roles
+2026-06-09 21:33:38 [INFO] Processing offer 16/30: Electronic Engineer
+2026-06-09 21:34:54 [INFO] Processing offer 17/30: Ingeniero/a Inyección (sector automoción)
+2026-06-09 21:35:57 [INFO] Processing offer 18/30: Ingeniero automatizacion_Pytnon_IA_Ingles alto
+2026-06-09 21:37:06 [INFO] Processing offer 19/30: Ingeniero/a Informático/a - Desarrollo Multiplataf
+2026-06-09 21:38:38 [INFO] Processing offer 20/30: Ingeniero/a de mantenimiento y reparación
+2026-06-09 21:40:02 [INFO] Progress: 20/30 offers processed
+2026-06-09 21:40:02 [INFO] Processing offer 21/30: Ingeniero/a Civil BIM - Asturias
+2026-06-09 21:41:21 [INFO] Adding new role to catalog: civil_bim_consultant
+2026-06-09 21:41:21 [INFO] Updated role catalog with 68 roles
+2026-06-09 21:41:21 [INFO] Processing offer 22/30: INGENIERO/A ELECTRÓNICO/A - APLICACIONES CAM
+2026-06-09 21:42:47 [INFO] Processing offer 23/30: Jefe de Obra Civil. Ingeniero/a Obra Civil.
+2026-06-09 21:44:07 [INFO] Processing offer 24/30: Ingeniero/a industrial
+2026-06-09 21:45:15 [INFO] Processing offer 25/30: PROJECT MANAGER (Oficina Técnica)
+2026-06-09 21:46:54 [INFO] Processing offer 26/30: Ingeniero eléctrico Junior
+2026-06-09 21:48:17 [INFO] Processing offer 27/30: Ingeniero/a de Automatización - PLC - SCADA
+2026-06-09 21:49:29 [INFO] Processing offer 28/30: Ingeniero/a junior ITV Madrid (zona sur)
+2026-06-09 21:50:41 [INFO] Processing offer 29/30: JEFE/A DE OBRA NAVAL – INGENIERO/A NAVAL O INDUSTR
+2026-06-09 21:52:05 [INFO] Processing offer 30/30: Ingeniero/a de producción
+2026-06-09 21:53:20 [INFO] Progress: 30/30 offers processed
+2026-06-09 21:53:20 [INFO] Classification complete: 30 classified, 5 new roles, distribution: {'adjacent': 7, 'stretch': 22, 'core': 1}
+2026-06-09 21:53:20 [INFO] [2/4] Classify — 30 ofertas clasificadas
+2026-06-09 21:53:20 [INFO] [2.5/4] Enrich — poblando datos de empresas...
+2026-06-09 21:53:20 [INFO] [Enrich] Empresas pendientes de enriquecimiento: 22
+2026-06-09 21:53:20 [INFO] [Enrich] Procesando empresa: Morgan Philips Specialist Recruitment (0ac493ccab499595f9df36d7069b88)
+2026-06-09 21:53:28 [INFO] [Enrich] 0ac493ccab499595f9df36d7069b88 -> sector=Industrial, tamano=gran_empresa, confianza=alta
+2026-06-09 21:53:28 [INFO] [Enrich] [1/22] 0ac493ccab499595f9df36d7069b88 — enriched
+2026-06-09 21:53:28 [INFO] [Enrich] Procesando empresa: MADISAPALMA, S.A. (436656524531105571954105250110)
+2026-06-09 21:53:31 [INFO] [Enrich] 436656524531105571954105250110 -> sector=Tecnologia, tamano=mediana, confianza=alta
+2026-06-09 21:53:31 [INFO] [Enrich] [2/22] 436656524531105571954105250110 — enriched
+2026-06-09 21:53:31 [INFO] [Enrich] Procesando empresa: ABC ARQUITECTURA MODULAR (735048524531106760234415750973)
+2026-06-09 21:53:34 [INFO] [Enrich] 735048524531106760234415750973 -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:53:34 [INFO] [Enrich] [3/22] 735048524531106760234415750973 — enriched
+2026-06-09 21:53:34 [INFO] [Enrich] Procesando empresa: TRANSPORTES ARNIELLA (946052524534005530385504854949)
+2026-06-09 21:53:38 [INFO] [Enrich] 946052524534005530385504854949 -> sector=Logistica, tamano=mediana, confianza=alta
+2026-06-09 21:53:38 [INFO] [Enrich] [4/22] 946052524534005530385504854949 — enriched
+2026-06-09 21:53:38 [INFO] [Enrich] Procesando empresa: OFICINA TECNICA INSULAR SL. (98484955515652797073676026093523705562)
+2026-06-09 21:53:41 [INFO] [Enrich] 98484955515652797073676026093523705562 -> sector=Industrial, tamano=pequeña, confianza=alta
+2026-06-09 21:53:41 [INFO] [Enrich] [5/22] 98484955515652797073676026093523705562 — enriched
+2026-06-09 21:53:41 [INFO] [Enrich] Procesando empresa: FACCTOR VALOR HUMANO SL. (98485757495457706567678023203253306444)
+2026-06-09 21:53:44 [INFO] [Enrich] 98485757495457706567678023203253306444 -> sector=Construccion, tamano=grande_empresa, confianza=alta
+2026-06-09 21:53:44 [INFO] [Enrich] [6/22] 98485757495457706567678023203253306444 — enriched
+2026-06-09 21:53:44 [INFO] [Enrich] Procesando empresa: FLUIDMECANICA SUR SL (98494950525350707685730015064146919341)
+2026-06-09 21:53:48 [INFO] [Enrich] 98494950525350707685730015064146919341 -> sector=Industrial, tamano=pequeña, confianza=media
+2026-06-09 21:53:48 [INFO] [Enrich] [7/22] 98494950525350707685730015064146919341 — enriched
+2026-06-09 21:53:48 [INFO] [Enrich] Procesando empresa: FEEDING SYSTEMS SL. (98505555544548706969683012163420709866)
+2026-06-09 21:53:51 [INFO] [Enrich] 98505555544548706969683012163420709866 -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:53:51 [INFO] [Enrich] [8/22] 98505555544548706969683012163420709866 — enriched
+2026-06-09 21:53:51 [INFO] [Enrich] Procesando empresa: FIGUERAS SEATING EUROPE SOCIEDAD LIMITADA. (98545050565651707371854024233112401628)
+2026-06-09 21:53:54 [INFO] [Enrich] 98545050565651707371854024233112401628 -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:53:54 [INFO] [Enrich] [9/22] 98545050565651707371854024233112401628 — enriched
+2026-06-09 21:53:54 [INFO] [Enrich] Procesando empresa: Asociación de la Industria Navarra (ain)
+2026-06-09 21:53:57 [INFO] [Enrich] ain -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:53:57 [INFO] [Enrich] [10/22] ain — enriched
+2026-06-09 21:53:57 [INFO] [Enrich] Procesando empresa: AIRON Sistemas S.L. (airon)
+2026-06-09 21:54:01 [INFO] [Enrich] airon -> sector=Tecnologia, tamano=mediana, confianza=alta
+2026-06-09 21:54:01 [INFO] [Enrich] [11/22] airon — enriched
+2026-06-09 21:54:01 [INFO] [Enrich] Procesando empresa: Applus Iteuve (applusiteuve)
+2026-06-09 21:54:04 [INFO] [Enrich] applusiteuve -> sector=Automocion, tamano=grande_empresa, confianza=alta
+2026-06-09 21:54:04 [INFO] [Enrich] [12/22] applusiteuve — enriched
+2026-06-09 21:54:04 [INFO] [Enrich] Procesando empresa: BATZ, S. COOP. (batz)
+2026-06-09 21:54:08 [INFO] [Enrich] batz -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:54:08 [INFO] [Enrich] [13/22] batz — enriched
+2026-06-09 21:54:08 [INFO] [Enrich] Procesando empresa: BY TECHDESIGN SL (bytechdesign)
+2026-06-09 21:54:12 [INFO] [Enrich] bytechdesign -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:54:12 [INFO] [Enrich] [14/22] bytechdesign — enriched
+2026-06-09 21:54:12 [INFO] [Enrich] Procesando empresa: Claire Joster (claire-joster)
+2026-06-09 21:54:15 [INFO] [Enrich] claire-joster -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:54:15 [INFO] [Enrich] [15/22] claire-joster — enriched
+2026-06-09 21:54:15 [INFO] [Enrich] Procesando empresa: HUBTALENT (hubtalent)
+2026-06-09 21:54:18 [INFO] [Enrich] hubtalent -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:54:18 [INFO] [Enrich] [16/22] hubtalent — enriched
+2026-06-09 21:54:18 [INFO] [Enrich] Procesando empresa: IRIUM SOLUCIONES Y SISTEMAS (irium)
+2026-06-09 21:54:22 [INFO] [Enrich] irium -> sector=Tecnologia, tamano=mediana, confianza=alta
+2026-06-09 21:54:22 [INFO] [Enrich] [17/22] irium — enriched
+2026-06-09 21:54:22 [INFO] [Enrich] Procesando empresa: Lantegi Batuak (lantegibatuak)
+2026-06-09 21:54:25 [INFO] [Enrich] lantegibatuak -> sector=Industrial, tamano=pequeña, confianza=media
+2026-06-09 21:54:25 [INFO] [Enrich] [18/22] lantegibatuak — enriched
+2026-06-09 21:54:25 [INFO] [Enrich] Procesando empresa: Paul Marlex (marlex-recruiting)
+2026-06-09 21:54:28 [INFO] [Enrich] marlex-recruiting -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:54:28 [INFO] [Enrich] [19/22] marlex-recruiting — enriched
+2026-06-09 21:54:28 [INFO] [Enrich] Procesando empresa: P&PD Ingenieros (ppdingenieros)
+2026-06-09 21:54:32 [INFO] [Enrich] ppdingenieros -> sector=Industrial, tamano=mediana, confianza=alta
+2026-06-09 21:54:32 [INFO] [Enrich] [20/22] ppdingenieros — enriched
+2026-06-09 21:54:32 [INFO] [Enrich] Procesando empresa: SEIDOR (seidor)
+2026-06-09 21:54:35 [INFO] [Enrich] seidor -> sector=Industrial, tamano=gran_empresa, confianza=alta
+2026-06-09 21:54:35 [INFO] [Enrich] [21/22] seidor — enriched
+2026-06-09 21:54:35 [INFO] [Enrich] Procesando empresa: Grupo SICE TyS (sice)
+2026-06-09 21:54:38 [INFO] [Enrich] sice -> sector=Industrial, tamano=mediana, confianza=media
+2026-06-09 21:54:38 [INFO] [Enrich] [22/22] sice — enriched
+2026-06-09 21:54:38 [INFO] [Enrich] Completado: 22 enriquecidas, 30 enlazadas, 0 saltadas, 0 errores, 0 pendientes
+2026-06-09 21:54:38 [INFO] [2.5/4] Enrich — 22 nuevas, 30 actualizadas, 0 errores, 0 pendientes
+2026-06-09 21:54:38 [INFO] [3/4] Evaluate — puntuando con gemma4:e4b...
+2026-06-09 21:54:38 [INFO] Ofertas pendientes: 30
+2026-06-09 21:54:38 [INFO] Skills candidato: 8 | Gap: 3.7 años | Exp: 4.3 años | Ciudad: Jerez de la Frontera, Spain
+Evaluando:   0%|          | 0/30 [00:00<?, ?oferta/s]2026-06-09 21:57:35 [INFO] ✓ Ingeniero/a recién titulado/a (Inspecciones reglamentarias) → 0.46 (Con expectativas bajas)
+Evaluando:   3%|▎         | 1/30 [02:56<1:25:32, 176.99s/oferta]2026-06-09 22:00:04 [INFO] ✓ Ingeniero/a - Sector Máquina Herramienta - Oficina técnica → 0.46 (Con expectativas bajas)
+Evaluando:   7%|▋         | 2/30 [05:25<1:14:53, 160.48s/oferta]2026-06-09 22:02:41 [INFO] ✓ Beca Experience&Talent: Ingeniero/a de Calidad Proyectos → 0.37 (Con expectativas bajas) [BLOQUEADO: otro]
+Evaluando:  10%|█         | 3/30 [08:03<1:11:32, 158.97s/oferta]2026-06-09 22:05:44 [INFO] ✓ Ingeniero Técnico Logístico y de Equipos → 0.43 (Con expectativas bajas) [BLOQUEADO: requisito_imposible]
+Evaluando:  13%|█▎        | 4/30 [11:05<1:12:51, 168.15s/oferta]2026-06-09 22:08:27 [INFO] ✓ INGENIERO/A AUTOMATIZACION & IA (MADRID) → 0.35 (Con expectativas bajas)
+Evaluando:  17%|█▋        | 5/30 [13:48<1:09:20, 166.42s/oferta]2026-06-09 22:11:18 [INFO] ✓ INGENIERO/A DE PRODUCCIÓN - PERFIL ELÉCTRICO → 0.54 (Con expectativas bajas)
+Evaluando:  20%|██        | 6/30 [16:39<1:07:14, 168.09s/oferta]2026-06-09 22:13:46 [INFO] ✓ Ingeniero/a Industrial → 0.39 (Con expectativas bajas)
+Evaluando:  23%|██▎       | 7/30 [19:07<1:01:54, 161.50s/oferta]2026-06-09 22:16:30 [INFO] ✓ Ingeniero/a calidad - ámbito defensa → 0.31 (No aplicar)
+Evaluando:  27%|██▋       | 8/30 [21:51<59:28, 162.22s/oferta]  2026-06-09 22:19:25 [INFO] ✓ Ingeniero/a calidad - especialidad motores (ámbito defensa) → 0.15 (No aplicar)
+Evaluando:  30%|███       | 9/30 [24:46<58:07, 166.05s/oferta]2026-06-09 22:22:04 [INFO] ✓ INGENIERO/A JUNIOR PARA OFICINA TÉCNICA → 0.31 (No aplicar)
+Evaluando:  33%|███▎      | 10/30 [27:25<54:40, 164.01s/oferta]2026-06-09 22:24:42 [INFO] ✓ Ingeniero/a Industrial (Primer empleo) → 0.54 (Con expectativas bajas)
+Evaluando:  37%|███▋      | 11/30 [30:03<51:19, 162.08s/oferta]2026-06-09 22:27:24 [INFO] ✓ JEFE TALLER MONTAJE EQUIPOS ELECTRONICOS → 0.45 (Con expectativas bajas)
+Evaluando:  40%|████      | 12/30 [32:45<48:37, 162.09s/oferta]2026-06-09 22:29:52 [INFO] ✓ Responsable de PRL → 0.31 (No aplicar)
+Evaluando:  43%|████▎     | 13/30 [35:13<44:44, 157.89s/oferta]2026-06-09 22:32:10 [INFO] ✓ Ingeniera/o de calidad envase plástico → 0.41 (Con expectativas bajas)
+Evaluando:  47%|████▋     | 14/30 [37:32<40:32, 152.00s/oferta]2026-06-09 22:34:37 [INFO] ✓ Platform Engineer - DevOps (Kubernetes/OpenShift) con inglés → 0.29 (No aplicar)
+Evaluando:  50%|█████     | 15/30 [39:58<37:36, 150.41s/oferta]2026-06-09 22:37:14 [INFO] ✓ Electronic Engineer → 0.31 (No aplicar)
+Evaluando:  53%|█████▎    | 16/30 [42:35<35:32, 152.34s/oferta]2026-06-09 22:39:52 [INFO] ✓ Ingeniero/a Inyección (sector automoción) → 0.42 (Con expectativas bajas)
+Evaluando:  57%|█████▋    | 17/30 [45:13<33:23, 154.09s/oferta]2026-06-09 22:42:24 [INFO] ✓ Ingeniero automatizacion_Pytnon_IA_Ingles alto → 0.41 (Con expectativas bajas)
+Evaluando:  60%|██████    | 18/30 [47:46<30:42, 153.55s/oferta]2026-06-09 22:45:15 [INFO] ✓ Ingeniero/a Informático/a - Desarrollo Multiplataforma → 0.39 (Con expectativas bajas)
+Evaluando:  63%|██████▎   | 19/30 [50:36<29:06, 158.76s/oferta]2026-06-09 22:47:48 [INFO] ✓ Ingeniero/a de mantenimiento y reparación → 0.41 (Con expectativas bajas)
+Evaluando:  67%|██████▋   | 20/30 [53:09<26:08, 156.81s/oferta]2026-06-09 22:50:19 [INFO] ✓ Ingeniero/a Civil BIM - Asturias → 0.32 (No aplicar)
+Evaluando:  70%|███████   | 21/30 [55:40<23:16, 155.17s/oferta]2026-06-09 22:52:56 [INFO] ✓ INGENIERO/A ELECTRÓNICO/A - APLICACIONES CAM → 0.50 (Con expectativas bajas)
+Evaluando:  73%|███████▎  | 22/30 [58:17<20:45, 155.65s/oferta]2026-06-09 22:55:31 [INFO] ✓ Jefe de Obra Civil. Ingeniero/a Obra Civil. → 0.24 (No aplicar)
+Evaluando:  77%|███████▋  | 23/30 [1:00:52<18:08, 155.45s/oferta]2026-06-09 22:58:07 [INFO] ✓ Ingeniero/a industrial → 0.32 (No aplicar)
+Evaluando:  80%|████████  | 24/30 [1:03:28<15:33, 155.61s/oferta]2026-06-09 23:00:53 [INFO] ✓ PROJECT MANAGER (Oficina Técnica) → 0.41 (Con expectativas bajas)
+Evaluando:  83%|████████▎ | 25/30 [1:06:14<13:14, 158.83s/oferta]2026-06-09 23:03:19 [INFO] ✓ Ingeniero eléctrico Junior → 0.78 (Prioritario)
+Evaluando:  87%|████████▋ | 26/30 [1:08:40<10:20, 155.09s/oferta]2026-06-09 23:05:42 [INFO] ✓ Ingeniero/a de Automatización - PLC - SCADA → 0.34 (No aplicar)
+Evaluando:  90%|█████████ | 27/30 [1:11:03<07:34, 151.37s/oferta]2026-06-09 23:07:58 [INFO] ✓ Ingeniero/a junior ITV Madrid (zona sur) → 0.82 (Prioritario)
+Evaluando:  93%|█████████▎| 28/30 [1:13:20<04:53, 146.87s/oferta]2026-06-09 23:10:53 [INFO] ✓ JEFE/A DE OBRA NAVAL – INGENIERO/A NAVAL O INDUSTRIAL → 0.50 (Con expectativas bajas)
+Evaluando:  97%|█████████▋| 29/30 [1:16:14<02:35, 155.22s/oferta]2026-06-09 23:13:34 [INFO] ✓ Ingeniero/a de producción → 0.98 (Prioritario)
+Evaluando: 100%|██████████| 30/30 [1:18:55<00:00, 156.86s/oferta]Evaluando: 100%|██████████| 30/30 [1:18:55<00:00, 157.85s/oferta]
+2026-06-09 23:13:34 [INFO] [3/4] Evaluate — {'evaluated': 30, 'errors': 0, 'scores': [0.46, 0.46, 0.37, 0.43, 0.355, 0.5425, 0.385, 0.31, 0.1525, 0.31, 0.535, 0.445, 0.31, 0.4075, 0.295, 0.31, 0.4225, 0.4145, 0.3925, 0.41, 0.32, 0.5, 0.245, 0.3175, 0.415, 0.775, 0.345, 0.82, 0.5, 0.9775], 'total': 30, 'avg_score': 0.4311}
+2026-06-09 23:13:34 [INFO] [4/4] Send — enviando a Telegram...
+2026-06-09 23:13:34 [INFO] Mensaje diario enviado con 3 ofertas
+2026-06-09 23:13:34 [INFO] [4/4] Send — OK
+2026-06-09 23:13:34 [INFO] Pipeline completado

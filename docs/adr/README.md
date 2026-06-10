@@ -46,3 +46,4 @@ decision is made.
 | 013 | Score Rebalance v2 — F_exp sin gap, location_match determinista | 2026-06-01 | active |
 | 014 | Flask Dashboard como Interfaz Principal | 2026-06-02 | active |
 | 015 | Dashboard Professional Redesign — 4-Section Navigation | 2026-06-02 | active |
+| 016 | Custom Scraper to Replace Apify for InfoJobs Offers | 2026-06-09 | active |

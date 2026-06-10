@@ -26,7 +26,11 @@ python src/pipeline/generate_dashboard.py   # reports/evaluations-v2.html
 
 ## 1. Fetch (fetch.py)
 
-Fetches job offers from InfoJobs via Apify. Operates in **three sequential phases**.
+> **ADR-016:** Apify scraper will be replaced by a custom scraper (`infojobs_scraper.py`)
+> that extracts full structured data (estudios, idiomas, conocimientos, experiencia)
+> directly from InfoJobs HTML. During migration, `--use-apify` flag enables fallback.
+
+Currently fetches job offers from InfoJobs via Apify. Operates in **three sequential phases**. 
 
 ### Phase 1 — `persist_raw_responses` (append-only)
 

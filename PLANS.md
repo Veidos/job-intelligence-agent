@@ -1,6 +1,6 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** T-5h — Branding JIA + microcopy + tooltips KPIs (Fase 2 de 4)
+> **Próximo paso:** T-A1 — Custom scraper para reemplazar Apify (ADR-016)
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
 > T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
 > T-5f ✅ — Flask dashboard con 6 secciones, API REST, feedback inline, applications timeline
@@ -106,3 +106,11 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-7 — run.py ciclo completo real sin errores (2026-06-06: 30 evaluadas, 25 nuevas, 0 errores) ✅
 - [ ] T-8 — Feedback bot funcional y natural
 - [ ] T-9 — pytest 0 failed
+
+## FASE 7 — Custom Scraper (ADR-016)
+- [ ] T-A1 — Implementar scraper propio (infojobs_scraper.py) con requests + BeautifulSoup
+  - [ ] Módulo search: GET a resultados, parsear lista de ofertas
+  - [ ] Módulo detail: GET a oferta individual, extraer Requisitos estructurados
+  - [ ] Reemplazar Apify en fetch.py (con flag --use-apify como fallback)
+  - [ ] Validar contra ofertas reales (comparar campos vs Apify)
+- [ ] T-A2 — Migrar completamente a scraper propio, eliminar dependencia Apify

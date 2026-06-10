@@ -471,3 +471,12 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
   - Captura `query_params` (args en JSON), `offers_fetched`, `new_offers`, `evaluated`, `errors`, `duration_ms`, `status`
   - Errores de pasos individuales se acumulan sin detener el pipeline
   - `_persist_run()` recibe todos los parámetros explícitamente (no usa closures)
+
+## Limitaciones de Apify (ADR-016)
+- El actor `alvaraaz/infojobs-actor` solo extrae campos básicos: code, title, description, city, link, contractType, workday, teleworking, publishedAt, companyName, companyLink
+- **No extrae** la sección estructurada "Requisitos" de InfoJobs (estudios mínimos, experiencia mínima, idiomas requeridos, conocimientos necesarios, sector)
+- La descripción libre NO contiene los datos estructurados de requisitos
+- `experience_min` inferido por LLM desde descripción → suele dar 0 cuando el valor real es mayor
+- Skills extraídas por gemma4 desde la descripción son muy pocas (1-2) y genéricas, porque el prompt limita a "3-5 skills" pero el LLM se queda corto
+- Consecuencia: scores inflados porque M_core/M_sec se calculan sobre muy pocas skills
+- **Solución:** scraper propio con requests + BeautifulSoup que parsea el HTML de la oferta individual y extrae todos los campos estructurados (ADR-016)
