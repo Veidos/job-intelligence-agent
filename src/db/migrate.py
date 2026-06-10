@@ -281,6 +281,31 @@ def run_migration() -> dict:
     conn.commit()
     log.info("Tabla apify_raw_responses verificada")
 
+    # Crear tabla scraper_raw_responses si no existe
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS scraper_raw_responses (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id     TEXT NOT NULL,
+            offer_id   TEXT,
+            payload    TEXT NOT NULL,
+            processed  INTEGER NOT NULL DEFAULT 0,
+            error      TEXT,
+            created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(offer_id)
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scraper_raw_run_id ON scraper_raw_responses(run_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scraper_raw_offer_id ON scraper_raw_responses(offer_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scraper_raw_processed ON scraper_raw_responses(processed)"
+    )
+    conn.commit()
+    log.info("Tabla scraper_raw_responses verificada")
+
     # Crear tabla applications si no existe
     conn.execute("""
         CREATE TABLE IF NOT EXISTS applications (

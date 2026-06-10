@@ -117,5 +117,13 @@ Ver checklist completo en docs/TESTING.md
   - [x] InfoJobsScraper HTTP layer con paginación, rate limiting, reintentos
   - [x] 33 tests unitarios pasando contra snapshots reales
   - [x] Reemplazar Apify en fetch.py (con flag --use-apify como fallback)
-  - [ ] Validar contra ofertas reales (comparar campos vs Apify)
-- [ ] T-A2 — Migrar completamente a scraper propio, eliminar dependencia Apify
+  - [x] Validar contra ofertas reales (comparar campos vs Apify)
+- [x] T-A2 — Migrar completamente a scraper propio, eliminar dependencia Apify
+  - [x] `scraper_raw_responses` tabla append-only (UNIQUE offer_id)
+  - [x] `persist_scraper_raw` + `upsert_from_scraper_raw` (3 fases como Apify)
+  - [x] Eliminar ApifyClient import y run_fetch()
+  - [x] Eliminar --use-apify del CLI
+  - [x] Eliminar apify_client/apify_shared de requirements.txt
+  - [x] apify_raw_responses preservada como legacy
+  - [x] ADR-016 marcado completed
+  - [x] 240 ofertas validadas: 100% exp_min, 75% edu, 100% skills

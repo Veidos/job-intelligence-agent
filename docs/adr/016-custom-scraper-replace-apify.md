@@ -2,8 +2,8 @@
 
 **Date:** 2026-06-09
 **Type:** `architecture` `dependency`
-**Status:** `active`
-**Component:** `src/pipeline/fetch.py`, `Apify actor`
+**Status:** `completed` (2026-06-10)
+**Component:** `src/pipeline/fetch.py`, `src/pipeline/infojobs_scraper.py`
 
 ---
 
@@ -78,6 +78,8 @@ Additionally, Apify costs ~$2.70/month ($0.09/run × 30 days) for a service we c
 - New scraper runs alongside Apify during validation
 - Apify remains as fallback until the new scraper is validated on real data
 - Flag `--use-apify` in run.py to toggle between scraper and Apify during transition
+- **Completed 2026-06-10:** Apify dependency fully removed; scraper propio is the only fetch path.
+  See `src/pipeline/infojobs_scraper.py` and `scraper_raw_responses` table.
 
 ---
 
@@ -100,8 +102,12 @@ def parse_requisitos(soup: BeautifulSoup) -> dict:
 
 | File | Change |
 |------|--------|
-| `src/pipeline/fetch.py` | Replace Apify `actor_client.call()` with `search_infojobs()` + `scrape_offer_detail()` |
-| `src/pipeline/run.py` | Add `--use-apify` flag for fallback |
-| `requirements.txt` | Add `beautifulsoup4`, `lxml` (or use stdlib HTMLParser) |
-| `.env.example` | Remove `APIFY_TOKEN` (may keep for fallback) |
-| `docs/PIPELINE.md` | Update step 1 to reflect custom scraper |
+| `src/pipeline/fetch.py` | Replaced Apify `actor_client.call()` with `InfoJobsScraper` + `InfoJobsParser` |
+| `src/pipeline/infojobs_scraper.py` | New: `SearchStub`, `RawOfferDetail` contracts; `InfoJobsParser` (HTML) + `InfoJobsScraper` (HTTP) |
+| `src/pipeline/run.py` | Updated to call `run_fetch_scraper()` instead of `run_fetch()` |
+| `src/db/schema.sql` | Added `scraper_raw_responses` table (append-only, same pattern as `apify_raw_responses`) |
+| `src/db/migrate.py` | Added migration for `scraper_raw_responses` |
+| `tests/unit/test_scraper.py` | 33 tests against real HTML snapshots (Beca + Senior) |
+| `requirements.txt` | Removed `apify_client`, `apify_shared`; added `beautifulsoup4`, `lxml`, `curl_cffi` |
+| `.env.example` | `APIFY_TOKEN` no longer required |
+| `docs/PIPELINE.md` | Step 1 updated to reflect custom scraper |

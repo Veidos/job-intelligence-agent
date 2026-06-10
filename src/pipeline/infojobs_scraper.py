@@ -545,6 +545,7 @@ class InfoJobsScraper:
     """
 
     BASE_URL = "https://www.infojobs.net"
+    SEARCH_PATH = "/jobsearch/search-results/list.xhtml"
 
     def __init__(
         self,
@@ -612,15 +613,15 @@ class InfoJobsScraper:
         for page in range(1, page_limit + 1):
             params = {"page": page, "sortBy": "PUBLICATION_DATE"}
             if query:
-                params["q"] = query
+                params["keyword"] = query
             if location:
                 params["location"] = location
 
-            # Construir URL (la API espera query params)
+            # Construir URL — mismo formato que build_search_urls() en fetch.py
             from urllib.parse import urlencode
 
             qs = urlencode(params)
-            url = f"{self.BASE_URL}/candidate/search-offers.xhtml?{qs}"
+            url = f"{self.BASE_URL}{self.SEARCH_PATH}?{qs}"
             html = self._fetch(url)
             if not html:
                 log.warning("No se pudo obtener la página %d", page)

@@ -55,6 +55,24 @@ CREATE INDEX IF NOT EXISTS idx_apify_raw_run_id    ON apify_raw_responses(run_id
 CREATE INDEX IF NOT EXISTS idx_apify_raw_source_id ON apify_raw_responses(source_id);
 CREATE INDEX IF NOT EXISTS idx_apify_raw_processed ON apify_raw_responses(processed);
 
+-- Registro inmutable de cada oferta scrapeada por el scraper propio
+-- append-only: INSERT OR IGNORE (UNIQUE(offer_id) evita duplicados).
+-- El primer scraping de una oferta es el canónico; si la oferta aparece
+-- en un run posterior se ignora (no sobreescribe).
+CREATE TABLE IF NOT EXISTS scraper_raw_responses (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id     TEXT NOT NULL,
+    offer_id   TEXT,
+    payload    TEXT NOT NULL,
+    processed  INTEGER NOT NULL DEFAULT 0,
+    error      TEXT,
+    created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(offer_id)
+);
+CREATE INDEX IF NOT EXISTS idx_scraper_raw_run_id ON scraper_raw_responses(run_id);
+CREATE INDEX IF NOT EXISTS idx_scraper_raw_offer_id ON scraper_raw_responses(offer_id);
+CREATE INDEX IF NOT EXISTS idx_scraper_raw_processed ON scraper_raw_responses(processed);
+
 CREATE TABLE IF NOT EXISTS offers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_id TEXT NOT NULL UNIQUE,

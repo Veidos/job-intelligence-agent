@@ -146,9 +146,9 @@ def run_pipeline(
         log.info("[1/4] Fetch — saltado (--skip-fetch)")
     else:
         log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
-        from src.pipeline.fetch import run_fetch
+        from src.pipeline.fetch import run_fetch_scraper
 
-        new_offers = run_fetch(since_date=since_date)
+        new_offers = run_fetch_scraper(since_date=since_date)
         log.info("[1/4] Fetch — %d ofertas nuevas", new_offers)
 
     # PASO 2: Classify
@@ -228,12 +228,14 @@ def _persist_run(
         VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            json.dumps({
-                "skip_fetch": skip_fetch,
-                "dry_run": dry_run,
-                "since_date": since_date,
-                "limit": limit,
-            }),
+            json.dumps(
+                {
+                    "skip_fetch": skip_fetch,
+                    "dry_run": dry_run,
+                    "since_date": since_date,
+                    "limit": limit,
+                }
+            ),
             0 if skip_fetch else new_offers,
             new_offers,
             evaluated,

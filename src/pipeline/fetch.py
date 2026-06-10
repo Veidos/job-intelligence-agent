@@ -1,12 +1,12 @@
 """
-Pipeline: fetch de ofertas desde InfoJobs vía Apify.
-Construye searchUrls desde search_config, limpia datos y hace upsert en DB.
+Pipeline: fetch de ofertas desde InfoJobs vía scraper propio (curl_cffi + BeautifulSoup).
+Extrae campos estructurados (requisitos, salario, modalidad) del HTML directo.
+3 fases: scraper_raw_responses (append-only) → upsert en offers → enrich con LLM.
 """
 
 import dataclasses
 import json
 import logging
-import os
 import re
 import sys
 from datetime import datetime
@@ -14,8 +14,6 @@ from dotenv import load_dotenv
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
-
-from apify_client import ApifyClient
 
 # Asegurar que la raíz del proyecto está en sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -486,6 +484,82 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
     return False
 
 
+def _persist_scraper_raw(run_id: str, detail: Any, conn) -> None:
+    """Persiste RawOfferDetail en scraper_raw_responses (append-only).
+
+    INSERT OR IGNORE con UNIQUE(offer_id): la primera vez que se scrapea
+    una oferta queda como canónica. Ejecuciones posteriores se ignoran.
+    """
+    import dataclasses
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO scraper_raw_responses
+            (run_id, offer_id, payload)
+        VALUES (?, ?, ?)
+        """,
+        (
+            run_id,
+            detail.offer_id,
+            json.dumps(dataclasses.asdict(detail), ensure_ascii=False),
+        ),
+    )
+    if cursor.rowcount:
+        conn.commit()
+        log.debug("Raw scraper guardado: %s", detail.offer_id)
+
+
+def _upsert_from_scraper_raw(run_id: str, conn) -> int:
+    """Lee scraper_raw_responses pendientes y hace upsert en offers.
+
+    Returns:
+        Número de ofertas nuevas insertadas.
+    """
+    cursor = conn.cursor()
+    rows = cursor.execute(
+        """
+        SELECT id, offer_id, payload
+        FROM scraper_raw_responses
+        WHERE run_id = ? AND processed = 0
+        """,
+        (run_id,),
+    ).fetchall()
+
+    if not rows:
+        log.info("No hay scraper raw pendientes para run_id=%s", run_id)
+        return 0
+
+    new_count = 0
+    for raw_id, offer_id, payload_str in rows:
+        try:
+            from src.pipeline.infojobs_scraper import RawOfferDetail
+
+            data = json.loads(payload_str)
+            # Reconstruir RawOfferDetail desde dict
+            detail = RawOfferDetail(**data)
+            is_new = _upsert_offer_from_scraper(detail, conn)
+            if is_new:
+                new_count += 1
+            cursor.execute(
+                "UPDATE scraper_raw_responses SET processed=1 WHERE id=?",
+                (raw_id,),
+            )
+        except Exception as e:
+            cursor.execute(
+                "UPDATE scraper_raw_responses SET error=? WHERE id=?",
+                (str(e), raw_id),
+            )
+            log.warning(
+                "Error procesando scraper_raw_id=%d (offer_id=%s): %s",
+                raw_id,
+                offer_id,
+                e,
+            )
+    conn.commit()
+    return new_count
+
+
 def upsert_from_raw(run_id: str, conn) -> int:
     """Lee apify_raw_responses no procesadas de este run y hace upsert en offers.
 
@@ -608,12 +682,16 @@ def enrich_pending(conn, limit: int = 0) -> int:
         if current_exp is not None:
             log.debug(
                 "COALESCE exp: manteniendo %s del scraper para %s (LLM propuso %s)",
-                current_exp, source_id, experience_min,
+                current_exp,
+                source_id,
+                experience_min,
             )
         if current_edu is not None:
             log.debug(
                 "COALESCE edu: manteniendo '%s' del scraper para %s (LLM propuso '%s')",
-                current_edu, source_id, education_level,
+                current_edu,
+                source_id,
+                education_level,
             )
 
         cursor.execute(
@@ -654,78 +732,6 @@ def enrich_pending(conn, limit: int = 0) -> int:
     return enriched_count
 
 
-def run_fetch(
-    search_config: dict | None = None,
-    profile: dict | None = None,
-    since_date: str | None = None,
-    max_items: int = 30,
-) -> int:
-    """Ejecuta el fetch completo desde Apify y guarda en DB."""
-    token = os.getenv("APIFY_TOKEN", "")
-    if not token:
-        log.error("APIFY_TOKEN no configurado")
-        return 0
-
-    # Leer search_config desde DB si no se pasa explícitamente
-    if not search_config:
-        search_config = ensure_search_config()
-    if not search_config:
-        log.error("No hay search_config en DB y no se proporcionó uno")
-        return 0
-
-    if not profile:
-        profile = {}
-
-    client = ApifyClient(token)
-    search_urls = build_search_urls(search_config, profile, since_date)
-
-    if not search_urls:
-        log.warning("No hay searchUrls para procesar")
-        return 0
-
-    log.info("Iniciando Apify actor para %d URLs", len(search_urls))
-
-    run_input: dict[str, Any] = {"searchUrls": search_urls}
-    if max_items > 0:
-        run_input["maxItems"] = max_items
-
-    try:
-        actor_client = client.actor("lRxJmbuhggr0LU3uj")
-        run_result = actor_client.call(run_input=run_input)
-    except Exception as e:
-        log.error("Error ejecutando Apify actor: %s", e)
-        return 0
-
-    if not run_result or "defaultDatasetId" not in run_result:
-        log.error("Apify no devolvió dataset válido")
-        return 0
-
-    run_id = run_result["defaultDatasetId"]
-    items = list(client.dataset(run_id).iterate_items())
-    log.info("Apify run_id=%s devolvió %d items", run_id, len(items))
-
-    conn = get_connection()
-
-    # Fase 1: persistir raw — inmutable, antes de cualquier procesado
-    persist_raw_responses(run_id, items, conn)
-
-    # Fase 2: upsert en offers desde raw
-    new_count = upsert_from_raw(run_id, conn)
-
-    # Fase 3: enriquecer con LLM
-    enriched = enrich_pending(conn)
-    log.info("Ofertas enriquecidas en este run: %d", enriched)
-
-    conn.close()
-    log.info(
-        "Fetch completado: %d ofertas nuevas (de %d items, run_id=%s)",
-        new_count,
-        len(items),
-        run_id,
-    )
-    return new_count
-
-
 def run_fetch_scraper(
     search_config: dict | None = None,
     since_date: str | None = None,
@@ -733,13 +739,15 @@ def run_fetch_scraper(
 ) -> int:
     """Fetch usando scraper propio. No requiere APIFY_TOKEN.
 
-    Usa InfoJobsScraper + InfoJobsParser en lugar del actor de Apify.
-    Skills del scraper van todas a secondary; el LLM las reclasifica
-    en enrich_pending() (core vs secondary).
+    Fases:
+      1. persist_scraper_raw — guarda RawOfferDetail en tabla append-only
+      2. upsert_from_scraper_raw — escribe en offers desde raw
+      3. enrich_pending — LLM reclasifica skills (core vs secondary)
 
     El scraper construye sus propias URLs de búsqueda internamente.
     """
     from src.pipeline.infojobs_scraper import InfoJobsScraper
+    from datetime import timezone
 
     # Leer search_config desde DB si no se pasa explícitamente
     if not search_config:
@@ -753,10 +761,12 @@ def run_fetch_scraper(
         log.warning("No hay keywords en role_hierarchy para buscar")
         return 0
 
+    # Generar run_id una sola vez al inicio
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     conn = get_connection()
     scraper = InfoJobsScraper()
 
-    total_new = 0
+    total_raw = 0
     try:
         for keyword in keywords:
             stubs = scraper.search(query=keyword, page_limit=5, max_items=max_items)
@@ -770,10 +780,14 @@ def run_fetch_scraper(
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue
-                is_new = _upsert_offer_from_scraper(detail, conn)
-                if is_new:
-                    total_new += 1
+                # Fase 1: raw inmutable
+                _persist_scraper_raw(run_id, detail, conn)
+                total_raw += 1
 
+        # Fase 2: upsert desde raw
+        new_count = _upsert_from_scraper_raw(run_id, conn)
+
+        # Fase 3: enriquecer con LLM
         enriched = enrich_pending(conn)
         log.info("Ofertas enriquecidas con LLM: %d", enriched)
     except Exception as e:
@@ -782,8 +796,12 @@ def run_fetch_scraper(
         scraper.close()
         conn.close()
 
-    log.info("Scraper fetch completado: %d ofertas nuevas", total_new)
-    return total_new
+    log.info(
+        "Scraper fetch completado: %d raws, %d nuevas ofertas",
+        total_raw,
+        new_count,
+    )
+    return new_count
 
 
 if __name__ == "__main__":
@@ -793,25 +811,19 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(
-        description="Fetch offers from InfoJobs (default: scraper propio)"
-    )
-    parser.add_argument(
-        "--use-apify",
-        action="store_true",
-        help="Usar Apify en lugar del scraper propio (legacy)",
+        description="Fetch offers from InfoJobs vía scraper propio"
     )
     parser.add_argument(
         "--max-items",
         type=int,
         default=30,
-        help="Máximo de ofertas a obtener. 0 = sin límite (default: 30). "
-        "En modo scraper: por keyword. En modo Apify: total.",
+        help="Máximo de ofertas a obtener por keyword (default: 30). 0 = sin límite.",
     )
     parser.add_argument(
         "--since-date",
         choices=["_24_HOURS", "_7_DAYS", "_15_DAYS", "ANY"],
-        default="_24_HOURS",
-        help="Filtro temporal (solo modo Apify, default: _24_HOURS)",
+        default=None,
+        help="Sin efecto en scraper propio (reservado para compatibilidad).",
     )
     parser.add_argument(
         "--enrich-only",
@@ -827,23 +839,11 @@ if __name__ == "__main__":
         print(f"Ofertas enriquecidas: {enriched}")
         sys.exit(0)
 
-    search_config = None  # lee desde DB via ensure_search_config()
-
-    if args.use_apify:
-        profile = {}
-        inserted = run_fetch(
-            search_config,
-            profile,
-            since_date=args.since_date,
-            max_items=args.max_items,
-        )
-    else:
-        inserted = run_fetch_scraper(
-            search_config,
-            since_date=args.since_date,
-            max_items=args.max_items,
-        )
-
+    inserted = run_fetch_scraper(
+        search_config=None,
+        since_date=args.since_date,
+        max_items=args.max_items,
+    )
     print(f"Ofertas insertadas: {inserted}")
 
     conn = get_connection()
