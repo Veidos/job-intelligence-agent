@@ -598,6 +598,24 @@ def enrich_pending(conn, limit: int = 0) -> int:
             if salary_text:
                 salary_min, salary_max = parse_salary(salary_text)
 
+        # Trazabilidad COALESCE: loguear cuándo el scraper proveyó valores
+        # que el LLM no va a sobrescribir.
+        row_current = cursor.execute(
+            "SELECT experience_min, education_level FROM offers WHERE id = ?",
+            (offer_id,),
+        ).fetchone()
+        current_exp, current_edu = row_current if row_current else (None, None)
+        if current_exp is not None:
+            log.debug(
+                "COALESCE exp: manteniendo %s del scraper para %s (LLM propuso %s)",
+                current_exp, source_id, experience_min,
+            )
+        if current_edu is not None:
+            log.debug(
+                "COALESCE edu: manteniendo '%s' del scraper para %s (LLM propuso '%s')",
+                current_edu, source_id, education_level,
+            )
+
         cursor.execute(
             """
             UPDATE offers SET
