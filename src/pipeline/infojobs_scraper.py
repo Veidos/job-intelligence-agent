@@ -428,19 +428,25 @@ class InfoJobsParser:
         if not skills:
             text = dd.get_text(separator=",", strip=True)
             skills = [s.strip() for s in text.split(",") if s.strip()]
-        return skills
+        return list(dict.fromkeys(skills))
 
     @staticmethod
     def _parse_description(soup: BeautifulSoup) -> tuple[str, str]:
         """Extrae el HTML y texto plano de la descripción."""
-        desc_section = soup.select_one(
-            ".ij-OfferDetailDescription, .ij-EnrichedTextArea, [class*='description']"
-        )
-        if not desc_section:
-            return "", ""
-        html = str(desc_section)
-        text = desc_section.get_text(separator="\n", strip=True)
-        return html, text
+        for selector in [
+            ".ij-OfferDetailDescription",
+            ".ij-EnrichedTextArea",
+            "section.ij-OfferDetailPage-mainContent",
+            "section.ij-OfferDetail-description",
+            "[data-testid='offer-description']",
+            "article .ij-BaseTypography",
+        ]:
+            desc_section = soup.select_one(selector)
+            if desc_section:
+                text = desc_section.get_text(separator="\n", strip=True)
+                if len(text) > 100:
+                    return str(desc_section), text
+        return "", ""
 
     @staticmethod
     def _extract_salary(text: str) -> tuple[float | None, float | None, str | None]:
@@ -476,12 +482,19 @@ class InfoJobsParser:
     @staticmethod
     def _extract_published_at(soup: BeautifulSoup) -> str | None:
         """Extrae la fecha de publicación."""
-        el = soup.select_one("[datetime]")
-        if el and el.get("datetime"):
-            return el["datetime"]
-        el = soup.select_one(".ij-OfferDetailHeader-publishedAt time")
-        if el and el.get("datetime"):
-            return el["datetime"]
+        for selector in [
+            ".ij-OfferDetailHeader-publishedAt time[datetime]",
+            ".ij-OfferDetailHeader time[datetime]",
+            "[class*='publishedAt'] time",
+            "[class*='published'] [datetime]",
+        ]:
+            el = soup.select_one(selector)
+            if el and el.get("datetime"):
+                return el["datetime"]
+        for el in soup.select("time"):
+            dt = el.get("datetime", "")
+            if re.match(r"\d{4}-\d{2}-\d{2}", dt):
+                return dt
         return None
 
     @staticmethod

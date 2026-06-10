@@ -167,3 +167,25 @@ class TestParseDetailSenior:
         assert d["company_name"] == self.detail.company
         assert d["salary_min"] == 30000.0
         assert d["salary_max"] == 40000.0
+
+
+class TestParserUtils:
+    """Tests unitarios para métodos auxiliares del parser."""
+
+    def test_parse_skills_dedup(self):
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = "<dd><ul><li>Python</li><li>Python</li><li>SQL</li><li>SQL</li><li>ML</li></ul></dd>"
+        dd = BeautifulSoup(html, "lxml").find("dd")
+        skills = InfoJobsParser._parse_skills(dd)
+        assert skills == ["Python", "SQL", "ML"]
+
+    def test_parse_skills_no_duplicates(self):
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = "<dd><ul><li>Python</li><li>SQL</li></ul></dd>"
+        dd = BeautifulSoup(html, "lxml").find("dd")
+        skills = InfoJobsParser._parse_skills(dd)
+        assert skills == ["Python", "SQL"]
