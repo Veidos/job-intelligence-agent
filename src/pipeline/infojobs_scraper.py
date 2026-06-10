@@ -1,8 +1,4 @@
-"""Scraper propio de InfoJobs con curl_cffi + BeautifulSoup.
-
-Reemplaza al actor de Apify (ADR-016).
-Arquitectura: InfoJobsScraper (HTTP) + InfoJobsParser (HTML).
-"""
+"""Scraper propio de InfoJobs con curl_cffi + BeautifulSoup."""
 
 from __future__ import annotations
 

@@ -27,6 +27,8 @@
 5. `apify_raw_responses` preservada como tabla legacy (datos históricos intactos)
 6. ADR-016 marcado como `completed`
 7. `204 tests pasando` (171 originales + 33 scraper), 0 regresiones
+8. Eliminado código muerto: `persist_raw_responses()`, `_upsert_offer()`, `upsert_from_raw()`
+9. Actualizados docstrings y help text obsoletos
 
 **Próximo paso (futuro):**
 - Extraer `languages`, `sector`, `workday` como columnas en `offers` si se necesitan en scoring

@@ -254,141 +254,9 @@ Responde SOLO con el JSON, sin markdown."""
         return {}
 
 
-def persist_raw_responses(run_id: str, items: list, conn) -> int:
-    """Persiste cada item de Apify de forma inmutable antes de cualquier procesado.
-
-    append-only: el payload nunca se modifica tras la inserción.
-    Si el source_id ya existe para este run_id, se salta (idempotente).
-
-    Returns:
-        Número de items guardados.
-    """
-    cursor = conn.cursor()
-    saved = 0
-    for idx, item in enumerate(items):
-        source_id = (item.get("offer") or {}).get("code")
-        try:
-            cursor.execute(
-                """
-                INSERT OR IGNORE INTO apify_raw_responses
-                    (run_id, item_index, source_id, payload, processed)
-                VALUES (?, ?, ?, ?, 0)
-                """,
-                (run_id, idx, source_id, json.dumps(item, ensure_ascii=False)),
-            )
-            saved += cursor.rowcount
-        except Exception as e:
-            log.warning(
-                "Error persistiendo raw item %d (run_id=%s): %s", idx, run_id, e
-            )
-    conn.commit()
-    log.info("Raw responses persistidas: %d/%d (run_id=%s)", saved, len(items), run_id)
-    return saved
-
-
-def _upsert_offer(item: dict, conn) -> bool:
-    """Persiste raw de Apify sin llamar a Ollama.
-
-    Guarda raw_data completo + campos estructurales directos de Apify.
-    Los campos que requieren LLM se rellenan en enrich_pending().
-
-    Returns:
-        True si fue inserción nueva, False si fue actualización.
-    """
-    offer_data = item.get("offer", {})
-
-    source_id = offer_data.get("code")
-    if not source_id:
-        log.warning(
-            "source_id es None, saltando oferta: %s",
-            offer_data.get("title", "sin título"),
-        )
-        return False
-
-    title = offer_data.get("title")
-    city = offer_data.get("city")
-    company_name = offer_data.get("companyName")
-    employer_id = _extract_employer_id(offer_data)
-    url = offer_data.get("link")
-    contract_type = offer_data.get("contractType")
-    work_mode_raw = offer_data.get("teleworking")
-    published_at = offer_data.get("publishedAt")
-    description_raw = offer_data.get("description", "")
-    work_mode = work_mode_raw or "Presencial"
-    fetched_at = item.get("scrapedAt") or datetime.now().isoformat()
-    raw_data = json.dumps(item, ensure_ascii=False)
-
-    salary_min, salary_max = parse_salary(offer_data.get("salary", "") or "")
-
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM offers WHERE source_id = ?", (source_id,))
-    count = cursor.fetchone()[0]
-
-    if count == 0:
-        cursor.execute(
-            """
-            INSERT INTO offers (
-                source_id, title, city, company_name, employer_id, url, contract_type,
-                work_mode, published_at, description_raw, salary_min, salary_max,
-                fetched_at, is_active, raw_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                source_id,
-                title,
-                city,
-                company_name,
-                employer_id,
-                url,
-                contract_type,
-                work_mode,
-                published_at,
-                description_raw,
-                salary_min,
-                salary_max,
-                fetched_at,
-                True,
-                raw_data,
-            ),
-        )
-        conn.commit()
-        log.debug("Inserción nueva oferta %s: %s", source_id, title)
-        return True
-
-    cursor.execute(
-        """
-        UPDATE offers SET
-            title=?, city=?, company_name=?, employer_id=?, url=?,
-            contract_type=?, work_mode=?, published_at=?, description_raw=?,
-            salary_min=?, salary_max=?, raw_data=?,
-            updated_at=CURRENT_TIMESTAMP
-        WHERE source_id=?
-        """,
-        (
-            title,
-            city,
-            company_name,
-            employer_id,
-            url,
-            contract_type,
-            work_mode,
-            published_at,
-            description_raw,
-            salary_min,
-            salary_max,
-            raw_data,
-            source_id,
-        ),
-    )
-    conn.commit()
-    log.debug("Actualización oferta %s: %s", source_id, title)
-    return False
-
-
 def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
     """Persiste RawOfferDetail directamente en offers.
 
-    Salta apify_raw_responses — no es un item Apify.
     Skills del scraper van todas a secondary hasta que el LLM
     las reclasifique (core vs secondary) en enrich_pending().
 
@@ -560,55 +428,6 @@ def _upsert_from_scraper_raw(run_id: str, conn) -> int:
     return new_count
 
 
-def upsert_from_raw(run_id: str, conn) -> int:
-    """Lee apify_raw_responses no procesadas de este run y hace upsert en offers.
-
-    Marca cada raw como processed=1 si el upsert fue exitoso,
-    o guarda el error en la columna error si falló.
-
-    Returns:
-        Número de ofertas nuevas insertadas.
-    """
-    cursor = conn.cursor()
-    rows = cursor.execute(
-        """
-        SELECT id, source_id, payload
-        FROM apify_raw_responses
-        WHERE run_id = ? AND processed = 0
-        """,
-        (run_id,),
-    ).fetchall()
-
-    if not rows:
-        log.info("No hay raw responses pendientes para run_id=%s", run_id)
-        return 0
-
-    new_count = 0
-    for raw_id, source_id, payload_str in rows:
-        try:
-            item = json.loads(payload_str)
-            is_new = _upsert_offer(item, conn)
-            if is_new:
-                new_count += 1
-            cursor.execute(
-                "UPDATE apify_raw_responses SET processed=1 WHERE id=?",
-                (raw_id,),
-            )
-        except Exception as e:
-            cursor.execute(
-                "UPDATE apify_raw_responses SET error=? WHERE id=?",
-                (str(e), raw_id),
-            )
-            log.warning(
-                "Error procesando raw_id=%d (source_id=%s): %s",
-                raw_id,
-                source_id,
-                e,
-            )
-    conn.commit()
-    return new_count
-
-
 def enrich_pending(conn, limit: int = 0) -> int:
     """Fase 2: enriquece con LLM ofertas con raw_data pero sin enriched_at.
 
@@ -737,7 +556,7 @@ def run_fetch_scraper(
     since_date: str | None = None,
     max_items: int = 30,
 ) -> int:
-    """Fetch usando scraper propio. No requiere APIFY_TOKEN.
+    """Fetch usando scraper propio (curl_cffi + BeautifulSoup).
 
     Fases:
       1. persist_scraper_raw — guarda RawOfferDetail en tabla append-only

@@ -269,7 +269,7 @@ def _write_hash(path: Path, hash_value: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--skip-fetch", action="store_true", help="Saltar fetch de Apify"
+        "--skip-fetch", action="store_true", help="Saltar fetch de InfoJobs"
     )
     parser.add_argument("--dry-run", action="store_true", help="No enviar a Telegram")
     parser.add_argument(
