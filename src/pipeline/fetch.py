@@ -3,6 +3,7 @@ Pipeline: fetch de ofertas desde InfoJobs vía Apify.
 Construye searchUrls desde search_config, limpia datos y hace upsert en DB.
 """
 
+import dataclasses
 import json
 import logging
 import os
@@ -57,6 +58,17 @@ def ensure_search_config(conn=None) -> dict:
             conn.close()
 
 
+def _extract_keywords_from_config(search_config: dict) -> list[str]:
+    """Extrae keywords de role_hierarchy sin construir URLs."""
+    roles_raw = search_config.get("role_hierarchy")
+    if not roles_raw:
+        return []
+    try:
+        return json.loads(roles_raw) if isinstance(roles_raw, str) else roles_raw
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 def build_search_urls(
     search_config: dict, profile: dict, since_date: str | None = None
 ) -> list[str]:
@@ -87,17 +99,7 @@ def build_search_urls(
         else None
     )
 
-    # Parse role_hierarchy (viene de DB, no usar fallback hardcodeado)
-    roles_raw = search_config.get("role_hierarchy")
-    if roles_raw:
-        try:
-            roles = json.loads(roles_raw) if isinstance(roles_raw, str) else roles_raw
-        except (json.JSONDecodeError, TypeError):
-            roles = []
-    else:
-        roles = []
-
-    for query in roles:
+    for query in _extract_keywords_from_config(search_config):
         url = f"{base}?keyword={quote(query)}&sortBy=PUBLICATION_DATE"
         if since_date:
             url += f"&sinceDate={since_date}"
@@ -385,6 +387,105 @@ def _upsert_offer(item: dict, conn) -> bool:
     return False
 
 
+def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
+    """Persiste RawOfferDetail directamente en offers.
+
+    Salta apify_raw_responses — no es un item Apify.
+    Skills del scraper van todas a secondary hasta que el LLM
+    las reclasifique (core vs secondary) en enrich_pending().
+
+    Returns:
+        True si fue inserción nueva, False si fue actualización.
+    """
+    source_id = detail.offer_id
+    if not source_id:
+        log.warning("source_id vacío en RawOfferDetail, saltando")
+        return False
+
+    skills_required = json.dumps(
+        {
+            "core": [],
+            "secondary": [{"name": s} for s in (detail.skills or [])],
+        }
+    )
+    raw_data = json.dumps(dataclasses.asdict(detail), ensure_ascii=False)
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM offers WHERE source_id = ?", (source_id,))
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        cursor.execute(
+            """
+            INSERT INTO offers (
+                source_id, title, city, company_name, url, contract_type,
+                work_mode, published_at, description_raw, description_clean,
+                salary_min, salary_max, experience_min, education_level,
+                skills_required, fetched_at, is_active, raw_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                source_id,
+                detail.title,
+                detail.city,
+                detail.company,
+                detail.url,
+                detail.contract_type,
+                detail.work_mode,
+                detail.published_at,
+                detail.description_html,
+                detail.description_text,
+                detail.salary_min,
+                detail.salary_max,
+                detail.experience_min_years,
+                detail.education_min,
+                skills_required,
+                detail.scraped_at,
+                True,
+                raw_data,
+            ),
+        )
+        conn.commit()
+        log.debug("Inserción nueva oferta (scraper) %s: %s", source_id, detail.title)
+        return True
+
+    cursor.execute(
+        """
+        UPDATE offers SET
+            title=?, city=?, company_name=?, url=?,
+            contract_type=?, work_mode=?, published_at=?,
+            description_raw=?, description_clean=?,
+            salary_min=?, salary_max=?,
+            experience_min=COALESCE(experience_min, ?),
+            education_level=COALESCE(education_level, ?),
+            skills_required=?, raw_data=?,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE source_id=?
+        """,
+        (
+            detail.title,
+            detail.city,
+            detail.company,
+            detail.url,
+            detail.contract_type,
+            detail.work_mode,
+            detail.published_at,
+            detail.description_html,
+            detail.description_text,
+            detail.salary_min,
+            detail.salary_max,
+            detail.experience_min_years,
+            detail.education_min,
+            skills_required,
+            raw_data,
+            source_id,
+        ),
+    )
+    conn.commit()
+    log.debug("Actualización oferta (scraper) %s: %s", source_id, detail.title)
+    return False
+
+
 def upsert_from_raw(run_id: str, conn) -> int:
     """Lee apify_raw_responses no procesadas de este run y hace upsert en offers.
 
@@ -502,8 +603,8 @@ def enrich_pending(conn, limit: int = 0) -> int:
             UPDATE offers SET
                 description_clean = ?,
                 skills_required   = ?,
-                experience_min    = ?,
-                education_level   = ?,
+                experience_min    = COALESCE(experience_min, ?),
+                education_level   = COALESCE(education_level, ?),
                 role_level_label  = ?,
                 salary_min        = COALESCE(?, salary_min),
                 salary_max        = COALESCE(?, salary_max),
@@ -607,29 +708,97 @@ def run_fetch(
     return new_count
 
 
+def run_fetch_scraper(
+    search_config: dict | None = None,
+    since_date: str | None = None,
+    max_items: int = 30,
+) -> int:
+    """Fetch usando scraper propio. No requiere APIFY_TOKEN.
+
+    Usa InfoJobsScraper + InfoJobsParser en lugar del actor de Apify.
+    Skills del scraper van todas a secondary; el LLM las reclasifica
+    en enrich_pending() (core vs secondary).
+
+    El scraper construye sus propias URLs de búsqueda internamente.
+    """
+    from src.pipeline.infojobs_scraper import InfoJobsScraper
+
+    # Leer search_config desde DB si no se pasa explícitamente
+    if not search_config:
+        search_config = ensure_search_config()
+    if not search_config:
+        log.error("No hay search_config en DB y no se proporcionó uno")
+        return 0
+
+    keywords = _extract_keywords_from_config(search_config)
+    if not keywords:
+        log.warning("No hay keywords en role_hierarchy para buscar")
+        return 0
+
+    conn = get_connection()
+    scraper = InfoJobsScraper()
+
+    total_new = 0
+    try:
+        for keyword in keywords:
+            stubs = scraper.search(query=keyword, page_limit=5, max_items=max_items)
+            if not stubs:
+                log.info("  Sin ofertas para '%s'", keyword)
+                continue
+
+            log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
+            for stub in stubs:
+                detail = scraper.detail(stub.url)
+                if not detail:
+                    log.warning("  Falló detalle para %s, saltando", stub.offer_id)
+                    continue
+                is_new = _upsert_offer_from_scraper(detail, conn)
+                if is_new:
+                    total_new += 1
+
+        enriched = enrich_pending(conn)
+        log.info("Ofertas enriquecidas con LLM: %d", enriched)
+    except Exception as e:
+        log.error("Error en scraper fetch: %s", e)
+    finally:
+        scraper.close()
+        conn.close()
+
+    log.info("Scraper fetch completado: %d ofertas nuevas", total_new)
+    return total_new
+
+
 if __name__ == "__main__":
     import argparse
 
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser(description="Fetch offers from InfoJobs vía Apify")
+    parser = argparse.ArgumentParser(
+        description="Fetch offers from InfoJobs (default: scraper propio)"
+    )
+    parser.add_argument(
+        "--use-apify",
+        action="store_true",
+        help="Usar Apify en lugar del scraper propio (legacy)",
+    )
     parser.add_argument(
         "--max-items",
         type=int,
         default=30,
-        help="Máximo de ofertas a obtener. 0 = sin límite (default: 30)",
+        help="Máximo de ofertas a obtener. 0 = sin límite (default: 30). "
+        "En modo scraper: por keyword. En modo Apify: total.",
     )
     parser.add_argument(
         "--since-date",
         choices=["_24_HOURS", "_7_DAYS", "_15_DAYS", "ANY"],
         default="_24_HOURS",
-        help="Filtro temporal (default: _24_HOURS)",
+        help="Filtro temporal (solo modo Apify, default: _24_HOURS)",
     )
     parser.add_argument(
         "--enrich-only",
         action="store_true",
-        help="Solo enriquecer ofertas pendientes con LLM, sin llamar a Apify",
+        help="Solo enriquecer ofertas pendientes con LLM, sin fetch",
     )
     args = parser.parse_args()
 
@@ -641,10 +810,22 @@ if __name__ == "__main__":
         sys.exit(0)
 
     search_config = None  # lee desde DB via ensure_search_config()
-    profile = {}
-    inserted = run_fetch(
-        search_config, profile, since_date=args.since_date, max_items=args.max_items
-    )
+
+    if args.use_apify:
+        profile = {}
+        inserted = run_fetch(
+            search_config,
+            profile,
+            since_date=args.since_date,
+            max_items=args.max_items,
+        )
+    else:
+        inserted = run_fetch_scraper(
+            search_config,
+            since_date=args.since_date,
+            max_items=args.max_items,
+        )
+
     print(f"Ofertas insertadas: {inserted}")
 
     conn = get_connection()

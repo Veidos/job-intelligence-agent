@@ -479,4 +479,29 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - `experience_min` inferido por LLM desde descripción → suele dar 0 cuando el valor real es mayor
 - Skills extraídas por gemma4 desde la descripción son muy pocas (1-2) y genéricas, porque el prompt limita a "3-5 skills" pero el LLM se queda corto
 - Consecuencia: scores inflados porque M_core/M_sec se calculan sobre muy pocas skills
-- **Solución:** scraper propio con requests + BeautifulSoup que parsea el HTML de la oferta individual y extrae todos los campos estructurados (ADR-016)
+- **Solución:** scraper propio con curl_cffi + BeautifulSoup que parsea el HTML de la oferta individual y extrae todos los campos estructurados (ADR-016)
+
+## Custom scraper con curl_cffi (junio 2026)
+
+### TLS fingerprint bypass
+- InfoJobs usa JA3 fingerprinting → `requests` es bloqueado (`curl_cffi` lo evita)
+- `curl_cffi.Session(impersonate="chrome124")` funciona tanto para search como detail pages
+- No hay JS challenge más allá del fingerprinting — las páginas son server-rendered (React SSR híbrido)
+- Constructor `Session(impersonate="chrome124")` acepta impersonate en kwargs (no como argumento posicional)
+
+### HTML structure hallazgos
+- **Search page:** cards de oferta en `li.ij-OfferList-offerCardItem`, publicidad se filtra por `aria-label="Publicidad"` (atributo de accesibilidad, legalmente requerido → más estable que clases CSS)
+- **Detail page:** header items en `.ij-OfferDetailHeader-detailsList-item p.ij-BaseTypography`, identificados por heurística de texto (los SVG no tienen atributos semánticos de identificación)
+- **Requisitos:** sección `<dl>` después de `<h3>` con texto "Requisitos". Cada `<dt>` es un label, el `<dd>` contiene el valor. No todos los labels están presentes en todas las ofertas.
+- **Publicación:** elemento `<time datetime="...">` con ISO 8601
+
+### Bugs de parseo encontrados y corregidos
+1. **`"no" in text` para experiencia:** `"Al menos 4 años"` contiene "menos" → `"no" in "menos"` es `True`. Fix: usar `re.search(r"\bno\b", text.lower())` (word boundary)
+2. **City regex con multi-word:** "A Coruña (A Coruña)" requiere espacio en el nombre de ciudad. Fix: `(?:\s[A-ZÁÉÍÓÚÑ][a-záéíóúñÀ-ÿ]+)*` (asterisco, no +, para ciudades de 1 palabra como "Barcelona")
+3. **Search card title:** El `<a>` con clase `ij-OfferCardContent-description-link` tiene el texto del título pero `title` attribute vacío. Usar `get_text(strip=True)` no `.get("title")`.
+
+### Patrón de tests
+- Snapshots HTML reales guardados en `scraper_lab/snapshots/`
+- Tests unitarios separados por perfil de oferta: `TestParseDetailBeca` vs `TestParseDetailSenior`
+- Cada test verifica un campo específico, no el objeto completo — facilita debugging
+- TDD: los tests contra snapshots reales se escribieron antes de implementar los parsers

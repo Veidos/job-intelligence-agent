@@ -108,9 +108,14 @@ Ver checklist completo en docs/TESTING.md
 - [ ] T-9 — pytest 0 failed
 
 ## FASE 7 — Custom Scraper (ADR-016)
-- [ ] T-A1 — Implementar scraper propio (infojobs_scraper.py) con requests + BeautifulSoup
-  - [ ] Módulo search: GET a resultados, parsear lista de ofertas
-  - [ ] Módulo detail: GET a oferta individual, extraer Requisitos estructurados
-  - [ ] Reemplazar Apify en fetch.py (con flag --use-apify como fallback)
+- [x] T-A1 — Implementar scraper propio (infojobs_scraper.py) con curl_cffi + BeautifulSoup
+  - [x] Validar TLS fingerprint bypass con search y detail pages reales
+  - [x] Guardar 3 snapshots HTML para tests
+  - [x] Módulo search: GET a resultados, parsear lista de ofertas con filtro publicidad
+  - [x] Módulo detail: GET a oferta individual, extraer Requisitos estructurados (estudios, experiencia, idiomas, conocimientos, sector)
+  - [x] Header heurístico por texto (ciudad multi-word, modalidad, salario, contrato)
+  - [x] InfoJobsScraper HTTP layer con paginación, rate limiting, reintentos
+  - [x] 33 tests unitarios pasando contra snapshots reales
+  - [x] Reemplazar Apify en fetch.py (con flag --use-apify como fallback)
   - [ ] Validar contra ofertas reales (comparar campos vs Apify)
 - [ ] T-A2 — Migrar completamente a scraper propio, eliminar dependencia Apify
