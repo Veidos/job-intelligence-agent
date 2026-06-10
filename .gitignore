@@ -12,3 +12,5 @@ jobs.db
 data/jobs.db
 *.db
 .cv_hash
+*.log
+reports/
