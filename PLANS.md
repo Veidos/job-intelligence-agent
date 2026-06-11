@@ -1,11 +1,12 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** T-A1 — Custom scraper para reemplazar Apify (ADR-016)
+> **Próximo paso:** T-5h Fase 2 (branding + microcopy dashboard) / Fase 4 (role_discovery, market_signals, strategic_advisor)
 > T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
 > T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
 > T-5f ✅ — Flask dashboard con 6 secciones, API REST, feedback inline, applications timeline
-> T-5g ✅ — Rediseño profesional dashboard: 4 secciones, tabla 10 columnas (incluye Ubicación), modal sticky CTA, apps inline status, empresas charts, monitor narrativo, filterBlocked off por defecto (ADR-015)
-> T-5h ⏳ — KPIs implementados: skills demand/gap, salary dist, weekly activity, sparkline, app funnel, model accuracy. Pendiente: branding + microcopy + interactividad
+> T-5g ✅ — Rediseño profesional dashboard: 4 secciones, tabla 10 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo (ADR-015)
+> T-5h ✅ — KPIs implementados (skills demand/gap, salary dist, weekly activity, sparkline, app funnel, model accuracy). Sesión 2026-06-11: 10 fixes de calidad, CandidateProfile, LLM metrics, ADR-018
+> **221 tests passing, 11 cambios implementados, ADR-018 creado**
 
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo
@@ -108,6 +109,22 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-7 — run.py ciclo completo real sin errores (2026-06-06: 30 evaluadas, 25 nuevas, 0 errores) ✅
 - [ ] T-8 — Feedback bot funcional y natural
 - [x] T-9 — pytest 0 failed (221 tests, 0 regresiones)
+
+## SESIÓN 2026-06-11 — Fixes de calidad
+- [x] #1 — employer_id en RawOfferDetail + parser HTML scraper
+- [x] #2 — employer_id en _upsert_offer_from_scraper() (INSERT/UPDATE)
+- [x] #3 — --limit separado en --limit-eval (30) y --limit-enrich (50)
+- [x] #4 — Global _run_start_time eliminada, t0 local
+- [x] #5 — Log "[CV] Pipeline abortado" en no-TTY
+- [x] #6 — skills_hard_match documentado (no renombrado, 25 referencias)
+- [x] #7 — perfil[:2500]/[:2000] → profile.excerpt() (secciones por regex)
+- [x] #8 — _extract_relevant_description() prioridad inversa en classifier
+- [x] #9 — CandidateProfile en src/utils/candidate_profile.py (parseo unificado)
+- [x] #10 — Warnings en GAP_TO_FLAG y relevance_corrected fallbacks
+- [x] #12 — LLM quality metrics (calls, json_parse_failures, empty_responses)
+- [x] #11 — location_match status quo (no ponderar en score) — cerrado
+- [x] #13 — CandidateProfile compartido (resuelto por #9) — cerrado
+- [x] ADR-018 — CandidateProfile, LLM Metrics, location_match Status Quo
 
 ## POST-FASE 7 — Optimización post-scraper (ADR-017)
 - [x] Skills del `<dl>` "Conocimientos" van directamente a core (elimina reclasificación LLM)

@@ -58,6 +58,7 @@ class RawOfferDetail:
     published_at: str | None = None
     source: str = "scraper"
     scraped_at: str = ""
+    employer_id: str | None = None
 
 
 # ── Parser ─────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ class InfoJobsParser:
         salary = InfoJobsParser._extract_salary(details.get("salary", ""))
 
         published = InfoJobsParser._extract_published_at(soup)
+        employer_id = InfoJobsParser._extract_employer_id(soup)
 
         now = datetime.now(timezone.utc).isoformat()
 
@@ -205,6 +207,7 @@ class InfoJobsParser:
             description_text=desc_text,
             published_at=published,
             scraped_at=now,
+            employer_id=employer_id,
         )
 
     @staticmethod
@@ -224,6 +227,22 @@ class InfoJobsParser:
             return el.get_text(strip=True)
         el = soup.select_one("[class*='company'] a")
         return el.get_text(strip=True) if el else ""
+
+    @staticmethod
+    def _extract_employer_id(soup: BeautifulSoup) -> str | None:
+        """Extrae employer_id desde el link de la empresa (em-i{HASH})."""
+        for selector in [
+            ".ij-OfferDetailHeader-companyLogo-companyName a",
+            ".ij-OfferDetailHeader-companyLogo a",
+            "[class*='companyLogo'] a",
+        ]:
+            el = soup.select_one(selector)
+            if el:
+                href = el.get("href") or ""
+                m = re.search(r"/em-i([a-zA-Z0-9_]+)", href)
+                if m:
+                    return m.group(1)
+        return None
 
     @staticmethod
     def _extract_offer_id(soup: BeautifulSoup, raw_html: str) -> str:

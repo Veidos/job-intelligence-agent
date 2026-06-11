@@ -21,6 +21,7 @@ load_dotenv()
 
 from src.db.init_db import get_connection  # noqa: E402
 from src.pipeline.fetch import parse_skills_required  # noqa: E402
+from src.utils.candidate_profile import CandidateProfile  # noqa: E402
 from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -614,6 +615,9 @@ def _build_evaluation_params(
     )
 
 
+# skills_hard_match (columna DB) = round(M_core * 100)
+# Almacena el match de skills core como entero 0-100.
+# NO renombrar: 25 referencias en schema, server, tests, fixtures.
 _COLUMNS = (
     "offer_id, cv_version_id, "
     "skills_hard_match, experience_match, "
@@ -708,9 +712,22 @@ def _normalize_none(val):
     return val
 
 
+VALID_RELEVANCE = {"core", "adjacent", "stretch", "temporal", None}
+
+
 def update_evaluation_final(offer_id: int, final: dict) -> None:
     conn = get_connection()
     cur = conn.cursor()
+
+    relevance_corrected = final.get("relevance_corrected")
+    if relevance_corrected not in VALID_RELEVANCE:
+        log.warning(
+            "relevance_corrected '%s' fuera del enum válido (offer_id=%d), "
+            "persistiendo como está",
+            relevance_corrected,
+            offer_id,
+        )
+
     cur.execute(
         """UPDATE offer_evaluations SET
             relevance_validation = ?, relevance_corrected = ?,
@@ -720,7 +737,7 @@ def update_evaluation_final(offer_id: int, final: dict) -> None:
          WHERE offer_id = ?""",
         (
             final.get("relevance_validation"),
-            final.get("relevance_corrected"),
+            relevance_corrected,
             final.get("relevance_reasoning"),
             _normalize_none(final.get("apply_block")),
             _normalize_none(final.get("apply_block_reason")),
@@ -736,14 +753,32 @@ def update_evaluation_final(offer_id: int, final: dict) -> None:
 
 def run_evaluate(limit: int = 10) -> dict:
     perfil = load_perfil()
+    profile = CandidateProfile.from_perfil(perfil)
     offers = get_pending_offers(limit)
-    candidate_skills_map = load_skills_from_perfil(perfil)
-    employment_gap = load_gap_from_perfil(perfil)
-    candidate_years = load_experience_years_from_perfil(perfil)
-    candidate_city = load_location_from_perfil(perfil)
+    candidate_skills_map = profile.skills_map
+    employment_gap = profile.employment_gap
+    candidate_years = profile.experience_years
+    candidate_city = profile.city
 
-    # Convertir load_skills_from_perfil (list[dict]) a dict[str, str]
-    candidate_skills_map = {s["name"]: s["level"] for s in candidate_skills_map}
+    perfil_hr = profile.excerpt(
+        [
+            "Skills técnicas",
+            "Gap de empleo",
+            "Educación",
+            "Experiencia",
+            "Preferencias laborales",
+            "Personal concerns",
+            "Entorno preferido / a evitar",
+        ]
+    )
+    perfil_final = profile.excerpt(
+        [
+            "Skills técnicas",
+            "Educación",
+            "Gap de empleo",
+            "Preferencias laborales",
+        ]
+    )
 
     log.info("Ofertas pendientes: %d", len(offers))
     log.info(
@@ -799,7 +834,7 @@ def run_evaluate(limit: int = 10) -> dict:
             # Paso 4: LLM evalúa context_fit (F_fit)
             hr = evaluate_hr(
                 offer,
-                perfil,
+                perfil_hr,
                 skill_detail,
                 M_core,
                 M_sec,
@@ -850,7 +885,7 @@ def run_evaluate(limit: int = 10) -> dict:
             )
 
             # Paso 6: Validación final (relevance + bloqueos)
-            final = evaluate_final(offer, perfil, skill_detail, hr, final_score)
+            final = evaluate_final(offer, perfil_final, skill_detail, hr, final_score)
             if not final:
                 log.warning("Sin resultado final: %s", offer["title"])
                 stats["errors"] += 1

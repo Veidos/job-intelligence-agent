@@ -18,6 +18,22 @@ from tenacity import (
 
 log = logging.getLogger(__name__)
 
+_metrics: dict[str, int] = {
+    "calls": 0,
+    "json_parse_failures": 0,
+    "empty_responses": 0,
+}
+
+
+def get_llm_metrics() -> dict[str, int]:
+    return dict(_metrics)
+
+
+def reset_llm_metrics() -> None:
+    for k in _metrics:
+        _metrics[k] = 0
+
+
 OLLAMA_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT = 180
 
@@ -96,6 +112,7 @@ def _extract_json(text: str) -> Any:
                 return json.loads(text[s : e + 1])
             except json.JSONDecodeError:
                 continue
+    _metrics["json_parse_failures"] += 1
     raise OllamaJSONError(f"No se pudo extraer JSON de: {text[:200]}...")
 
 
@@ -119,9 +136,12 @@ def ollama_call(
     Returns: str si expect_json=False, dict/list si expect_json=True.
     Raises: OllamaError, OllamaJSONError
     """
+    _metrics["calls"] += 1
     log.debug("Llamando a %s (expect_json=%s)", model, expect_json)
     start = time.time()
     text = _call_ollama_raw(model, prompt, temperature, think, num_ctx)
+    if not text:
+        _metrics["empty_responses"] += 1
 
     if not expect_json:
         log.debug("Respuesta de %s en %dms", model, int((time.time() - start) * 1000))
@@ -137,6 +157,8 @@ def ollama_call(
     text_retry = _call_ollama_raw(
         model, prompt + json_retry_instruction, temperature, think, num_ctx
     )
+    if not text_retry:
+        _metrics["empty_responses"] += 1
     try:
         result = _extract_json(text_retry)
         log.debug("JSON valido de %s en segundo intento", model)

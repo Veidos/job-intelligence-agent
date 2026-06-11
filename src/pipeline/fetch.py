@@ -242,8 +242,9 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
                 source_id, title, city, company_name, url, contract_type,
                 work_mode, published_at, description_raw, description_clean,
                 salary_min, salary_max, experience_min, education_level,
-                skills_required, fetched_at, is_active, raw_data, enriched_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                skills_required, fetched_at, is_active, raw_data, enriched_at,
+                employer_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 source_id,
@@ -265,6 +266,7 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
                 True,
                 raw_data,
                 now,
+                detail.employer_id,
             ),
         )
         conn.commit()
@@ -282,6 +284,7 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
             education_level=COALESCE(education_level, ?),
             skills_required=?, raw_data=?,
             enriched_at=COALESCE(enriched_at, ?),
+            employer_id=COALESCE(employer_id, ?),
             updated_at=CURRENT_TIMESTAMP
         WHERE source_id=?
         """,
@@ -302,6 +305,7 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
             skills_required,
             raw_data,
             now,
+            detail.employer_id,
             source_id,
         ),
     )

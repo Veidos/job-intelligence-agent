@@ -161,6 +161,46 @@ def update_role_catalog(conn: sqlite3.Connection, catalog: list[str]) -> None:
     logger.info("Updated role catalog with %d roles", len(catalog))
 
 
+_REQ_MARKERS = [
+    "requisitos",
+    "se requiere",
+    "se necesita",
+    "buscamos",
+    "formación",
+    "estudios mínimos",
+    "experiencia mínima",
+]
+
+
+def _extract_relevant_description(description: str) -> str:
+    """Extrae descripción con prioridad inversa: requisitos primero.
+
+    El bloque de requisitos tiene más señal para el clasificador de roles
+    que la intro corporativa.
+    """
+    if not description:
+        return ""
+
+    MAX_TOTAL = 2000
+    MAX_REQ = 1000
+
+    req_start = None
+    desc_lower = description.lower()
+    for marker in _REQ_MARKERS:
+        idx = desc_lower.find(marker)
+        if idx >= 0:
+            req_start = idx
+            break
+
+    if req_start is not None:
+        req_block = description[req_start : req_start + MAX_REQ]
+        intro = description[:req_start]
+        intro = intro[: MAX_TOTAL - len(req_block)]
+        return (req_block + "\n\n" + intro)[:MAX_TOTAL]
+
+    return description[:MAX_TOTAL]
+
+
 FORBIDDEN_IN_ROLE_REASONING = [
     "candidato",
     "del candidato",
@@ -232,9 +272,9 @@ def classify_offer(
 ) -> dict[str, Any] | None:
     """Classify an offer using gemma4."""
     title = offer.get("title", "")
-    description = offer.get("description_clean") or offer.get("description_raw") or ""
-    if description:
-        description = description[:2000]
+    description = _extract_relevant_description(
+        offer.get("description_clean") or offer.get("description_raw") or ""
+    )
     skills_raw = offer.get("skills_required") or ""
     if skills_raw.startswith("["):
         try:
@@ -323,7 +363,15 @@ def classify_offer(
         # Ensure all elements are strings (gemma4 may return dicts)
         clean_gaps = [str(g) if not isinstance(g, str) else g for g in raw_gaps]
         result["gap_type"] = resolve_gap_type(clean_gaps)
-        result["relevance_flag"] = GAP_TO_FLAG.get(result["gap_type"], "stretch")
+        gap_type = result["gap_type"]
+        if gap_type not in GAP_TO_FLAG:
+            logger.warning(
+                "gap_type '%s' no está en GAP_TO_FLAG (offer_id=%s), "
+                "defaulting a 'stretch'",
+                gap_type,
+                offer.get("id"),
+            )
+        result["relevance_flag"] = GAP_TO_FLAG.get(gap_type, "stretch")
         return result
     except Exception as e:
         logger.error("Error calling gemma4 for offer %s: %s", offer.get("id"), e)

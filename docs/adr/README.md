@@ -48,3 +48,4 @@ decision is made.
 | 015 | Dashboard Professional Redesign — 4-Section Navigation | 2026-06-02 | active |
 | 016 | Custom Scraper to Replace Apify for InfoJobs Offers | 2026-06-09 | active |
 | 017 | Eliminar Phase 3 (enrich_pending) y role_level_label del scoring | 2026-06-11 | active |
+| 018 | CandidateProfile, LLM Metrics, y location_match Status Quo | 2026-06-11 | active |

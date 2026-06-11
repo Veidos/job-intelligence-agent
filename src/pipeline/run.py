@@ -59,7 +59,8 @@ def setup_logging() -> None:
 def run_pipeline(
     skip_fetch: bool = False,
     dry_run: bool = False,
-    limit: int = 30,
+    limit_eval: int = 30,
+    limit_enrich: int = 50,
     skip_cv_check: bool = False,
     since_date: str = "_24_HOURS",
 ) -> None:
@@ -115,6 +116,7 @@ def run_pipeline(
                 "[CV] CV actualizado. Ejecuta: "
                 "PYTHONPATH=. python src/onboarding/run.py"
             )
+            log.warning("[CV] Pipeline abortado — CV nuevo sin PERFIL.md actualizado")
             return
 
     elif not has_perfil and has_cv:
@@ -131,7 +133,7 @@ def run_pipeline(
         log.info("[CV] PERFIL.md actualizado — continuando")
     # ── fin CV check ──────────────────────────────────────────────
 
-    _start_run(time.monotonic())
+    t0 = time.monotonic()
 
     log.info("═══════════════════════════════════")
     log.info("  Job Intelligence Agent — Pipeline")
@@ -163,7 +165,7 @@ def run_pipeline(
     from src.pipeline.fetch_company import run as run_fetch_company
 
     try:
-        enrich_result = run_fetch_company(limit=limit)
+        enrich_result = run_fetch_company(limit=limit_enrich)
         log.info(
             "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d errores, %d pendientes",
             enrich_result["enriched"],
@@ -179,7 +181,7 @@ def run_pipeline(
     log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
     from src.pipeline.evaluate import run_evaluate
 
-    stats = run_evaluate(limit=limit)
+    stats = run_evaluate(limit=limit_eval)
     evaluated = stats.get("evaluated", 0)
     log.info("[3/4] Evaluate — %s", stats)
 
@@ -197,16 +199,26 @@ def run_pipeline(
             log.error("[4/4] Send — error: %s", e)
             errors.append(f"send: {e}")
 
-    log.info("Pipeline completado")
-    _persist_run(errors, new_offers, evaluated, skip_fetch, dry_run, limit, since_date)
+    elapsed = int((time.monotonic() - t0) * 1000)
+    log.info("Pipeline completado (%d ms)", elapsed)
 
+    from src.utils.ollama_client import get_llm_metrics
 
-_run_start_time: float | None = None
+    llm_metrics = get_llm_metrics()
+    if llm_metrics["calls"] > 0:
+        log.info("[LLM Metrics] %s", llm_metrics)
 
-
-def _start_run(now: float) -> None:
-    global _run_start_time
-    _run_start_time = now
+    _persist_run(
+        errors,
+        new_offers,
+        evaluated,
+        skip_fetch,
+        dry_run,
+        limit_eval,
+        limit_enrich,
+        since_date,
+        elapsed,
+    )
 
 
 def _persist_run(
@@ -215,12 +227,13 @@ def _persist_run(
     evaluated: int,
     skip_fetch: bool,
     dry_run: bool,
-    limit: int,
+    limit_eval: int,
+    limit_enrich: int,
     since_date: str,
+    elapsed: int,
 ) -> None:
     from src.db.init_db import get_connection
 
-    elapsed = int((time.monotonic() - (_run_start_time or time.monotonic())) * 1000)
     conn = get_connection()
     conn.execute(
         """
@@ -233,7 +246,8 @@ def _persist_run(
                     "skip_fetch": skip_fetch,
                     "dry_run": dry_run,
                     "since_date": since_date,
-                    "limit": limit,
+                    "limit_eval": limit_eval,
+                    "limit_enrich": limit_enrich,
                 }
             ),
             0 if skip_fetch else new_offers,
@@ -276,10 +290,16 @@ if __name__ == "__main__":
         "--skip-cv-check", action="store_true", help="Saltar verificación de CV"
     )
     parser.add_argument(
-        "--limit",
+        "--limit-eval",
         type=int,
         default=30,
-        help="Máximo de ofertas a procesar (default: 30)",
+        help="Máximo de ofertas a evaluar (default: 30)",
+    )
+    parser.add_argument(
+        "--limit-enrich",
+        type=int,
+        default=50,
+        help="Máximo de empresas a enriquecer (default: 50)",
     )
     parser.add_argument(
         "--since-date",
@@ -291,7 +311,8 @@ if __name__ == "__main__":
     run_pipeline(
         skip_fetch=args.skip_fetch,
         dry_run=args.dry_run,
-        limit=args.limit,
+        limit_eval=args.limit_eval,
+        limit_enrich=args.limit_enrich,
         skip_cv_check=args.skip_cv_check,
         since_date=args.since_date,
     )

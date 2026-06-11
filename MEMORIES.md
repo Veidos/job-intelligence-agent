@@ -573,3 +573,35 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - 18 tests que verifican todos los endpoints REST del servidor Flask
 - Usan monkeypatch de `get_connection` con wrapper que ignora `close()` para preservar la conexión session-scoped
 - Validan: stats, offers con/sin filtros, 404, companies, applications CRUD, feedback CRUD, runs, HTML serve, static files, favicon
+
+## Employer ID desde scraper propio (ADR-018, junio 2026)
+
+### RawOfferDetail.employer_id
+- `employer_id` se extrae desde el company link en el HTML de detalle (`em-i{HASH}`)
+- `_extract_employer_id()` busca selectores del company logo area, extrae href y parsea con regex `r"/em-i([a-zA-Z0-9_]+)"`
+- Se persiste en `_upsert_offer_from_scraper()` tanto en INSERT como en UPDATE con `COALESCE`
+- `fetch_company.py` ya usaba `employer_id` como `infojobs_company_id` — no hay conflicto. El scraper popularlo mejora el enrich porque más ofertas tendrán ID real.
+
+### CandidateProfile en src/utils/
+- `CandidateProfile.from_perfil()` hace parseo en 1 pass con regex por sección (`re.DOTALL | re.IGNORECASE`, lookahead `(?=\n##|\Z)`)
+- `perfil_sections: dict[str, str]` preserva cada sección completa para recomposición vía `excerpt()`
+- Elimina truncado posicional (`perfil[:2500]`) que podía cortar `personal_concerns`
+- `personal_concerns` ahora SIEMPRE llega al HR LLM
+- `raw_perfil` preservado con `# TODO: eliminar` para migración gradual
+- `excerpt()` omite secciones faltantes silenciosamente (log DEBUG), no hace KeyError
+
+### Prioridad inversa en extracción de descripción
+- `_extract_relevant_description()` busca marcadores de requisitos y da prioridad al bloque de requisitos (hasta 1000 chars) sobre el intro (resto hasta 2000)
+- El clasificador recibe la señal más densa primero
+- Marcadores: "requisitos", "se requiere", "se necesita", "buscamos", "formación", "estudios mínimos", "experiencia mínima"
+
+### LLM quality metrics
+- 3 contadores en `ollama_client.py`: `calls`, `json_parse_failures`, `empty_responses`
+- In-memory, no persistidos en DB — son señal de runtime
+- `get_llm_metrics()` se loggea al final del pipeline en `run.py`
+- `null_fields` no se cuenta — es responsabilidad del caller, no de `ollama_call()`
+
+### location_match como columna informativa
+- No se pondera en el score final (status quo)
+- `F_fit` del HR LLM ya captura ubicación cualitativamente
+- El usuario evalúa caso por caso en el dashboard
