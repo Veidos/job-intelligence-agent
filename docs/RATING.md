@@ -15,25 +15,19 @@ S = W_core · M_core + W_sec · M_sec + W_exp · F_exp + W_fit · F_fit
 | 0.25 | `F_exp` | Years of experience (sin gap — cualitativo en HR) |
 | 0.15 | `F_fit` | gemma4:e4b (context_fit cualitativo) |
 
-## Skills: per-skill level
+## Skills: binary presence
 
-Each skill has an inferred required level:
+Skills evaluate presence, not depth. `L_i` is binary:
 
 ```
-level_required = sk.level_required                           if skill has explicit level
-level_required = ROLE_LEVEL_TO_SKILL_LEVEL[role_level_label]  otherwise (default)
+L_i = 1.0 if candidate has the skill (or equivalent detected by gemma4 in step 1)
+L_i = 0.0 otherwise
 ```
 
-The default resolution uses the offer's seniority:
-
-| `role_level_label` | Default `level_required` |
-|---|---|
-| junior | basic (ord=1) |
-| mid | intermediate (ord=2) |
-| senior | advanced (ord=3) |
-
-Note: `sk.level_required` is often NULL in the DB; this is the normal case, not a
-bug. The level is resolved from the role's seniority.
+The depth dimension is captured by `F_exp` (experience_min_years from the scraper).
+This replaces the previous `role_level_label` → `level_required` mapping, which
+was a noisy proxy (67% default "mid") when `experience_min_years` is available
+as structured data.
 
 ## Education as domain skills (ADR-012)
 
@@ -46,14 +40,13 @@ Example: "Ingeniería Técnica Industrial, Especialidad Mecánica" (education)
 matches "Ingeniería Industrial" (offer skill) via both LLM semantic detection
 and Python substring matching.
 
-Individual multiplier:
+Individual multiplier (binary):
 
 ```
-L_i = min(ord(candidate_level), ord(required_level)) / ord(required_level)
+L_i = 1.0  if candidate has the skill
+L_i = 0.0  otherwise
 ```
 
-- Candidate lacks the skill → `L_i = 0`
-- Overqualification capped at `1.0`
 - `M_core = avg(L_i)` over core skills
 - `M_sec = avg(L_i)` over secondary skills
 

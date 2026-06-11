@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
-from src.pipeline.fetch import enrich_pending
+
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -119,12 +119,6 @@ def main():
         scraper.close()
 
     log.info("Re-scrapeo completado: %d actualizadas, %d fallos", updated, failed)
-
-    # Re-enriquecer
-    if updated > 0:
-        log.info("Re-ejecutando enrich_pending()...")
-        enriched = enrich_pending(conn)
-        log.info("Enriquecidas: %d", enriched)
 
     conn.close()
 

@@ -26,60 +26,58 @@ python src/pipeline/generate_dashboard.py   # reports/evaluations-v2.html
 
 ## 1. Fetch (fetch.py)
 
-> **ADR-016:** Apify scraper will be replaced by a custom scraper (`infojobs_scraper.py`)
-> that extracts full structured data (estudios, idiomas, conocimientos, experiencia)
-> directly from InfoJobs HTML. During migration, `--use-apify` flag enables fallback.
+> **ADR-016 (completed):** Apify scraper ha sido reemplazado por un scraper propio
+> (`infojobs_scraper.py`) que extrae datos estructurados completos (estudios, idiomas,
+> conocimientos, experiencia) directamente del HTML de InfoJobs.
 
-Currently fetches job offers from InfoJobs via Apify. Operates in **three sequential phases**. 
+Actualmente obtiene ofertas mediante **scraper propio** con `curl_cffi` + BeautifulSoup.
+Opera en **dos fases secuenciales**.
 
-### Phase 1 — `persist_raw_responses` (append-only)
+### Phase 1 — `persist_scraper_raw` (append-only)
 
-1. Reads `APIFY_TOKEN` from environment (inside `run_fetch()`, not module-level)
-2. Reads `search_config` from the database
-3. Builds search URLs with geo/role hierarchy from `search_config.role_hierarchy`
-4. Runs Apify actor (`lRxJmbuhggr0LU3uj`)
-5. Persists **each item** in `apify_raw_responses` table (append-only, immutable)
-   - `run_id`, `item_index`, `source_id`, `payload` (full item JSON), `processed=0`
-   - `INSERT OR IGNORE` — idempotent per (run_id, item_index)
-6. **Does not call any LLM** in this phase
+1. Lee `search_config` de la base de datos
+2. Construye URLs de búsqueda con geo/role hierarchy desde `search_config.role_hierarchy`
+3. Invoca `InfoJobsScraper.search()` para cada URL — parsea el HTML de resultados con `InfoJobsParser.parse_search_html()`
+4. Para cada oferta: invoca `InfoJobsScraper.get_detail()` → `InfoJobsParser.parse_detail_html()`
+   que extrae:
+   - Header: ciudad, modalidad, salario, contrato, experiencia, educación
+   - Requisitos `<dl>`: estudios, experiencia, idiomas, conocimientos, sector
+   - Descripción real (selectores semánticos, guard `len > 100`)
+   - `published_at` desde texto plano (5 formatos: "Hace Xd", "Hace Xh", "Hoy", "Ayer", "DD de mes")
+5. Persiste **cada item** en `scraper_raw_responses` (append-only, inmutable)
+   - `offer_id`, `url`, `payload` (HTML completo), `processed=0`
+   - `INSERT OR IGNORE` — idempotente por `UNIQUE(offer_id)`
+6. **No llama a ningún LLM** en esta fase
 
-### Phase 2 — `upsert_from_raw` (upsert in offers)
+### Phase 2 — `upsert_from_scraper_raw` (upsert en offers)
 
-1. Reads `apify_raw_responses` where `run_id = current_run AND processed = 0`
-2. For each raw row: deserializes `payload`, calls `_upsert_offer()` (previously `upsert_raw`)
-3. On success: marks `processed = 1`
-4. On failure: saves error message in `error` column, does not block the batch
+1. Lee `scraper_raw_responses` donde `processed = 0`
+2. Para cada raw row: deserializa `payload` del HTML parseado, llama a `_upsert_offer_from_scraper()`
+3. Extrae campos estructurados directamente del HTML parseado:
+   `title`, `city`, `company`, `link`, `contract_type`, `work_mode`, `description_text`,
+   `salary_min`, `salary_max`, `experience_min`, `education_level`, `skills`, `languages`, `sector`, `published_at`
+4. Skills del HTML (sección `<dl>` "Conocimientos") van directamente a `core` — son requisitos estructurados del formulario de la oferta, no de la descripción libre.
+5. `enriched_at` se setea en el mismo upsert — no hay Fase 3 separada.
+6. On success: marca `processed = 1`
+7. On failure: guarda error en columna `error`, no bloquea el batch
 
-`_upsert_offer()` extracts structural fields directly from Apify
-(`title`, `city`, `companyName`, `link`, `contractType`, `teleworking`,
-`description`, `salary`, etc.) + saves `raw_data` (full item JSON).
-**No LLM call.**
+### Parámetros de búsqueda
 
-### Phase 3 — `enrich_pending` (with LLM)
+- `--max-items` — número máximo de ofertas a scrapear por keyword (0 = sin límite)
+- `--since-date` — filtro temporal: `_24_HOURS`, `_7_DAYS`, `_15_DAYS`, `ANY` (default: `_24_HOURS`)
 
-1. Selects offers with `raw_data IS NOT NULL AND enriched_at IS NULL`
-2. For each offer: deserializes `raw_data`, calls `extract_fields_with_llm`
-   (gemma4:e4b, temperature 0.0) to extract:
-   - `description_clean` — plain text without HTML
-   - `role_level` — junior / mid / senior
-   - `skills_required` — core and secondary (name only, no level)
-   - `experience_min`, `education_level`
-   - `salary_min`, `salary_max`
-3. Updates the offer and sets `enriched_at = NOW()`
+### Comportamiento de `published_at`
 
-**If the LLM fails:** the offer remains with `enriched_at IS NULL` and is
-automatically retried on the next run. The raw offer is never lost.
+InfoJobs no expone fechas ISO en el HTML. `_extract_published_at()` parsea texto relativo:
+| Texto visible | Interpretación |
+|---------------|---------------|
+| "Publicada Hace 4d" | Hoy − 4 días |
+| "Publicada Hace 2h" | Hoy (mismo día) |
+| "Hoy" | Hoy |
+| "Ayer" | Hoy − 1 día |
+| "29 de may" | 2026-05-29 (asume año actual) |
 
-**Output:** full `raw_data`, `description_raw`, and structural fields
-available from Phase 1 — even if the LLM never succeeds.
-
-### Key changes from the previous 2-phase design
-
-| Before | After |
-|--------|-------|
-| `upsert_raw()` (single function) | `persist_raw_responses()` → `upsert_from_raw()` → `enrich_pending()` |
-| Raw items persisted directly in `offers` | Raw items persisted first in `apify_raw_responses` (immutable), then upserted in `offers` |
-| `APIFY_TOKEN` at module level | `APIFY_TOKEN` read inside `run_fetch()` |
+Si falla el parseo, `published_at` queda `NULL` (ofertas expiradas).
 
 ## 2. Classify (role_classifier.py)
 
@@ -122,11 +120,8 @@ with a single context prompt.**
 
 ### Key rules
 
-- **`level_required` is not persisted per skill.** It is resolved at
-  evaluation time from the offer's `role_level_label` via the
-  `ROLE_LEVEL_TO_SKILL_LEVEL` mapping.
+- **Skills evalúan presencia, no profundidad.** L es binario (1.0 si el candidato tiene la skill, 0.0 si no). La profundidad la captura `F_exp` mediante `experience_min_years` del scraper.
 - **`gap_severity` is computed in Python** (deterministic), not asked of the LLM.
-- **Overqualification is not penalized** — the level multiplier caps at 1.0.
 - **Final validation** (third prompt): detects real blockers
   (internship agreements, mandatory disability certificate) and validates
   `relevance_flag`.
@@ -213,7 +208,7 @@ Sends the daily summary via Telegram. Optional — the dashboard is the primary 
 ### fetch.py
 
 ```bash
-# Fetch completo: llama a Apify + upsert + enriquecimiento
+# Fetch completo: scraper propio + upsert + enriquecimiento LLM
 python src/pipeline/fetch.py
 
 # Fetch sin límite de ofertas (histórico completo)
@@ -228,14 +223,6 @@ python src/pipeline/fetch.py --since-date ANY        # Sin filtro de fecha
 
 # Pipeline completo con filtro temporal
 python src/pipeline/run.py --since-date _24_HOURS    # Solo últimas 24h (default)
-
-# Solo enriquecer ofertas pendientes con LLM (sin llamar a Apify)
-python src/pipeline/fetch.py --enrich-only
-```
-
-`--enrich-only` es útil para reprocesar ofertas cuyo enriquecimiento falló
-en ejecuciones anteriores. Re-intenta todas las ofertas con
-`enriched_at IS NULL` sin coste de API.
 
 ### run.py
 

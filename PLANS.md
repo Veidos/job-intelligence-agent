@@ -71,7 +71,8 @@
 [x] Ollama cassettes (13 JSON en tests/fixtures/ollama/ + patch-based tests)
 [x] Integration cassettes: test_evaluate_cassettes.py, test_classifier_cassettes.py, test_fetch_cassettes.py (30 tests cassette-based)
 [x] Pipeline tests: test_pipeline.py (10 tests, flujo completo con cassettes)
-[x] 171 tests passing total
+[x] Scraper tests: test_scraper.py (39 tests: parser, published_at, skills dedup)
+[x] 203 tests passing total (171 originales + 33 scraper v1 + 6 published_at - 7 build_search_urls)
 
 ## BUGS DETECTADOS (TESTS Y REVISIÓN)
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)
@@ -105,7 +106,15 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-6 — send.py — mensaje Telegram correcto
 - [x] T-7 — run.py ciclo completo real sin errores (2026-06-06: 30 evaluadas, 25 nuevas, 0 errores) ✅
 - [ ] T-8 — Feedback bot funcional y natural
-- [ ] T-9 — pytest 0 failed
+- [x] T-9 — pytest 0 failed (203 tests, 0 regresiones)
+
+## POST-FASE 7 — Optimización post-scraper (ADR-017)
+- [x] Skills del `<dl>` "Conocimientos" van directamente a core (elimina reclasificación LLM)
+- [x] `enrich_pending()` eliminado (Phase 3) — el scraper setea enriched_at en el upsert
+- [x] `--enrich-only` eliminado del CLI
+- [x] `role_level_label` eliminado del scoring — L binario (presencia, no profundidad)
+- [x] `level_multiplier()`, `LEVEL_ORDINAL`, `ROLE_LEVEL_TO_SKILL_LEVEL` eliminados
+- [x] ADR-017 documenta el cambio completo
 
 ## FASE 7 — Custom Scraper (ADR-016)
 - [x] T-A1 — Implementar scraper propio (infojobs_scraper.py) con curl_cffi + BeautifulSoup
@@ -127,3 +136,11 @@ Ver checklist completo en docs/TESTING.md
   - [x] apify_raw_responses preservada como legacy
   - [x] ADR-016 marcado completed
   - [x] 240 ofertas validadas: 100% exp_min, 75% edu, 100% skills
+- [x] T-A3 — Post-production bugfixes (3 bugs)
+  - [x] Skills duplicados: `list(dict.fromkeys(skills))` en `_parse_skills()`
+  - [x] Descripciones vacías (21 ofertas): selectores semánticos + guard `len > 100`
+  - [x] `published_at` nulo: `_extract_published_at()` parsea 5 formatos de texto plano
+  - [x] Re-scrape de 21 ofertas con `scraper_lab/reparse_offers.py`
+- [x] T-A4 — `--since-date` conectado al scraper (ya no es no-op, pasa `sinceDate` real)
+- [x] T-A5 — Eliminar `build_search_urls()` (código muerto de era Apify)
+- [x] T-A6 — Backfill `published_at` retroactivo con `scraper_lab/fix_published_at.py` (43/44 ofertas)

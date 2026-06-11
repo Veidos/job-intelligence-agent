@@ -47,3 +47,4 @@ decision is made.
 | 014 | Flask Dashboard como Interfaz Principal | 2026-06-02 | active |
 | 015 | Dashboard Professional Redesign — 4-Section Navigation | 2026-06-02 | active |
 | 016 | Custom Scraper to Replace Apify for InfoJobs Offers | 2026-06-09 | active |
+| 017 | Eliminar Phase 3 (enrich_pending) y role_level_label del scoring | 2026-06-11 | active |

@@ -70,9 +70,8 @@ def fetch_offers_by_id(ids: list[int]) -> list[dict]:
         f"""
         SELECT o.id, o.title, o.company_name, o.city, o.work_mode,
                o.description_clean, o.skills_required,
-               o.relevance_flag, o.role_normalized,
-               o.role_level_label,
-               o.experience_min, o.experience_max,
+                o.relevance_flag, o.role_normalized,
+                o.experience_min, o.experience_max,
                o.salary_min, o.salary_max, o.published_at,
                c.sector AS company_sector, c.size_range AS company_size
         FROM offers o
@@ -109,7 +108,7 @@ def run():
         t0 = time.monotonic()
         log.info("─" * 75)
         log.info(f"[{offer['id']}] {offer['title']} | {offer['company_name']}")
-        log.info(f"    Flag: {offer['relevance_flag']} | Role: {offer['role_normalized']} | Level: {offer['role_level_label']}")
+        log.info(f"    Flag: {offer['relevance_flag']} | Role: {offer['role_normalized']}")
 
         try:
             # Paso 1: LLM detecta presencia de skills
@@ -125,7 +124,6 @@ def run():
             offer_skills = parse_skills_required(offer.get("skills_required"))
             M_core, M_sec, skill_detail = compute_skill_score(
                 offer_skills, enriched_map,
-                role_level_label=offer.get("role_level_label"),
             )
             log.info(f"  Step 2: M_core={M_core:.4f}  M_sec={M_sec:.4f}")
 

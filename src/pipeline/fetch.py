@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.db.init_db import get_connection
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
-from src.utils.cleaner import clean_description
+
 
 log = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def parse_skills_required(raw: Any) -> dict:
     - string JSON -> deserializa y reintenta
     - None / vacío -> estructura vacía
 
-    level_required se resuelve en evaluate.py desde role_level_label,
+    evaluate.py usa L binario (no level_required),
     no se persiste por skill desde fetch.
     """
     if raw is None:
@@ -211,8 +211,8 @@ Responde SOLO con el JSON, sin markdown."""
 def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
     """Persiste RawOfferDetail directamente en offers.
 
-    Skills del scraper van todas a secondary hasta que el LLM
-    las reclasifique (core vs secondary) en enrich_pending().
+    Skills del scraper (del <dl> de Requisitos) van directamente a core.
+    enriched_at se setea en el mismo upsert — no hay Fase 3 separada.
 
     Returns:
         True si fue inserción nueva, False si fue actualización.
@@ -224,11 +224,12 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
 
     skills_required = json.dumps(
         {
-            "core": [],
-            "secondary": [{"name": s} for s in (detail.skills or [])],
+            "core": [{"name": s} for s in (detail.skills or [])],
+            "secondary": [],
         }
     )
     raw_data = json.dumps(dataclasses.asdict(detail), ensure_ascii=False)
+    now = datetime.now().isoformat()
 
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM offers WHERE source_id = ?", (source_id,))
@@ -241,8 +242,8 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
                 source_id, title, city, company_name, url, contract_type,
                 work_mode, published_at, description_raw, description_clean,
                 salary_min, salary_max, experience_min, education_level,
-                skills_required, fetched_at, is_active, raw_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                skills_required, fetched_at, is_active, raw_data, enriched_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 source_id,
@@ -263,6 +264,7 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
                 detail.scraped_at,
                 True,
                 raw_data,
+                now,
             ),
         )
         conn.commit()
@@ -279,6 +281,7 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
             experience_min=COALESCE(experience_min, ?),
             education_level=COALESCE(education_level, ?),
             skills_required=?, raw_data=?,
+            enriched_at=COALESCE(enriched_at, ?),
             updated_at=CURRENT_TIMESTAMP
         WHERE source_id=?
         """,
@@ -298,6 +301,7 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
             detail.education_min,
             skills_required,
             raw_data,
+            now,
             source_id,
         ),
     )
@@ -382,129 +386,6 @@ def _upsert_from_scraper_raw(run_id: str, conn) -> int:
     return new_count
 
 
-def enrich_pending(conn, limit: int = 0) -> int:
-    """Fase 2: enriquece con LLM ofertas con raw_data pero sin enriched_at.
-
-    Llama a extract_fields_with_llm() para cada oferta pendiente y actualiza
-    description_clean, skills_required, experience_min, education_level,
-    role_level_label, salary_min/max y enriched_at.
-
-    Si el LLM falla -> enriched_at queda NULL -> reintento automático.
-    """
-    query = """
-        SELECT id, source_id, raw_data
-        FROM offers
-        WHERE raw_data IS NOT NULL AND enriched_at IS NULL
-    """
-    params: tuple = ()
-    if limit > 0:
-        query += " LIMIT ?"
-        params = (limit,)
-
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-
-    if not rows:
-        log.info("No hay ofertas pendientes de enriquecimiento")
-        return 0
-
-    log.info("Enriqueciendo %d ofertas con LLM...", len(rows))
-    enriched_count = 0
-
-    for offer_id, source_id, raw_data_str in rows:
-        try:
-            item = json.loads(raw_data_str)
-        except (json.JSONDecodeError, TypeError):
-            log.warning("raw_data inválido para oferta %s, saltando", source_id)
-            continue
-
-        enriched = extract_fields_with_llm(item)
-        if not enriched:
-            log.warning(
-                "LLM no devolvió datos para oferta %s, se reintentará", source_id
-            )
-            continue
-
-        description_clean = enriched.get(
-            "description_clean",
-            clean_description(item.get("offer", {}).get("description", "")),
-        )
-        skills_raw = enriched.get("skills_required", {"core": [], "secondary": []})
-        skills_required = json.dumps(
-            parse_skills_required(skills_raw), ensure_ascii=False
-        )
-        experience_min = enriched.get("experience_min", 0)
-        education_level = enriched.get("education_level", "")
-        role_level = enriched.get("role_level")
-
-        salary_min = enriched.get("salary_min")
-        salary_max = enriched.get("salary_max")
-        if salary_min is None and salary_max is None:
-            salary_text = enriched.get("salary_text", "")
-            if salary_text:
-                salary_min, salary_max = parse_salary(salary_text)
-
-        # Trazabilidad COALESCE: loguear cuándo el scraper proveyó valores
-        # que el LLM no va a sobrescribir.
-        row_current = cursor.execute(
-            "SELECT experience_min, education_level FROM offers WHERE id = ?",
-            (offer_id,),
-        ).fetchone()
-        current_exp, current_edu = row_current if row_current else (None, None)
-        if current_exp is not None:
-            log.debug(
-                "COALESCE exp: manteniendo %s del scraper para %s (LLM propuso %s)",
-                current_exp,
-                source_id,
-                experience_min,
-            )
-        if current_edu is not None:
-            log.debug(
-                "COALESCE edu: manteniendo '%s' del scraper para %s (LLM propuso '%s')",
-                current_edu,
-                source_id,
-                education_level,
-            )
-
-        cursor.execute(
-            """
-            UPDATE offers SET
-                description_clean = ?,
-                skills_required   = ?,
-                experience_min    = COALESCE(experience_min, ?),
-                education_level   = COALESCE(education_level, ?),
-                role_level_label  = ?,
-                salary_min        = COALESCE(?, salary_min),
-                salary_max        = COALESCE(?, salary_max),
-                enriched_at       = datetime('now'),
-                updated_at        = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (
-                description_clean,
-                skills_required,
-                experience_min,
-                education_level,
-                role_level,
-                salary_min,
-                salary_max,
-                offer_id,
-            ),
-        )
-        conn.commit()
-        enriched_count += 1
-        log.info(
-            "  ✓ [%d/%d] %s — enriquecida",
-            enriched_count,
-            len(rows),
-            source_id,
-        )
-
-    log.info("Enriquecimiento completado: %d/%d ofertas", enriched_count, len(rows))
-    return enriched_count
-
-
 def run_fetch_scraper(
     search_config: dict | None = None,
     since_date: str | None = None,
@@ -514,8 +395,7 @@ def run_fetch_scraper(
 
     Fases:
       1. persist_scraper_raw — guarda RawOfferDetail en tabla append-only
-      2. upsert_from_scraper_raw — escribe en offers desde raw
-      3. enrich_pending — LLM reclasifica skills (core vs secondary)
+      2. upsert_from_scraper_raw — escribe en offers desde raw (skills a core)
 
     El scraper construye sus propias URLs de búsqueda internamente.
     """
@@ -559,12 +439,8 @@ def run_fetch_scraper(
                 _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
 
-        # Fase 2: upsert desde raw
+        # Fase 2: upsert desde raw (skills del <dl> van a core, enriched_at se setea aquí)
         new_count = _upsert_from_scraper_raw(run_id, conn)
-
-        # Fase 3: enriquecer con LLM
-        enriched = enrich_pending(conn)
-        log.info("Ofertas enriquecidas con LLM: %d", enriched)
     except Exception as e:
         log.error("Error en scraper fetch: %s", e)
     finally:
@@ -600,19 +476,7 @@ if __name__ == "__main__":
         default=None,
         help="Filtro temporal: _24_HOURS, _7_DAYS, _15_DAYS, ANY. None = sin filtro.",
     )
-    parser.add_argument(
-        "--enrich-only",
-        action="store_true",
-        help="Solo enriquecer ofertas pendientes con LLM, sin fetch",
-    )
     args = parser.parse_args()
-
-    if args.enrich_only:
-        conn = get_connection()
-        enriched = enrich_pending(conn)
-        conn.close()
-        print(f"Ofertas enriquecidas: {enriched}")
-        sys.exit(0)
 
     inserted = run_fetch_scraper(
         search_config=None,

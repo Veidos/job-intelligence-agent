@@ -114,31 +114,23 @@
 - `ollama_call` internamente extrae JSON, los cassettes ya deben contener el dict parsed
 - CASSETTES[name] es directamente el dict con keys del JSON de respuesta
 
-## Fetch en dos fases (refactor mayo 2026)
+## Fetch en dos fases (refactor mayo/junio 2026)
 
+### Era Apify (histórico, hasta ADR-016)
 - `upsert_raw()` reemplazó a `upsert_offer()` para separar persistencia
   de Apify del enriquecimiento con LLM
 - `raw_data` almacena el JSON completo del item Apify para re-enriquecimiento
-- `enriched_at IS NULL` sirve como flag de reintento automático
-- `role_level_label` almacena el seniority (junior/mid/senior) inferido por el LLM
-- `level_required` por skill ya no se persiste desde fetch — se resuelve en
-  evaluate.py desde `ROLE_LEVEL_TO_SKILL_LEVEL` según `role_level_label`
-- `parse_skills_required` acepta tanto objetos dict como strings planos
-  (backward-compat con datos legacy en DB)
-- `_ensure_skill_obj()` normaliza cualquier formato de skill a
-  `{"name": str, "level_required": str|None}`
-- Las columnas nuevas (`raw_data`, `enriched_at`, `role_level_label`) se
-  añaden vía `src/db/migrate.py`, no con ALTER TABLE ad-hoc
+- `enriched_at IS NULL` servía como flag de reintento automático
 
-## Fetch en tres fases + apify_raw_responses (mayo 2026)
-
-- `fetch.py` ahora opera en 3 fases secuenciales:
-  1. `persist_raw_responses()` — guarda cada item Apify en `apify_raw_responses` (append-only, inmutable)
-  2. `upsert_from_raw()` — lee raw responses pendientes, llama a `_upsert_offer()` (antes `upsert_raw`)
-  3. `enrich_pending()` — sin cambios
-- `apify_raw_responses` es tabla append-only: nunca se actualiza un payload, solo se marca `processed=1`
-- `_upsert_offer()` es privada (underscore), solo llamada desde `upsert_from_raw()`
-- `APIFY_TOKEN` se lee dentro de `run_fetch()` vía `os.getenv()`, no en module-level
+### Era scraper propio (ADR-016/017)
+- `fetch.py` opera en 2 fases secuenciales:
+  1. `persist_scraper_raw()` — guarda RawOfferDetail en `scraper_raw_responses` (append-only, UNIQUE offer_id)
+  2. `_upsert_from_scraper_raw()` — lee raw pendientes, llama a `_upsert_offer_from_scraper()`
+- Skills del `<dl>` "Conocimientos" van directamente a `core` — son requisitos estructurados
+- `enriched_at` se setea en el mismo upsert (no hay Phase 3 separada)
+- `role_level_label` eliminado del scoring — L es binario (presencia, no profundidad)
+- `enrich_pending()` y `--enrich-only` eliminados (ADR-017)
+- `level_multiplier()`, `LEVEL_ORDINAL`, `ROLE_LEVEL_TO_SKILL_LEVEL` eliminados de evaluate.py
 
 ## Keyword generator (keyword_generator.py)
 
@@ -152,13 +144,13 @@
   - Solo títulos que existan realmente en InfoJobs España
   - Exactamente `MAX_KEYWORDS` títulos únicos (sin duplicados garantizado por dedup en Python)
 
-## Enriquecimiento con think=True y num_ctx (mayo 2026)
+## Enriquecimiento con think=True y num_ctx (mayo 2026) — HISTÓRICO
 
-- `extract_fields_with_llm` sin `think=True` fallaba en ~30% de ofertas (respuesta no-JSON)
-- Fix: `think=True` + `num_ctx=8192` → **92/92 ofertas enriquecidas, 0 errores**
-- `ollama_call()` ahora acepta `num_ctx` como parámetro (default 4096, backward-compat)
-- `_call_ollama_raw()` pasa `num_ctx` en el payload `options`
-- El progreso de `enrich_pending()` ahora loguea en INFO: `[N/total] source_id — enriquecida`
+- En la era Apify, `extract_fields_with_llm` sin `think=True` fallaba en ~30% de ofertas
+- Fix: `think=True` + `num_ctx=8192` → 92/92 ofertas enriquecidas
+- **Desde ADR-017**: `extract_fields_with_llm()` ya no se llama desde el pipeline.
+  El scraper proporciona todos los campos estructurados sin LLM.
+- `ollama_call()` sigue aceptando `num_ctx` como parámetro (disponible para uso futuro)
 
 ## parse_salary — formato dict de Apify (mayo 2026)
 
@@ -168,12 +160,11 @@
 - Si es dict, extrae `range.min` y `range.max` directamente
 - Si es string, aplica regex legacy
 
-## fetch.py — argumentos CLI (mayo 2026)
+## fetch.py — argumentos CLI (mayo/junio 2026)
 
-- `--max-items 0`: omite `maxItems` del payload Apify → sin límite de resultados
-  Anteriormente siempre enviaba `maxItems: 30` en el payload.
-- `--enrich-only`: solo reprocesa `enrich_pending()` sin llamar a Apify.
-  Útil para reintentar ofertas con `enriched_at IS NULL` tras corregir parámetros.
+- `--max-items 0`: sin límite de resultados por keyword
+- `--enrich-only`: **eliminado en ADR-017** (ya no hay enrich_pending que llamar)
+- El scraper setea `enriched_at` en el upsert, no necesita reprocesamiento
 
 ## employer_id desde companyLink (mayo 2026)
 
@@ -493,15 +484,63 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - **Search page:** cards de oferta en `li.ij-OfferList-offerCardItem`, publicidad se filtra por `aria-label="Publicidad"` (atributo de accesibilidad, legalmente requerido → más estable que clases CSS)
 - **Detail page:** header items en `.ij-OfferDetailHeader-detailsList-item p.ij-BaseTypography`, identificados por heurística de texto (los SVG no tienen atributos semánticos de identificación)
 - **Requisitos:** sección `<dl>` después de `<h3>` con texto "Requisitos". Cada `<dt>` es un label, el `<dd>` contiene el valor. No todos los labels están presentes en todas las ofertas.
-- **Publicación:** elemento `<time datetime="...">` con ISO 8601
+- **Publicación:** InfoJobs NO usa `time[datetime]` ISO. Es texto plano ("Publicada Hace 4d", "29 may", "Hoy", "Ayer"). `_extract_published_at()` parsea 5 formatos con `[data-testid='sincedate-tag']` o `.ij-FormatterSincedate`.
 
-### Bugs de parseo encontrados y corregidos
+### Bugs de parseo encontrados durante TDD
 1. **`"no" in text` para experiencia:** `"Al menos 4 años"` contiene "menos" → `"no" in "menos"` es `True`. Fix: usar `re.search(r"\bno\b", text.lower())` (word boundary)
 2. **City regex con multi-word:** "A Coruña (A Coruña)" requiere espacio en el nombre de ciudad. Fix: `(?:\s[A-ZÁÉÍÓÚÑ][a-záéíóúñÀ-ÿ]+)*` (asterisco, no +, para ciudades de 1 palabra como "Barcelona")
 3. **Search card title:** El `<a>` con clase `ij-OfferCardContent-description-link` tiene el texto del título pero `title` attribute vacío. Usar `get_text(strip=True)` no `.get("title")`.
+
+### Bugs de parseo post-producción (corregidos en producción)
+1. **Skills duplicados** — `_parse_skills()` devolvía cada skill dos veces por anidamiento `<li>`/`<span>` (li contiene span, el parser iteraba ambos). Fix: `list(dict.fromkeys(skills))`.
+2. **Descripciones vacías** — `_parse_description()` usaba `[class*='description']` que capturaba el toggle "Ofertas similares" (27 chars) en vez del bloque de descripción real. **Todas las 21 ofertas del scraper** tenían `description_clean` inválida. Fix: selectores semánticos (`section.ij-OfferDetailPage-mainContent`, `.ij-OfferDetailDescription`) + guard `len(text) > 100`. Las 21 ofertas se re-scrapearon con `scraper_lab/reparse_offers.py`.
+3. **`published_at` nulo** — Asumir `time[datetime]` era incorrecto. InfoJobs usa texto relativo. Fix: `_extract_published_at()` con 5 formatos: "Hace Xd", "Hace Xh", "Hoy", "Ayer", "DD de mes" (ej. "29 de may"). Backfill de 43/44 ofertas con `scraper_lab/fix_published_at.py` (1 expirada sin fecha).
+
+### Otros aprendizajes de la sesión de bugfixes
+- **`--since-date` era no-op**: el scraper ignoraba el parámetro. Fix: `InfoJobsScraper.search()` ahora acepta `since_date` y lo pasa como `sinceDate` en la URL (`_24_HOURS`, `_7_DAYS`, `_15_DAYS`, `ANY`).
+- **`build_search_urls()` eliminado**: código muerto de la era Apify, nunca llamado por el scraper. Sus tests también eliminados.
+- **Test count**: 204 → 197 (tras eliminar `build_search_urls`) → 203 (6 nuevos de `published_at`).
+- **`description` selector**: `section.ij-OfferDetailPage-mainContent` captura el panel completo (requisitos + descripción). Es el selector más estable; no hay contenedor semántico que separe solo la descripción.
+- **`fix_published_at.py`**: script one-shot en `scraper_lab/` que backfillea `published_at` parseando el texto plano guardado en `scraper_raw_responses.payload` (evita re-scrapear).
+- **43 scraper offers** en DB con `published_at` poblado, 44 filas en `scraper_raw_responses`, 1 oferta expirada eliminada.
 
 ### Patrón de tests
 - Snapshots HTML reales guardados en `scraper_lab/snapshots/`
 - Tests unitarios separados por perfil de oferta: `TestParseDetailBeca` vs `TestParseDetailSenior`
 - Cada test verifica un campo específico, no el objeto completo — facilita debugging
 - TDD: los tests contra snapshots reales se escribieron antes de implementar los parsers
+
+## Eliminación de Phase 3 enrich_pending y role_level_label (ADR-017, junio 2026)
+
+### Decisión
+- `enrich_pending()` eliminado — el scraper proporciona todos los campos estructurados
+- Skills del `<dl>` "Conocimientos" van directamente a `core` en `_upsert_offer_from_scraper()`
+- `enriched_at` se setea en el upsert (INSERT y UPDATE), no en una fase separada
+- `role_level_label` eliminado del scoring — `L_i` es binario (1.0 si presente, 0.0 si no)
+- `level_multiplier()`, `LEVEL_ORDINAL`, `ROLE_LEVEL_TO_SKILL_LEVEL` eliminados (código muerto)
+
+### Datos que validaron la decisión
+- `experience_min` del scraper coincidía al 100% con el LLM (22 ofertas scraper verificadas)
+- `role_level_label` era 67% "mid" — proxy ruidoso cuando `experience_min_years` está disponible
+- 0 skills en DB tenían `level_required` explícito (todas dependían del default)
+- `enrich_pending()` era ~120 líneas que llamaban a gemma4 para campos que el scraper ya daba
+
+### Pipeline actual (2 fases en fetch)
+1. `persist_scraper_raw` — guarda RawOfferDetail en scraper_raw_responses (append-only)
+2. `_upsert_from_scraper_raw` — upsert en offers con skills en core + enriched_at
+
+### Impacto en scores
+- `M_core` sube: skills presentes ya no penalizan por nivel (antes mid → 0.5, ahora 1.0)
+- `M_sec` = 0 para ofertas sin skills en secondary (peso 0.15, aceptable)
+- `F_exp` sin cambios (sigue usando `experience_min_years` del scraper)
+- `F_fit` sin cambios (HR LLM inalterado)
+- Ofertas senior son las más beneficiadas (antes L=0.33, ahora L=1.0)
+
+### Lecciones aprendidas
+- Validar con datos reales antes de diseñar sustitutos: eliminar el proxy ruidoso
+  (role_level_label) y medir el impacto real fue mejor que diseñar un reemplazo
+  determinista especulativo
+- Cuando el scraper proporciona datos estructurados, el LLM enrichment es
+  redundante si COALESCE preserva los valores del scraper
+- `extract_fields_with_llm()` se conserva como función utilidad para casos
+  futuros donde se necesite extracción desde descripción libre
