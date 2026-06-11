@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from bs4 import BeautifulSoup, Tag
@@ -481,20 +481,82 @@ class InfoJobsParser:
 
     @staticmethod
     def _extract_published_at(soup: BeautifulSoup) -> str | None:
-        """Extrae la fecha de publicación."""
+        """Extrae y normaliza la fecha de publicación a ISO 8601 (YYYY-MM-DD)."""
+        now = datetime.now(timezone.utc)
+
+        # 1) Intentar time[datetime] por si algún día lo añaden
         for selector in [
             ".ij-OfferDetailHeader-publishedAt time[datetime]",
             ".ij-OfferDetailHeader time[datetime]",
-            "[class*='publishedAt'] time",
-            "[class*='published'] [datetime]",
+            "time[datetime]",
         ]:
             el = soup.select_one(selector)
             if el and el.get("datetime"):
-                return el["datetime"]
-        for el in soup.select("time"):
-            dt = el.get("datetime", "")
-            if re.match(r"\d{4}-\d{2}-\d{2}", dt):
-                return dt
+                dt = el["datetime"]
+                if re.match(r"\d{4}-\d{2}-\d{2}", dt):
+                    return dt[:10]
+
+        # 2) Texto plano con formato relativo o literal
+        for selector in [
+            "[data-testid='sincedate-tag']",
+            ".ij-FormatterSincedate",
+            "[class*='publishedAt']",
+            "[class*='published']",
+        ]:
+            el = soup.select_one(selector)
+            if not el:
+                continue
+            text = el.get_text(strip=True).lower()
+
+            # "hace Nd" o "hace N días"
+            m = re.search(r"hace\s+(\d+)\s*d", text)
+            if m:
+                return (now - timedelta(days=int(m.group(1)))).strftime("%Y-%m-%d")
+
+            # "hace Nh"
+            m = re.search(r"hace\s+(\d+)\s*h", text)
+            if m:
+                return now.strftime("%Y-%m-%d")
+
+            # "hace N semanas" / "hace N sem"
+            m = re.search(r"hace\s+(\d+)\s*sem", text)
+            if m:
+                return (now - timedelta(weeks=int(m.group(1)))).strftime("%Y-%m-%d")
+
+            # "hoy"
+            if "hoy" in text:
+                return now.strftime("%Y-%m-%d")
+
+            # "ayer"
+            if "ayer" in text:
+                return (now - timedelta(days=1)).strftime("%Y-%m-%d")
+
+            # "29 may", "3 jun", "15 ene" — fecha literal sin año
+            MESES = {
+                "ene": 1,
+                "feb": 2,
+                "mar": 3,
+                "abr": 4,
+                "may": 5,
+                "jun": 6,
+                "jul": 7,
+                "ago": 8,
+                "sep": 9,
+                "oct": 10,
+                "nov": 11,
+                "dic": 12,
+            }
+            m = re.search(r"(\d{1,2})\s+([a-záéíóú]{3})", text)
+            if m:
+                day = int(m.group(1))
+                month = MESES.get(m.group(2)[:3])
+                if month:
+                    year = now.year
+                    candidate = datetime(year, month, day, tzinfo=timezone.utc)
+                    if candidate > now:
+                        candidate = datetime(year - 1, month, day, tzinfo=timezone.utc)
+                    return candidate.strftime("%Y-%m-%d")
+
         return None
 
     @staticmethod

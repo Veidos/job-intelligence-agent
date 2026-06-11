@@ -189,3 +189,57 @@ class TestParserUtils:
         dd = BeautifulSoup(html, "lxml").find("dd")
         skills = InfoJobsParser._parse_skills(dd)
         assert skills == ["Python", "SQL"]
+
+    def test_extract_published_at_days_ago(self):
+        from datetime import datetime, timedelta, timezone
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = '<span class="ij-FormatterSincedate">Hace 4d</span>'
+        dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
+        expected = (datetime.now(timezone.utc) - timedelta(days=4)).strftime("%Y-%m-%d")
+        assert dt == expected
+
+    def test_extract_published_at_hours_ago(self):
+        from datetime import datetime, timezone
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = '<span data-testid="sincedate-tag">Hace 4h</span>'
+        dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
+        assert dt == datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def test_extract_published_at_literal_date(self):
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = '<span data-testid="sincedate-tag">29 may</span>'
+        dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
+        assert dt == "2026-05-29"
+
+    def test_extract_published_at_hoy(self):
+        from datetime import datetime, timezone
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = '<span class="ij-FormatterSincedate">Hoy</span>'
+        dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
+        assert dt == datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def test_extract_published_at_ayer(self):
+        from datetime import datetime, timedelta, timezone
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = '<span class="ij-FormatterSincedate">Ayer</span>'
+        dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
+        expected = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+        assert dt == expected
+
+    def test_extract_published_at_no_date(self):
+        from bs4 import BeautifulSoup
+        from src.pipeline.infojobs_scraper import InfoJobsParser
+
+        html = '<div>Sin fecha</div>'
+        dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
+        assert dt is None
