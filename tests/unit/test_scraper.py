@@ -45,9 +45,11 @@ class TestParseSearch:
 
     def test_offer_id_tiene_formato_correcto(self):
         import re
+
         for s in self.stubs:
-            assert re.match(r"^[a-zA-Z0-9]{30,}$", s.offer_id), \
+            assert re.match(r"^[a-zA-Z0-9]{30,}$", s.offer_id), (
                 f"offer_id inválido: {s.offer_id}"
+            )
 
     def test_url_contiene_of_code(self):
         for s in self.stubs:
@@ -101,6 +103,7 @@ class TestParseDetailBeca:
 
     def test_to_db_dict(self):
         from src.pipeline.infojobs_scraper import InfoJobsParser
+
         d = InfoJobsParser.to_db_dict(self.detail)
         assert d["source_id"] == self.detail.offer_id
         assert d["title"] == self.detail.title
@@ -142,7 +145,9 @@ class TestParseDetailSenior:
         assert self.detail.experience_min_years == 4
 
     def test_skills_not_empty(self):
-        assert len(self.detail.skills) > 0, "Skills debería tener al menos un conocimiento"
+        assert len(self.detail.skills) > 0, (
+            "Skills debería tener al menos un conocimiento"
+        )
 
     def test_education_min_not_none(self):
         assert self.detail.education_min is not None
@@ -161,6 +166,7 @@ class TestParseDetailSenior:
 
     def test_to_db_dict(self):
         from src.pipeline.infojobs_scraper import InfoJobsParser
+
         d = InfoJobsParser.to_db_dict(self.detail)
         assert d["source_id"] == self.detail.offer_id
         assert d["title"] == self.detail.title
@@ -240,6 +246,6 @@ class TestParserUtils:
         from bs4 import BeautifulSoup
         from src.pipeline.infojobs_scraper import InfoJobsParser
 
-        html = '<div>Sin fecha</div>'
+        html = "<div>Sin fecha</div>"
         dt = InfoJobsParser._extract_published_at(BeautifulSoup(html, "lxml"))
         assert dt is None

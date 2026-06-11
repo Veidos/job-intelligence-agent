@@ -887,7 +887,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--limit",
         type=int,
-        default=10,
+        default=30,
         help="Número de ofertas a evaluar (0 = sin límite)",
     )
     args = parser.parse_args()

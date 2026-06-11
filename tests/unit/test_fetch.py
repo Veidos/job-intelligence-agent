@@ -67,5 +67,3 @@ class TestParseSalary:
         result = parse_salary("hasta 40.000")
 
         assert result == (40000.0, None)
-
-

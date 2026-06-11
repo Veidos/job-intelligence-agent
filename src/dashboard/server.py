@@ -154,7 +154,8 @@ def api_offers():
         ORDER BY e.match_score DESC
     """
     if limit:
-        sql += f" LIMIT {limit}"
+        sql += " LIMIT ?"
+        params.append(limit)
 
     cur.execute(sql, params)
     rows = cur.fetchall()

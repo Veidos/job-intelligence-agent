@@ -162,7 +162,9 @@ class TestPipelineEndToEnd:
         assert len(stats["scores"]) == 2
 
         evals = test_db.execute(
-            "SELECT COUNT(*) FROM offer_evaluations WHERE offer_id IN (1, 2)"
+            "SELECT COUNT(*) FROM offer_evaluations e "
+            "JOIN offers o ON o.id = e.offer_id "
+            "WHERE o.source_id IN ('PIPE-MULTI-1', 'PIPE-MULTI-2')"
         ).fetchone()[0]
         assert evals == 2
 

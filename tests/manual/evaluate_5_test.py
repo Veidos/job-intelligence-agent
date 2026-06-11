@@ -15,11 +15,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from src.db.init_db import get_connection
 from src.pipeline.fetch import parse_skills_required
-from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call
 
 from src.pipeline.evaluate import (
     load_perfil,
@@ -35,7 +35,10 @@ from src.pipeline.evaluate import (
     evaluate_final,
     save_evaluation,
     update_evaluation_final,
-    W_CORE, W_SEC, W_EXP, W_FIT,
+    W_CORE,
+    W_SEC,
+    W_EXP,
+    W_FIT,
 )
 
 logging.basicConfig(
@@ -54,9 +57,7 @@ def reset_test_offers(ids: list[int]) -> None:
     conn.execute(
         f"DELETE FROM offer_evaluations WHERE offer_id IN ({placeholders})", ids
     )
-    conn.execute(
-        f"UPDATE offers SET is_evaluated=0 WHERE id IN ({placeholders})", ids
-    )
+    conn.execute(f"UPDATE offers SET is_evaluated=0 WHERE id IN ({placeholders})", ids)
     conn.commit()
     conn.close()
     log.info("Reset de evaluaciones para IDs: %s", ids)
@@ -79,7 +80,7 @@ def fetch_offers_by_id(ids: list[int]) -> list[dict]:
         WHERE o.id IN ({placeholders})
         ORDER BY o.id
         """,
-        ids
+        ids,
     ).fetchall()
     cols = [d[0] for d in cur.description]
     conn.close()
@@ -98,7 +99,9 @@ def run():
 
     log.info("=" * 75)
     log.info("TEST: evaluate.py — 5 ofertas (con fix candidate_years)")
-    log.info(f"Candidato: {len(candidate_skills_map)} skills, gap={employment_gap}años, exp={candidate_years}años")
+    log.info(
+        f"Candidato: {len(candidate_skills_map)} skills, gap={employment_gap}años, exp={candidate_years}años"
+    )
     log.info(f"Skills: {candidate_skills_map}")
     log.info("=" * 75)
 
@@ -108,7 +111,9 @@ def run():
         t0 = time.monotonic()
         log.info("─" * 75)
         log.info(f"[{offer['id']}] {offer['title']} | {offer['company_name']}")
-        log.info(f"    Flag: {offer['relevance_flag']} | Role: {offer['role_normalized']}")
+        log.info(
+            f"    Flag: {offer['relevance_flag']} | Role: {offer['role_normalized']}"
+        )
 
         try:
             # Paso 1: LLM detecta presencia de skills
@@ -123,50 +128,80 @@ def run():
             # Paso 2: Python calcula M_core, M_sec
             offer_skills = parse_skills_required(offer.get("skills_required"))
             M_core, M_sec, skill_detail = compute_skill_score(
-                offer_skills, enriched_map,
+                offer_skills,
+                enriched_map,
             )
             log.info(f"  Step 2: M_core={M_core:.4f}  M_sec={M_sec:.4f}")
 
             # Paso 3: Python calcula F_exp
             F_exp = compute_experience_score(
-                offer.get("experience_min"), candidate_years, employment_gap,
+                offer.get("experience_min"),
+                candidate_years,
+                employment_gap,
             )
             G = get_gap_multiplier(employment_gap)
             gap_severity = "low" if G >= 0.85 else ("medium" if G >= 0.55 else "high")
             req_exp = max(int(offer.get("experience_min") or 0), 0)
-            log.info(f"  Step 3: F_exp={F_exp:.4f} (req={req_exp}y, cand={candidate_years:.1f}y, G={G}, sev={gap_severity})")
+            log.info(
+                f"  Step 3: F_exp={F_exp:.4f} (req={req_exp}y, cand={candidate_years:.1f}y, G={G}, sev={gap_severity})"
+            )
 
             # Paso 4: LLM HR
             log.info("  Step 4: HR LLM (think=True)...")
             hr = evaluate_hr(
-                offer, perfil, skill_detail, M_core, M_sec, F_exp,
-                employment_gap, gap_severity,
-                offer.get("company_sector"), offer.get("company_size"),
+                offer,
+                perfil,
+                skill_detail,
+                M_core,
+                M_sec,
+                F_exp,
+                employment_gap,
+                gap_severity,
+                offer.get("company_sector"),
+                offer.get("company_size"),
             )
             if not hr:
                 log.warning("  ❌ Sin resultado HR")
                 stats["errors"] += 1
                 continue
             F_fit = min(max(float(hr.get("context_fit", 0.5)), 0.0), 1.0)
-            log.info(f"  Step 4: F_fit={F_fit:.4f} | env={hr.get('environment_compatibility')} | signal={hr.get('apply_signal')}")
+            log.info(
+                f"  Step 4: F_fit={F_fit:.4f} | env={hr.get('environment_compatibility')} | signal={hr.get('apply_signal')}"
+            )
 
             # Paso 5: Score final
             final_score = round(
-                min(max(
-                    W_CORE * M_core + W_SEC * M_sec + W_EXP * F_exp + W_FIT * F_fit,
-                    0.0
-                ), 1.0), 4
+                min(
+                    max(
+                        W_CORE * M_core + W_SEC * M_sec + W_EXP * F_exp + W_FIT * F_fit,
+                        0.0,
+                    ),
+                    1.0,
+                ),
+                4,
             )
             recommendation = get_rating(final_score)
             log.info(f"  Step 5: Score={final_score:.4f} → {recommendation}")
-            log.info(f"    Desglose: core={W_CORE*M_core:.4f} + sec={W_SEC*M_sec:.4f} + exp={W_EXP*F_exp:.4f} + fit={W_FIT*F_fit:.4f}")
+            log.info(
+                f"    Desglose: core={W_CORE * M_core:.4f} + sec={W_SEC * M_sec:.4f} + exp={W_EXP * F_exp:.4f} + fit={W_FIT * F_fit:.4f}"
+            )
 
             ms = int((time.monotonic() - t0) * 1000)
 
             # Guardado parcial (Step 1-5, sin final validation)
             save_evaluation(
-                offer["id"], technical_llm, hr, None, skill_detail,
-                M_core, M_sec, F_exp, F_fit, final_score, recommendation, ms,
+                offer["id"],
+                technical_llm,
+                hr,
+                None,
+                skill_detail,
+                M_core,
+                M_sec,
+                F_exp,
+                F_fit,
+                final_score,
+                recommendation,
+                ms,
                 partial=True,
             )
 
@@ -184,34 +219,38 @@ def run():
             rec_final = final.get("apply_recommendation")
             val = final.get("relevance_validation")
             verdict = final.get("verdict", "")
-            log.info(f"  ✅ Score={final_score:.4f} ({recommendation}) | block={block} | rec={rec_final} | val={val}")
+            log.info(
+                f"  ✅ Score={final_score:.4f} ({recommendation}) | block={block} | rec={rec_final} | val={val}"
+            )
             log.info(f"     Veredicto: {verdict[:200]}")
             stats["evaluated"] += 1
             stats["scores"].append(final_score)
-            stats["results"].append({
-                "id": offer["id"],
-                "title": offer["title"],
-                "company": offer["company_name"],
-                "flag": offer["relevance_flag"],
-                "score": final_score,
-                "rating": recommendation,
-                "M_core": M_core,
-                "M_sec": M_sec,
-                "F_exp": F_exp,
-                "F_fit": F_fit,
-                "apply_block": block,
-                "apply_block_reason": final.get("apply_block_reason"),
-                "apply_recommendation": rec_final,
-                "relevance_validation": val,
-                "relevance_corrected": final.get("relevance_corrected"),
-                "apply_signal": hr.get("apply_signal"),
-                "processing_ms": ms,
-                "verdict": verdict,
-                "hr_concerns": hr.get("hr_concerns", []),
-                "strengths": hr.get("strengths", []),
-                "red_flags": hr.get("red_flags", []),
-                "interview_prep": hr.get("interview_prep", []),
-            })
+            stats["results"].append(
+                {
+                    "id": offer["id"],
+                    "title": offer["title"],
+                    "company": offer["company_name"],
+                    "flag": offer["relevance_flag"],
+                    "score": final_score,
+                    "rating": recommendation,
+                    "M_core": M_core,
+                    "M_sec": M_sec,
+                    "F_exp": F_exp,
+                    "F_fit": F_fit,
+                    "apply_block": block,
+                    "apply_block_reason": final.get("apply_block_reason"),
+                    "apply_recommendation": rec_final,
+                    "relevance_validation": val,
+                    "relevance_corrected": final.get("relevance_corrected"),
+                    "apply_signal": hr.get("apply_signal"),
+                    "processing_ms": ms,
+                    "verdict": verdict,
+                    "hr_concerns": hr.get("hr_concerns", []),
+                    "strengths": hr.get("strengths", []),
+                    "red_flags": hr.get("red_flags", []),
+                    "interview_prep": hr.get("interview_prep", []),
+                }
+            )
 
         except Exception as e:
             log.error(f"  ❌ Error: {e}", exc_info=True)
@@ -222,13 +261,17 @@ def run():
     log.info(f"  Evaluadas: {stats['evaluated']} | Errores: {stats['errors']}")
     for r in stats["results"]:
         block_fmt = f" BLOCK={r['apply_block']}" if r["apply_block"] else ""
-        log.info(f"  [{r['id']:>3}] {r['flag']:<10} score={r['score']:.4f} {r['rating']:<25} {r['company']:<25}{block_fmt}")
+        log.info(
+            f"  [{r['id']:>3}] {r['flag']:<10} score={r['score']:.4f} {r['rating']:<25} {r['company']:<25}{block_fmt}"
+        )
     if stats["scores"]:
-        log.info(f"  Score promedio: {sum(stats['scores'])/len(stats['scores']):.4f}")
+        log.info(f"  Score promedio: {sum(stats['scores']) / len(stats['scores']):.4f}")
     log.info("=" * 75)
 
     out = Path("reports/testing/evaluate_5_test_results.json")
-    out.write_text(json.dumps(stats["results"], ensure_ascii=False, indent=2), encoding="utf-8")
+    out.write_text(
+        json.dumps(stats["results"], ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     log.info(f"Resultados guardados en {out}")
     return stats
 

@@ -158,10 +158,18 @@ class TestGetTopOffers:
         assert rows[2][1] == 45
 
     def test_excluye_ofertas_ya_enviadas(self, test_db):
-        self._insert_offer_and_eval(test_db, "SENT-001", 60)
-        self._insert_offer_and_eval(test_db, "SENT-002", 55)
+        source_ids = ["SENT-001", "SENT-002"]
+        offer_ids = []
+        for sid in source_ids:
+            self._insert_offer_and_eval(test_db, sid, 60 if sid == "SENT-001" else 55)
+            offer_ids.append(
+                test_db.execute(
+                    "SELECT id FROM offers WHERE source_id = ?", (sid,)
+                ).fetchone()[0]
+            )
         test_db.execute(
-            "UPDATE offer_evaluations SET sent_via_telegram = 1 WHERE offer_id IN (1)"
+            "UPDATE offer_evaluations SET sent_via_telegram = 1 WHERE offer_id = ?",
+            (offer_ids[0],),
         )
 
         count = test_db.execute(

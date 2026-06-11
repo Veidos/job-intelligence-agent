@@ -1,39 +1,32 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
 **Última actualización:** 2026-06-11
-**Fase activa:** ADR-017 — Eliminación de Phase 3 enrich_pending y role_level_label.
+**Fase activa:** Sesión de evaluación y fixes de calidad.
 
 ## Cambios de la sesión actual (2026-06-11)
 
-### fetch.py — Phase 3 eliminada
-- `enrich_pending()` eliminada — el scraper proporciona todos los campos estructurados directamente del HTML
-- Skills del `<dl>` "Conocimientos" van directamente a `core` en `_upsert_offer_from_scraper()`
-  (antes iban a `secondary` esperando reclasificación del LLM)
-- `enriched_at` se setea en el mismo upsert (INSERT y UPDATE con COALESCE en UPDATE)
-- `--enrich-only` eliminado del CLI
-- Import de `cleaner.py` eliminado
+### server.py — SQL injection fix
+- `LIMIT ?` con parámetro en vez de `f" LIMIT {limit}"` (riesgo bajo, limit ya era int)
 
-### evaluate.py — role_level_label eliminado, L binario
-- `compute_skill_score()` ya no acepta `role_level_label`: L = 1.0 si presente, 0.0 si no
-- `run_evaluate()` ya no pasa `role_level_label` a compute_skill_score
-- `get_pending_offers()`: `o.role_level_label` eliminado del SELECT
-- `level_multiplier()`, `LEVEL_ORDINAL`, `ROLE_LEVEL_TO_SKILL_LEVEL` eliminados (código muerto)
+### role_classifier.py — Logging lazy, DB_PATH unificado
+- 11 f-string logging → lazy `%s` formatting
+- `DB_PATH` hardcodeado eliminado, ahora usa `get_connection()` de `init_db.py`
+  (respeta `DB_PATH` env var, consistente con el resto del proyecto)
+- `run_classifier()` simplificado: usa `get_connection()` en vez de re-calcular path
 
-### Datos que validaron la decisión
-- `experience_min` del scraper coincidía al 100% con el valor del LLM
-- Ninguna skill en DB tenía `level_required` explícito
-- `role_level_label` era 67% "mid" — proxy ruidoso
+### evaluate.py — Default --limit consistente
+- `--limit` default cambiado de 10 a 30 (igual que run.py)
 
-### Docs y ADR
-- ADR-017 creado documentando el cambio completo
-- MEMORIES.md actualizado (stale references corregidas, nueva sección)
-- PIPELINE.md actualizado (Phase 3 eliminada, --enrich-only eliminado)
-- RATING.md actualizado (sección "Skills: binary presence")
-- scraper_lab/reparse_offers.py: import de enrich_pending eliminado
+### Tests — Dashboard + pre-existing bugs
+- 18 tests nuevos para server.py (todos los endpoints REST + HTML serve)
+- `test_excluye_ofertas_ya_enviadas` en test_db_evaluations.py: hardcode `offer_id IN (1)` → lookup dinámico
+- `test_run_evaluate_procesa_oferta_y_guarda_en_db` en test_evaluate_cassettes.py: hardcode `offer_id = 1` → JOIN por source_id
+- `test_multiple_ofertas_procesadas_en_orden` en test_pipeline.py: hardcode `offer_id IN (1, 2)` → JOIN por source_id
+- test_feedback.py: unused `mock_save` y unused `pytest` import eliminados
 
-### Tests
-- **203 tests passing, 0 regresiones**
-- ruff format: 28 files OK
+### Resultado final
+- **221 tests passing** (203 originales + 18 nuevos), 0 regresiones
+- ruff format: 35 files OK
 - ruff check: solo errores pre-existentes E402 (migrate.py, server.py)
 
 ### Bloqueadores

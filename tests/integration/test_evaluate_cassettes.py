@@ -73,9 +73,7 @@ class TestEvaluateTechnical:
         assert result["skills_present"][0]["present"] is True
         assert result["skills_present"][1]["present"] is True
 
-    def test_technical_devuelve_dict_no_string(
-        self, sample_offer, sample_perfil_text
-    ):
+    def test_technical_devuelve_dict_no_string(self, sample_offer, sample_perfil_text):
         from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
 
         candidate_skills_map = {
@@ -103,9 +101,14 @@ class TestEvaluateHR:
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
             result = evaluate_hr(
-                sample_offer, sample_perfil_text, skill_detail,
-                M_core=0.8, M_sec=0.5, F_exp=0.6,
-                employment_gap=3.7, gap_severity="medium",
+                sample_offer,
+                sample_perfil_text,
+                skill_detail,
+                M_core=0.8,
+                M_sec=0.5,
+                F_exp=0.6,
+                employment_gap=3.7,
+                gap_severity="medium",
             )
 
         assert result["context_fit"] == 0.6
@@ -121,9 +124,14 @@ class TestEvaluateHR:
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
             result = evaluate_hr(
-                sample_offer_senior, sample_perfil_text, skill_detail,
-                M_core=0.2, M_sec=0.1, F_exp=0.1,
-                employment_gap=3.7, gap_severity="medium",
+                sample_offer_senior,
+                sample_perfil_text,
+                skill_detail,
+                M_core=0.2,
+                M_sec=0.1,
+                F_exp=0.1,
+                employment_gap=3.7,
+                gap_severity="medium",
             )
 
         assert result["apply_signal"] == "no"
@@ -138,9 +146,14 @@ class TestEvaluateHR:
         with patch("src.pipeline.evaluate.ollama_call") as mock:
             mock.return_value = mock_response
             result = evaluate_hr(
-                sample_offer_temporal, sample_perfil_text, skill_detail,
-                M_core=0.6, M_sec=0.4, F_exp=0.8,
-                employment_gap=3.7, gap_severity="medium",
+                sample_offer_temporal,
+                sample_perfil_text,
+                skill_detail,
+                M_core=0.6,
+                M_sec=0.4,
+                F_exp=0.8,
+                employment_gap=3.7,
+                gap_severity="medium",
             )
 
         assert result["apply_signal"] == "yes"
@@ -212,7 +225,9 @@ class TestRunEvaluateWithCassettes:
         assert len(stats["scores"]) == 1
 
         row = test_db.execute(
-            "SELECT match_score, recommendation FROM offer_evaluations WHERE offer_id = 1"
+            "SELECT e.match_score, e.recommendation FROM offer_evaluations e "
+            "JOIN offers o ON o.id = e.offer_id WHERE o.source_id = ?",
+            ("RUN-EVAL-001",),
         ).fetchone()
         assert row is not None
         assert row[0] > 0

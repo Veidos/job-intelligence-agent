@@ -13,6 +13,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from src.db.init_db import get_connection
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 logging.basicConfig(
@@ -20,8 +21,6 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "jobs.db"
 
 INITIAL_ROLES = [
     "data_analyst",
@@ -132,7 +131,7 @@ def get_role_catalog(conn: sqlite3.Connection) -> list[str]:
 
     try:
         catalog = json.loads(role_catalog_json)
-        logger.info(f"Loaded role catalog with {len(catalog)} roles")
+        logger.info("Loaded role catalog with %d roles", len(catalog))
         return catalog
     except json.JSONDecodeError:
         logger.warning("Failed to parse role_catalog JSON, resetting to initial")
@@ -159,7 +158,7 @@ def update_role_catalog(conn: sqlite3.Connection, catalog: list[str]) -> None:
         (catalog_json, row[0]),
     )
     conn.commit()
-    logger.info(f"Updated role catalog with {len(catalog)} roles")
+    logger.info("Updated role catalog with %d roles", len(catalog))
 
 
 FORBIDDEN_IN_ROLE_REASONING = [
@@ -255,7 +254,7 @@ def classify_offer(
             think=True,
         )
         if result is None:
-            logger.warning(f"gemma4 returned None for offer {offer.get('id')}")
+            logger.warning("gemma4 returned None for offer %s", offer.get("id"))
             return None
         if isinstance(result, str):
             try:
@@ -303,9 +302,9 @@ def classify_offer(
                         for p in FORBIDDEN_IN_ROLE_REASONING
                     ):
                         result = retry
-                        logger.info(f"Retry succeeded for offer {offer.get('id')}")
+                        logger.info("Retry succeeded for offer %s", offer.get("id"))
             except Exception:
-                logger.warning(f"Retry also failed for offer {offer.get('id')}")
+                logger.warning("Retry also failed for offer %s", offer.get("id"))
         role_reasoning = result.get("role_reasoning", "")
         if any(
             p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING
@@ -327,7 +326,7 @@ def classify_offer(
         result["relevance_flag"] = GAP_TO_FLAG.get(result["gap_type"], "stretch")
         return result
     except Exception as e:
-        logger.error(f"Error calling gemma4 for offer {offer.get('id')}: {e}")
+        logger.error("Error calling gemma4 for offer %s: %s", offer.get("id"), e)
         return None
 
 
@@ -342,7 +341,7 @@ def _run_logic(limit: int | None) -> None:
         return
     perfil_content = perfil_path.read_text(encoding="utf-8")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     conn.row_factory = sqlite3.Row
     try:
         ensure_columns_exist(conn)
@@ -362,7 +361,7 @@ def _run_logic(limit: int | None) -> None:
         if not offers:
             logger.info("No unclassified offers found")
             return
-        logger.info(f"Found {len(offers)} unclassified offers to process")
+        logger.info("Found %d unclassified offers to process", len(offers))
         classified_count = 0
         new_roles_added: list[str] = []
         relevance_distribution: dict[str, int] = {}
@@ -373,14 +372,14 @@ def _run_logic(limit: int | None) -> None:
             )
             result = classify_offer(offer_dict, catalog, perfil_content)
             if result is None:
-                logger.warning(f"Failed to classify offer {offer_dict['id']}")
+                logger.warning("Failed to classify offer %s", offer_dict["id"])
                 continue
             role_normalized = result["role_normalized"]
             relevance_flag = result["relevance_flag"]
             is_new_role = role_normalized not in catalog
             result["is_new_role"] = is_new_role
             if is_new_role:
-                logger.info(f"Adding new role to catalog: {role_normalized}")
+                logger.info("Adding new role to catalog: %s", role_normalized)
                 catalog.append(role_normalized)
                 new_roles_added.append(role_normalized)
                 update_role_catalog(conn, catalog)
@@ -407,13 +406,13 @@ def _run_logic(limit: int | None) -> None:
                 relevance_distribution.get(relevance_flag, 0) + 1
             )
             if i % 10 == 0:
-                logger.info(f"Progress: {i}/{len(offers)} offers processed")
+                logger.info("Progress: %d/%d offers processed", i, len(offers))
         conn.commit()
         logger.info(
             f"Classification complete: {classified_count} classified, {len(new_roles_added)} new roles, distribution: {relevance_distribution}"
         )
     except Exception as e:
-        logger.error(f"Error in main: {e}")
+        logger.error("Error in main: %s", e)
         raise
     finally:
         conn.close()
@@ -421,13 +420,7 @@ def _run_logic(limit: int | None) -> None:
 
 def run_classifier(limit: int = 0) -> int:
     """Función exportable para el orquestador. Devuelve número de ofertas clasificadas."""
-    import os
-    import sqlite3
-    from pathlib import Path
-
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
-    db_path = PROJECT_ROOT / os.getenv("DB_PATH", "data/jobs.db")
-    conn = sqlite3.connect(db_path)
+    conn = get_connection()
     count = conn.execute(
         "SELECT COUNT(*) FROM offers WHERE relevance_flag IS NULL"
     ).fetchone()[0]

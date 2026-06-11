@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
@@ -53,6 +52,7 @@ class TestGetLatestDailyOffers:
                 mock_get.return_value = conn
 
                 from src.telegram.handlers import get_latest_daily_offers
+
                 result = get_latest_daily_offers()
 
             conn.close()
@@ -100,7 +100,9 @@ class TestFeedbackProcessor:
 
     def test_feedback_processor_min_threshold(self):
         """Menos de 3 feedbacks → no llama al modelo."""
-        with patch("src.pipeline.feedback_processor.get_pending_feedback") as mock_pending:
+        with patch(
+            "src.pipeline.feedback_processor.get_pending_feedback"
+        ) as mock_pending:
             mock_pending.return_value = [
                 {"id": 1, "feedback_type": "f1", "raw_text": "a"},
                 {"id": 2, "feedback_type": "f2", "raw_text": "b"},
@@ -117,14 +119,18 @@ class TestFeedbackProcessor:
 
     def test_feedback_processor_writes_psychology(self):
         """≥3 feedbacks → escribe en user_psychology."""
-        with patch("src.pipeline.feedback_processor.get_pending_feedback") as mock_pending:
+        with patch(
+            "src.pipeline.feedback_processor.get_pending_feedback"
+        ) as mock_pending:
             mock_pending.return_value = [
                 {"id": 1, "feedback_type": "f1", "raw_text": "salario"},
                 {"id": 2, "feedback_type": "f2", "raw_text": "horario"},
                 {"id": 3, "feedback_type": "dia", "raw_text": "bien"},
             ]
 
-            with patch("src.pipeline.feedback_processor.get_latest_psychology") as mock_psych:
+            with patch(
+                "src.pipeline.feedback_processor.get_latest_psychology"
+            ) as mock_psych:
                 mock_psych.return_value = None
 
                 mock_response = {
@@ -137,11 +143,17 @@ class TestFeedbackProcessor:
 
                 from src.pipeline.feedback_processor import run
 
-                with patch("src.pipeline.feedback_processor.ollama_call") as mock_ollama:
+                with patch(
+                    "src.pipeline.feedback_processor.ollama_call"
+                ) as mock_ollama:
                     mock_ollama.return_value = mock_response
 
-                    with patch("src.pipeline.feedback_processor.save_psychology") as mock_save:
-                        with patch("src.pipeline.feedback_processor.mark_feedback_processed"):
+                    with patch(
+                        "src.pipeline.feedback_processor.save_psychology"
+                    ):
+                        with patch(
+                            "src.pipeline.feedback_processor.mark_feedback_processed"
+                        ):
                             result = run()
 
                 assert result["processed"] == 3

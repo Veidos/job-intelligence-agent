@@ -51,6 +51,7 @@
   [x] Scripts cron (setup_cron.sh, start_bot.sh, stop_bot.sh)
   [x] Logging persistente (RotatingFileHandler en run.py y bot.py)
   [x] Tests para feedback (test_feedback.py)
+  [x] Tests para dashboard server REST API (test_dashboard_server.py, 18 tests)
 
 ## FASE 6 — Dashboard
   [x] Flask server.py con 6 secciones + Chart.js
@@ -72,7 +73,7 @@
 [x] Integration cassettes: test_evaluate_cassettes.py, test_classifier_cassettes.py, test_fetch_cassettes.py (30 tests cassette-based)
 [x] Pipeline tests: test_pipeline.py (10 tests, flujo completo con cassettes)
 [x] Scraper tests: test_scraper.py (39 tests: parser, published_at, skills dedup)
-[x] 203 tests passing total (171 originales + 33 scraper v1 + 6 published_at - 7 build_search_urls)
+[x] 221 tests passing total (203 originales + 18 dashboard server API)
 
 ## BUGS DETECTADOS (TESTS Y REVISIÓN)
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)
@@ -106,7 +107,7 @@ Ver checklist completo en docs/TESTING.md
 - [x] T-6 — send.py — mensaje Telegram correcto
 - [x] T-7 — run.py ciclo completo real sin errores (2026-06-06: 30 evaluadas, 25 nuevas, 0 errores) ✅
 - [ ] T-8 — Feedback bot funcional y natural
-- [x] T-9 — pytest 0 failed (203 tests, 0 regresiones)
+- [x] T-9 — pytest 0 failed (221 tests, 0 regresiones)
 
 ## POST-FASE 7 — Optimización post-scraper (ADR-017)
 - [x] Skills del `<dl>` "Conocimientos" van directamente a core (elimina reclasificación LLM)

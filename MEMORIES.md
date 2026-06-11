@@ -544,3 +544,32 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
   redundante si COALESCE preserva los valores del scraper
 - `extract_fields_with_llm()` se conserva como función utilidad para casos
   futuros donde se necesite extracción desde descripción libre
+
+## Sesión de fixes de calidad (junio 2026)
+
+### SQL injection en server.py
+- `LIMIT` se interpolaba con f-string: `f" LIMIT {limit}"`
+- Aunque `limit` se casteaba a `int`, la práctica correcta es usar `" LIMIT ?"` con `params.append(limit)`
+- Fix: parámetro posicional en lugar de interpolación
+
+### F-string logging en role_classifier.py
+- 11 instancias de `logger.info(f"...")` en vez de `logger.info("... %s", var)`
+- El resto del proyecto ya usaba lazy `%s` — role_classifier.py era el outlier
+- Fix: todas convertidas a lazy formatting
+
+### DB_PATH inconsistente
+- `role_classifier.py` tenía `DB_PATH` hardcodeado a nivel de módulo, pero `run_classifier()` usaba `os.getenv("DB_PATH", "data/jobs.db")`
+- `_run_logic()` abría conexión con el path hardcodeado, `run_classifier()` abría su propia conexión para COUNT
+- Fix: eliminar `DB_PATH`, usar `get_connection()` de `init_db.py` que ya maneja el env var
+
+### Tests con IDs hardcodeados
+- 3 tests asumían que los IDs de autoincrement empezaban en 1: `offer_id IN (1)`, `offer_id IN (1, 2)`, `offer_id = 1`
+- Esto funcionaba solo por orden de colección de pytest (archivos anteriores se ejecutaban primero)
+- Al añadir `test_dashboard_server.py` (orden alfabético temprano), los IDs cambiaban
+- Fix: usar JOIN por `source_id` o lookup dinámico en lugar de IDs hardcodeados
+- Lección: **nunca asumir valores de autoincrement en tests** — usar SELECT por campo único
+
+### Tests de dashboard
+- 18 tests que verifican todos los endpoints REST del servidor Flask
+- Usan monkeypatch de `get_connection` con wrapper que ignora `close()` para preservar la conexión session-scoped
+- Validan: stats, offers con/sin filtros, 404, companies, applications CRUD, feedback CRUD, runs, HTML serve, static files, favicon
