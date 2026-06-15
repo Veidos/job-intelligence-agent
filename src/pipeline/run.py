@@ -33,6 +33,9 @@ PERFIL_PATH = PROJECT_ROOT / "PERFIL.md"
 
 def setup_logging() -> None:
     """Configura logging con rotación de archivos."""
+    root = logging.getLogger()
+    if root.handlers:
+        return
     project_root = Path(__file__).resolve().parents[2]
     log_dir = project_root / "logs"
     log_dir.mkdir(exist_ok=True)
