@@ -93,6 +93,14 @@ def api_stats():
     )
 
 
+# Columnas filtrables en api_offers — allowlist explícito.
+# Siempre usar placeholders ? con params, nunca interpolación directa.
+_OFFER_FILTER_COLUMNS = frozenset({
+    "match_score", "recommendation", "llm_apply_signal",
+    "relevance_flag", "title", "company_name", "company_id",
+})
+
+
 @app.route("/api/offers")
 def api_offers():
     with contextlib.closing(get_connection()) as conn:

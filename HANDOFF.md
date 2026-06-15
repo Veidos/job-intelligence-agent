@@ -100,6 +100,11 @@
 - **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
 - **Tests:** 223 passed, 0 regresiones
 
+### 🟠 Fix: server.py — allowlist _OFFER_FILTER_COLUMNS (#11)
+- **Problema:** SQL dinámico en `api_offers()` construido con f-string + `where_sql`. Aunque los valores iban parametrizados, no había documentación explícita de qué columnas son filtrables.
+- **Fix:** constante `_OFFER_FILTER_COLUMNS` como frozenset + comentario de seguridad. Sin cambios en lógica (ya era segura) — documentación defensiva para futuros desarrolladores.
+- **Tests:** 223 passed, 0 regresiones
+
 ### 🟠 Fix: migrate.py — SCHEMA_DEFINITIONS reemplazado por parseo de schema.sql (#9)
 - **Problema:** `SCHEMA_DEFINITIONS` (~150 líneas) duplicaba manualmente las columnas de schema.sql. Riesgo de divergencia entre ambos.
 - **Fix:** nueva función `_parse_schema_columns()` que parsea los `CREATE TABLE` de schema.sql con regex. Maneja comentarios inline (`--`), paréntesis anidados (`datetime('now')`), y omite constraints/índices. `SCHEMA_DEFINITIONS` eliminado.
