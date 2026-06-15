@@ -24,161 +24,6 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-SCHEMA_DEFINITIONS = {
-    "companies": [
-        ("infojobs_company_id", "TEXT"),
-        ("name", "TEXT NOT NULL"),
-        ("sector", "TEXT"),
-        ("size_range", "TEXT"),
-        ("rating_overall", "REAL"),
-        ("rating_worklife", "REAL"),
-        ("rating_culture", "REAL"),
-        ("rating_growth", "REAL"),
-        ("reviews_count", "INTEGER DEFAULT 0"),
-        ("reviews_sample", "TEXT"),
-        ("avg_inscriptions", "INTEGER"),
-        ("offers_published_30d", "INTEGER"),
-        ("response_rate_signal", "TEXT DEFAULT 'desconocida'"),
-        ("llm_description", "TEXT"),
-        ("green_flags", "TEXT"),
-        ("red_flags", "TEXT"),
-        ("llm_confidence", "TEXT"),
-        ("enriched_by_llm_at", "DATETIME"),
-        ("llm_model", "TEXT"),
-        ("first_seen_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("last_updated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-    ],
-    "cv_versions": [
-        ("version", "TEXT NOT NULL"),
-        ("filename", "TEXT"),
-        ("uploaded_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("content_parsed", "TEXT"),
-        ("is_active", "INTEGER NOT NULL DEFAULT 1"),
-    ],
-    "apify_raw_responses": [
-        ("run_id", "TEXT NOT NULL"),
-        ("item_index", "INTEGER NOT NULL"),
-        ("source_id", "TEXT"),
-        ("fetched_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("payload", "TEXT NOT NULL"),
-        ("processed", "INTEGER NOT NULL DEFAULT 0"),
-        ("error", "TEXT"),
-    ],
-    "offers": [
-        ("source_id", "TEXT NOT NULL UNIQUE"),
-        ("source", "TEXT NOT NULL DEFAULT 'infojobs'"),
-        ("url", "TEXT"),
-        ("title", "TEXT NOT NULL"),
-        ("company_id", "INTEGER REFERENCES companies(id)"),
-        ("company_name", "TEXT"),
-        ("employer_id", "TEXT"),
-        ("province", "TEXT"),
-        ("city", "TEXT"),
-        ("salary_min", "REAL"),
-        ("salary_max", "REAL"),
-        ("salary_period", "TEXT"),
-        ("contract_type", "TEXT"),
-        ("work_mode", "TEXT"),
-        ("experience_min", "INTEGER"),
-        ("experience_max", "INTEGER"),
-        ("education_level", "TEXT"),
-        ("skills_required", "TEXT"),
-        ("description_raw", "TEXT"),
-        ("description_clean", "TEXT"),
-        ("applications_count", "INTEGER DEFAULT 0"),
-        ("views_count", "INTEGER DEFAULT 0"),
-        ("published_at", "DATETIME"),
-        ("expires_at", "DATETIME"),
-        ("fetched_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("updated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("is_active", "INTEGER NOT NULL DEFAULT 1"),
-        ("is_evaluated", "INTEGER NOT NULL DEFAULT 0"),
-        ("search_layer", "INTEGER"),
-        ("role_level", "INTEGER"),
-        ("relevance_flag", "TEXT"),
-        ("role_normalized", "TEXT"),
-        ("classification_reasoning", "TEXT"),
-        ("gap_type", "TEXT"),
-        ("role_reasoning", "TEXT"),
-        ("is_new_role", "INTEGER DEFAULT 0"),
-        ("raw_data", "TEXT"),
-        ("enriched_at", "TEXT"),
-        ("role_level_label", "TEXT"),
-    ],
-    "offer_evaluations": [
-        ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),
-        ("cv_version_id", "INTEGER REFERENCES cv_versions(id)"),
-        ("evaluated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("skills_hard_match", "INTEGER"),
-        ("experience_match", "INTEGER"),
-        ("location_match", "INTEGER"),
-        ("market_competitiveness", "INTEGER"),
-        ("scoring_detail", "TEXT"),
-        ("match_score", "INTEGER"),
-        ("recommendation", "TEXT"),
-        ("environment_compatibility", "TEXT"),
-        ("hr_concerns", "TEXT"),
-        ("strengths", "TEXT"),
-        ("red_flags", "TEXT"),
-        ("gemma_verdict", "TEXT"),
-        ("interview_prep", "TEXT"),
-        ("apply_recommendation", "TEXT"),
-        ("descarte_tipo", "TEXT DEFAULT 'ninguno'"),
-        ("descarte_razon", "TEXT"),
-        ("relevance_validation", "TEXT"),
-        ("relevance_corrected", "TEXT"),
-        ("relevance_reasoning", "TEXT"),
-        ("apply_block", "TEXT"),
-        ("apply_block_reason", "TEXT"),
-        ("llm_apply_signal", "TEXT"),
-        ("model_technical", "TEXT DEFAULT 'gemma4:e4b'"),
-        ("model_hr", "TEXT DEFAULT 'gemma4:e4b'"),
-        ("processing_ms", "INTEGER"),
-        ("sent_via_telegram", "INTEGER DEFAULT 0"),
-        ("sent_at", "DATETIME"),
-        ("daily_position", "INTEGER"),
-    ],
-    "user_feedback": [
-        ("offer_id", "INTEGER REFERENCES offers(id)"),
-        ("feedback_type", "TEXT NOT NULL"),
-        ("raw_text", "TEXT NOT NULL"),
-        ("processed", "INTEGER DEFAULT 0"),
-    ],
-    "user_psychology": [
-        ("raw_feedback", "TEXT"),
-        ("summary", "TEXT"),
-        ("key_insights", "TEXT"),
-        ("version", "INTEGER DEFAULT 1"),
-    ],
-    "search_config": [
-        ("generated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("cv_version_id", "INTEGER REFERENCES cv_versions(id)"),
-        ("geo_hierarchy", "TEXT"),
-        ("role_hierarchy", "TEXT"),
-        ("active_geo_level", "INTEGER"),
-        ("active_role_level", "INTEGER"),
-        ("last_full_fetch", "DATETIME"),
-        ("last_updated", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("role_catalog", "TEXT"),
-    ],
-    "applications": [
-        ("offer_id", "INTEGER NOT NULL REFERENCES offers(id)"),
-        ("applied_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("status", "TEXT NOT NULL DEFAULT 'applied'"),
-        ("notes", "TEXT"),
-        ("contact_name", "TEXT"),
-        ("next_action_date", "TEXT"),
-        ("created_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-        ("updated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-    ],
-    "user_settings": [
-        ("key", "TEXT NOT NULL UNIQUE"),
-        ("value", "TEXT"),
-        ("updated_at", "DATETIME NOT NULL DEFAULT (datetime('now'))"),
-    ],
-}
-
-
 def get_existing_columns(conn, table_name: str) -> set[str]:
     """Obtiene las columnas existentes de una tabla."""
     cur = conn.cursor()
@@ -247,9 +92,61 @@ def drop_zombie_columns(conn) -> list[str]:
     return dropped
 
 
+def _parse_schema_columns(schema_sql: str) -> dict[str, list[tuple[str, str]]]:
+    """Extrae columnas por tabla desde los CREATE TABLE de schema.sql.
+
+    Devuelve: {"tabla": [("col_name", "col_def"), ...]}
+    Solo extrae columnas simples (no PRIMARY KEY, FOREIGN KEY, etc.).
+    """
+    import re
+
+    result: dict[str, list[tuple[str, str]]] = {}
+
+    for table_match in re.finditer(
+        r"CREATE TABLE\s+(?:IF NOT EXISTS\s+)?(\w+)\s*\((.*?)\);",
+        schema_sql,
+        re.DOTALL | re.IGNORECASE,
+    ):
+        table_name = table_match.group(1)
+        body = table_match.group(2)
+        cols = []
+        for raw_line in body.split("\n"):
+            line = raw_line.split("--")[0].strip().rstrip(",").strip()
+            if not line:
+                continue
+            upper = line.upper()
+            if any(
+                upper.startswith(kw)
+                for kw in (
+                    "PRIMARY KEY",
+                    "FOREIGN KEY",
+                    "UNIQUE",
+                    "CHECK",
+                    "CONSTRAINT",
+                    "CREATE",
+                    "PRAGMA",
+                )
+            ):
+                continue
+            parts = line.split(None, 1)
+            if len(parts) >= 2:
+                col_name = parts[0]
+                col_def = parts[1].rstrip(",").strip()
+                if col_name.lower() == "id":
+                    continue
+                cols.append((col_name, col_def))
+        if cols:
+            result[table_name] = cols
+    return result
+
+
 def run_migration() -> dict:
     """Ejecuta la migración del schema."""
     log.info("Iniciando migración de schema...")
+
+    schema_path = Path(__file__).resolve().parents[2] / "src" / "db" / "schema.sql"
+    schema_sql = schema_path.read_text(encoding="utf-8")
+    schema_definitions = _parse_schema_columns(schema_sql)
 
     conn = get_connection()
     total_added = 0
@@ -331,7 +228,7 @@ def run_migration() -> dict:
         conn.commit()
         log.info("Limpieza completada: %d columnas procesadas", len(dropped_cols))
 
-    for table_name, columns in SCHEMA_DEFINITIONS.items():
+    for table_name, columns in schema_definitions.items():
         try:
             existing = get_existing_columns(conn, table_name)
             if not existing:
@@ -355,7 +252,7 @@ def run_migration() -> dict:
     else:
         log.info("Migración completada: %d columnas añadidas", total_added)
 
-    return {"added": total_added, "tables": len(SCHEMA_DEFINITIONS)}
+    return {"added": total_added, "tables": len(schema_definitions)}
 
 
 if __name__ == "__main__":
