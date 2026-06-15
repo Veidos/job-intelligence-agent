@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS offer_evaluations (
     location_match INTEGER,
     market_competitiveness INTEGER,
     scoring_detail TEXT,
-    match_score INTEGER,
+    match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)
     recommendation TEXT,
     environment_compatibility TEXT,
     hr_concerns TEXT,

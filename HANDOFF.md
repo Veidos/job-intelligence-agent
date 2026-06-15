@@ -95,6 +95,11 @@
 - **Fix #7:** Footer genera `/f1`...`/fN` dinámicamente según `len(offers)`. `range(1, 6)` se mantiene como cota máxima flexible.
 - **Tests:** 223 passed, 0 regresiones
 
+### 🔴 #6 — No era bug, solo documentación faltante
+- **Diagnóstico:** `evaluate.py` ya convierte `float 0-1 → INTEGER 0-100` en `_build_evaluation_params()` con `round(final_score * 100)`. `send.py` compara contra `>= 35` (escala 0-100). Dashboard muestra porcentaje. Pipeline consistente.
+- **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
+- **Tests:** 223 passed, 0 regresiones
+
 ---
 
 ## Auditoría intensiva completa (2026-06-15)
@@ -190,8 +195,8 @@ He leído y analizado metódicamente cada archivo del repositorio. Auditoría co
 | 3 | `server.py` | Conexiones sin context manager | 🔴 |
 | 4 | `ollama_client.py` | OLLAMA_BASE_URL hardcodeado | 🔴 |
 | 5 | `send.py` | Sin validación de tokens vacíos | 🔴 |
-| 6 | Schema | match_score INTEGER vs float 0-1 | 🔴 |
-| 7 | `send.py` | range(1,6) vs /f1–/f3 docs | 🔴 |
+| 6 | Schema | match_score INTEGER vs float 0-1 | 🔴 **✅ NO BUG** |
+| 7 | `send.py` | range(1,6) vs /f1–/f3 docs | 🔴 **✅ FIXED** |
 | 8 | Todo | sys.path.insert x8 | 🟠 |
 | 9 | `migrate.py` | Duplica schema.sql | 🟠 |
 | 10 | `models.py` | ORM parcial (solo UserSettings) | 🟠 |
