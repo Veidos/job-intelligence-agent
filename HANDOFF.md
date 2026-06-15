@@ -81,9 +81,10 @@ He leído y analizado metódicamente cada archivo del repositorio. Auditoría co
 
 ### 🔴 Críticos — Bugs o riesgos reales
 
-1. **src/db/models.py** — `DB_PATH` hardcodeado, engine creado antes de `load_dotenv()` → **✅ FIXED en esta sesión**
+1. **src/db/models.py** — `DB_PATH` hardcodeado, engine creado antes de `load_dotenv()` → **✅ FIXED (parcial)**
    - Engine se instancia al importar, antes de que `load_dotenv()` se ejecute.
-   - Fix: `_get_engine()` perezoso dentro de `load_dotenv()`, lee `os.getenv("DB_PATH", "data/jobs.db")`.
+   - Fix: `_get_engine()` perezoso + `load_dotenv()` dentro del módulo.
+   - **⚠️ Limitación:** `load_dotenv()` en models.py es redundante si otro módulo ya lo llamó. El engine sigue creándose al importar, pero ahora respeta `DB_PATH` del `.env`. El `load_dotenv()` extra es ruido inofensivo. Se eliminará naturalmente al abordar el ítem #8 (pyproject.toml + punto de entrada único).
 
 2. **src/pipeline/evaluate.py** — Duplicación total de lógica de parseo ya refactorizada
    - `load_skills_from_perfil()`, `load_gap_from_perfil()`, `load_experience_years_from_perfil()`, `MONTH_NAMES` — código idéntico al que ya existe en `CandidateProfile` (`src/utils/candidate_profile.py`).
