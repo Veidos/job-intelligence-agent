@@ -605,3 +605,37 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - No se pondera en el score final (status quo)
 - `F_fit` del HR LLM ya captura ubicación cualitativamente
 - El usuario evalúa caso por caso en el dashboard
+
+## Sesión 2026-06-15 — Borrón y cuenta nueva + fixes de pipeline
+
+### Scraper 403 Forbidden — Rate limiting
+- InfoJobs bloqueó **todas** las detail pages de "Ingeniero de Procesos" con 403 usando delay 2.0 fijo
+- Fix dual: delay 2.0→4.0s + jitter aleatorio 0-2.0s + fingerprint rotatorio (chrome131/safari17/chrome124)
+- Resultado: 0 errores 403 en el re-run con 79 detail fetches
+- Lección: delay fijo es detectable como patrón de bot. Jitter rompe el patrón.
+
+### `--dry-run` no protegía fetch.py
+- `run_fetch_scraper()` no aceptaba `dry_run` — escribía en DB aunque run.py pasara `--dry-run`
+- El timeout de la dry-run dejó 36 filas huérfanas en `scraper_raw_responses` con un `run_id` que ya nunca se procesaría
+- Fix: `run_fetch_scraper()` ahora acepta `dry_run=True` y salta persistencia
+
+### `_upsert_from_scraper_raw()` filtraba por `run_id`
+- `WHERE run_id = ? AND processed = 0` → si un run aborta, filas huérfanas
+- Fix: `WHERE processed = 0` — procesa todas las pendientes independientemente del run_id
+- Especialmente importante para pipelines con reinicios frecuentes
+
+### `LIMIT 0` en SQLite
+- `LIMIT 0` devuelve 0 filas en SQLite, no es "sin límite"
+- `-1` es el equivalente SQLite de "sin límite"
+- Mismo problema con list slicing `[:0]` en Python: lista vacía
+- Lección: cada función destino debe normalizar `limit=0` → `-1`/`None` internamente (patrón role_classifier)
+
+### `published_at` nulo en ofertas scrapeadas
+- InfoJobs puede tener texto atípico: "Publicada hace 3d. Publicada de nuevo" que no matchea los 5 formatos del parser
+- Fallback: `scraped_at` como `published_at` — error de 1 día irrelevante para ciclado de 30 días
+- Sin fallback, ofertas sin fecha nunca expiran del dashboard
+
+### Dashboard — Verificación post-reset
+- Zombie columns eliminadas (7 columnas de offer_evaluations) — ninguna referenciada en dashboard
+- `skill_detail` como objeto categorizado (no array) — dashboard lo maneja correctamente
+- Pipeline completo verificado: 65 ofertas, 176 companies, 65 evaluaciones, todas las APIs respondiendo

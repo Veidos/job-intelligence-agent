@@ -150,7 +150,7 @@ def run_pipeline(
         log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
         from src.pipeline.fetch import run_fetch_scraper
 
-        new_offers = run_fetch_scraper(since_date=since_date)
+        new_offers = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
         log.info("[1/4] Fetch — %d ofertas nuevas", new_offers)
 
     # PASO 2: Classify
@@ -293,13 +293,13 @@ if __name__ == "__main__":
         "--limit-eval",
         type=int,
         default=30,
-        help="Máximo de ofertas a evaluar (default: 30)",
+        help="Máximo de ofertas a evaluar (0 = sin límite, default: 30)",
     )
     parser.add_argument(
         "--limit-enrich",
         type=int,
         default=50,
-        help="Máximo de empresas a enriquecer (default: 50)",
+        help="Máximo de empresas a enriquecer (0 = sin límite, default: 50)",
     )
     parser.add_argument(
         "--since-date",

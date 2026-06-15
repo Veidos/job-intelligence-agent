@@ -1,56 +1,54 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
-**Última actualización:** 2026-06-11
-**Fase activa:** Sesión de calidad — 11 fixes implementados, ADR-018 creado.
+**Última actualización:** 2026-06-15
+**Fase activa:** Borrón y cuenta nueva + fixes scraper + pipeline completo
 
-## Cambios de la sesión actual (2026-06-11)
+## Cambios de la sesión actual (2026-06-15)
 
-### 🟢 Fix #1-2 — employer_id desde scraper
-- `RawOfferDetail.employer_id` añadido al dataclass + `_extract_employer_id()` desde `em-i{HASH}` en company link
-- `_upsert_offer_from_scraper()` ahora persiste `employer_id` en INSERT y UPDATE (COALESCE)
-- `fetch_company.py` ya usaba `employer_id` como `infojobs_company_id` — sin conflictos
+### Reseteo de DB
+- `data/jobs.db` respaldado como `data/jobs.db.v1` (8.7 MB)
+- Tablas reseteadas: offers, offer_evaluations, scraper_raw_responses, apify_raw_responses, applications, user_feedback, search_runs
+- Companies, search_config, user_settings, user_psychology preservados
 
-### 🟢 Fix #3-5 — run.py
-- `--limit` separado en `--limit-eval` (default 30) y `--limit-enrich` (default 50)
-- Global `_run_start_time` eliminada, `t0 = time.monotonic()` local
-- Log `"[CV] Pipeline abortado — CV nuevo sin PERFIL.md actualizado"` en no-TTY
+### Fixes de scraper (403 Forbidden)
+- `delay` aumentado de 2.0s → 4.0s + jitter aleatorio 2.0s
+- Fingerprint rotado: `chrome131`/`safari17`/`chrome124` (random)
+- `random` import añadido a `infojobs_scraper.py`
 
-### 🟢 Fix #6 — skills_hard_match documentado
-- No renombrado (25 referencias en schema, server, tests, fixtures)
-- Comentario explicativo en `_COLUMNS`: `# skills_hard_match (columna DB) = round(M_core * 100)`
+### Fix: `_upsert_from_scraper_raw()` filtraba por `run_id`
+- `WHERE run_id = ? AND processed = 0` → `WHERE processed = 0`
+- Ejecuciones abortadas ya no dejan filas huérfanas
 
-### 🟡 Fix #7 + #9 — CandidateProfile + excerpt()
-- `src/utils/candidate_profile.py` — nuevo módulo con `CandidateProfile.from_perfil()`
-- Parseo unificado de PERFIL.md en 1 pass con regex por sección (`re.DOTALL | re.IGNORECASE`, lookahead `(?=\n##|\Z)`)
-- `perfil_sections: dict[str, str]` preserva cada sección completa
-- `excerpt(nombres_seccion)` compone texto para prompts sin truncado posicional
-- `perfil[:2500]` y `perfil[:2000]` reemplazados por `profile.excerpt()`
-- `personal_concerns` garantizado en HR LLM
-- `raw_perfil` preservado con `# TODO: eliminar` para migración gradual
+### Fix: `--dry-run` no llegaba a fetch.py
+- `run_fetch_scraper()` ahora acepta `dry_run: bool = False`
+- En dry_run: no abre conexión, no persiste raw, no upsert
+- `run.py` pasa `dry_run` correctamente
 
-### 🟡 Fix #8 — Prioridad inversa en descripción
-- `_extract_relevant_description()` en classifier: bloque requisitos (hasta 1000 chars) + intro (resto hasta 2000)
-- Marcadores: "requisitos", "se requiere", "formación", "estudios mínimos", etc.
+### Fix: `--limit-eval 0` y `--limit-enrich 0` como "sin límite"
+- `evaluate.py:get_pending_offers()`: `limit=0` → `-1` (SQLite LIMIT -1 = sin límite)
+- `fetch_company.py:run()`: batch slice `companies_to_enrich[:limit if limit > 0 else None]`
+- `run.py`: help actualizado documentando que `0` = sin límite
 
-### 🟡 Fix #10 — Warnings en fallbacks silenciosos
-- `GAP_TO_FLAG.get(gap_type, "stretch")` ahora loggea warning si gap_type no está en dict
-- `relevance_corrected` validado contra `{"core", "adjacent", "stretch", "temporal", None}`, warning si fuera
+### Fix: `published_at` nulo en scraper
+- Fallback: si `_extract_published_at()` devuelve `None`, usar `datetime.now().strftime("%Y-%m-%d")`
+- Previene acumulación de ofertas sin fecha en dashboard
 
-### #12 — LLM quality metrics
-- 3 contadores en `ollama_client.py`: `calls`, `json_parse_failures`, `empty_responses`
-- `get_llm_metrics()` loggeado al final del pipeline en `run.py`
-- In-memory, no persistidos en DB
-- `null_fields` no implementado (responsabilidad del caller)
+### Pipeline resultados
+- **65 ofertas** fetch + classify (5 core, 20 adjacent, 38 stretch, 2 temporal)
+- **14 empresas enriquecidas** → 176 total, 100% pobladas
+- **65/65 evaluadas**, 0 errores
+- **3 "Aplicar"**: CONSULTOR DATA SCIENCE @ Management Solutions (0.70), Ingeniero/a procesos @ CADE (0.67), Data Scientist/ML Analyst @ Solutia (0.61)
+- **Avg score**: 0.253 | 197 LLM calls, 0 fallos JSON
+- **Pipeline**: ~3h45min total (ambos runs), Telegram enviado con 3 ofertas
 
-### #11 + #13 — Cerrados
-- **#11:** `location_match` status quo — no se pondera en score. ADR-018 documenta.
-- **#13:** `CandidateProfile` compartido — resuelto por #9 en `src/utils/`
+### Dashboard
+- Servidor Flask en `http://localhost:8080`
+- Todos los endpoints API verificados: stats, offers, companies, runs
+- Sin regresiones por zombie columns (ninguna referenciada en dashboard)
+- skill_detail, scoring breakdown (M_core, F_exp, etc.) poblados correctamente
 
-### Resultado final
-- **221 tests passing**, 0 regresiones
-- 10 cambios implementados + 2 cerrados
-- ADR-018 creado: CandidateProfile, LLM Metrics, location_match Status Quo
-- ruff: solo 3 pre-existing E402 (server.py, migrate.py)
+### Tests
+- **221 tests passing** (sin cambios en tests)
 
 ### Bloqueadores
 - Ninguno

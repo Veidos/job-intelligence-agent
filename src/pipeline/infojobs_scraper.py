@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import re
 import time
 from dataclasses import dataclass, field
@@ -181,6 +182,8 @@ class InfoJobsParser:
         salary = InfoJobsParser._extract_salary(details.get("salary", ""))
 
         published = InfoJobsParser._extract_published_at(soup)
+        if not published:
+            published = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         employer_id = InfoJobsParser._extract_employer_id(soup)
 
         now = datetime.now(timezone.utc).isoformat()
@@ -637,9 +640,11 @@ class InfoJobsScraper:
     BASE_URL = "https://www.infojobs.net"
     SEARCH_PATH = "/jobsearch/search-results/list.xhtml"
 
+    _FINGERPRINTS = ["chrome131", "safari17", "chrome124"]
+
     def __init__(
         self,
-        delay: float = 2.0,
+        delay: float = 4.0,
         max_retries: int = 3,
         timeout: int = 30,
     ):
@@ -650,17 +655,20 @@ class InfoJobsScraper:
                 "curl_cffi no está instalado. Ejecuta: pip install curl_cffi"
             )
 
-        self.session = cffi_requests.Session(impersonate="chrome124")
+        fp = random.choice(self._FINGERPRINTS)
+        self.session = cffi_requests.Session(impersonate=fp)
         self.delay = delay
+        self.jitter = 2.0
         self.max_retries = max_retries
         self.timeout = timeout
         self._last_request = 0.0
 
     def _rate_limit(self) -> None:
-        """Espera al menos self.delay segundos desde la última petición."""
+        """Espera self.delay + jitter aleatorio desde la última petición."""
         elapsed = time.monotonic() - self._last_request
-        if elapsed < self.delay:
-            time.sleep(self.delay - elapsed)
+        wait = self.delay + random.uniform(0, self.jitter)
+        if elapsed < wait:
+            time.sleep(wait - elapsed)
         self._last_request = time.monotonic()
 
     def _fetch(self, url: str) -> str | None:

@@ -343,6 +343,9 @@ def _persist_scraper_raw(run_id: str, detail: Any, conn) -> None:
 def _upsert_from_scraper_raw(run_id: str, conn) -> int:
     """Lee scraper_raw_responses pendientes y hace upsert en offers.
 
+    Procesa TODAS las filas no procesadas, independientemente de run_id,
+    para que ejecuciones abortadas no dejen filas huérfanas.
+
     Returns:
         Número de ofertas nuevas insertadas.
     """
@@ -351,9 +354,8 @@ def _upsert_from_scraper_raw(run_id: str, conn) -> int:
         """
         SELECT id, offer_id, payload
         FROM scraper_raw_responses
-        WHERE run_id = ? AND processed = 0
+        WHERE processed = 0
         """,
-        (run_id,),
     ).fetchall()
 
     if not rows:
@@ -394,12 +396,15 @@ def run_fetch_scraper(
     search_config: dict | None = None,
     since_date: str | None = None,
     max_items: int = 30,
+    dry_run: bool = False,
 ) -> int:
     """Fetch usando scraper propio (curl_cffi + BeautifulSoup).
 
     Fases:
       1. persist_scraper_raw — guarda RawOfferDetail en tabla append-only
       2. upsert_from_scraper_raw — escribe en offers desde raw (skills a core)
+
+    Si dry_run=True, no persiste nada en DB. Útil para pruebas sin efectos laterales.
 
     El scraper construye sus propias URLs de búsqueda internamente.
     """
@@ -420,10 +425,11 @@ def run_fetch_scraper(
 
     # Generar run_id una sola vez al inicio
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    conn = get_connection()
+    conn = get_connection() if not dry_run else None
     scraper = InfoJobsScraper()
 
     total_raw = 0
+    new_count = 0
     try:
         for keyword in keywords:
             stubs = scraper.search(
@@ -439,22 +445,24 @@ def run_fetch_scraper(
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue
-                # Fase 1: raw inmutable
-                _persist_scraper_raw(run_id, detail, conn)
+                if not dry_run:
+                    _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
 
-        # Fase 2: upsert desde raw (skills del <dl> van a core, enriched_at se setea aquí)
-        new_count = _upsert_from_scraper_raw(run_id, conn)
+        if not dry_run:
+            new_count = _upsert_from_scraper_raw(run_id, conn)
     except Exception as e:
         log.error("Error en scraper fetch: %s", e)
     finally:
         scraper.close()
-        conn.close()
+        if not dry_run:
+            conn.close()
 
     log.info(
-        "Scraper fetch completado: %d raws, %d nuevas ofertas",
+        "Scraper fetch completado: %d raws, %d nuevas ofertas%s",
         total_raw,
         new_count,
+        " (DRY RUN)" if dry_run else "",
     )
     return new_count
 

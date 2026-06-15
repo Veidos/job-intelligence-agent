@@ -1,12 +1,10 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** T-5h Fase 2 (branding + microcopy dashboard) / Fase 4 (role_discovery, market_signals, strategic_advisor)
-> T-2 ✅, T-3 ✅, T-4 ✅, T-5 ✅ (92/92 evaluadas, 0 errores)
-> T-5c ✅ — Re-evaluación v2 completa (avg 29.8→41.4, 10 "Aplicar"), zombie columns cleanup
-> T-5f ✅ — Flask dashboard con 6 secciones, API REST, feedback inline, applications timeline
-> T-5g ✅ — Rediseño profesional dashboard: 4 secciones, tabla 10 columnas, modal sticky CTA, apps inline status, empresas charts, monitor narrativo (ADR-015)
-> T-5h ✅ — KPIs implementados (skills demand/gap, salary dist, weekly activity, sparkline, app funnel, model accuracy). Sesión 2026-06-11: 10 fixes de calidad, CandidateProfile, LLM metrics, ADR-018
-> **221 tests passing, 11 cambios implementados, ADR-018 creado**
+> **Próximo paso:** Fase 2 (branding + microcopy dashboard) / Fase 4 (role_discovery, market_signals, strategic_advisor)
+> T-8 ✅ — Feedback bot funcional y natural
+> T-10 ✅ — Dashboard test checklist completado (ADR-015)
+> **Sesión 2026-06-15:** Borrón y cuenta nueva, fixes scraper (403/dry-run/run_id/limit=0/published_at), pipeline completo 65 ofertas, 65 evaluadas, 3 "Aplicar" ✅
+> **221 tests passing, pipeline funcional con scraper propio**
 
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo

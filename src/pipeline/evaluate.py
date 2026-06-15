@@ -344,6 +344,7 @@ def load_perfil() -> str:
 def get_pending_offers(limit: int = 10) -> list[dict]:
     conn = get_connection()
     cur = conn.cursor()
+    limit = -1 if limit == 0 else limit  # 0 = sin límite
     rows = cur.execute(
         """
         SELECT o.id, o.title, o.company_name, o.city, o.work_mode,

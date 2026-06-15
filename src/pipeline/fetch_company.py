@@ -258,7 +258,7 @@ def run(limit: int = 50) -> dict[str, Any]:
         conn.close()
         return {"enriched": 0, "linked": linked, "errors": 0, "pending": 0}
 
-    batch = companies_to_enrich[:limit]
+    batch = companies_to_enrich[:limit if limit > 0 else None]
     enriched_count = 0
     error_count = 0
     skipped_count = 0
