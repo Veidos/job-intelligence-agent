@@ -27,7 +27,16 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 
+def _validate_config() -> None:
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        raise EnvironmentError(
+            "TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID son obligatorios. "
+            "Revisa tu archivo .env"
+        )
+
+
 def send_message(text: str, parse_mode: str = "HTML") -> bool:
+    _validate_config()
     try:
         r = requests.post(
             f"{BASE_URL}/sendMessage",
@@ -159,6 +168,7 @@ def save_feedback(position: int, text: str, feedback_type: str = "offer") -> Non
 
 
 def send_daily() -> None:
+    _validate_config()
     settings = get_user_settings()
     max_offers = settings.max_offers_day if settings else 3
 
@@ -181,11 +191,12 @@ def send_daily() -> None:
         eval_ids.append(offer["eval_id"])
         positions.append(i)
 
+    feedback_lines = "\n".join(
+        f"/f{i} [comentario] → sobre oferta {i}" for i in range(1, len(offers) + 1)
+    )
     footer = (
         "\n───\n💬 <i>Feedback opcional:</i>\n"
-        "/f1 [comentario] → sobre oferta 1\n"
-        "/f2 [comentario] → sobre oferta 2\n"
-        "/f3 [comentario] → sobre oferta 3\n"
+        f"{feedback_lines}\n"
         "/dia [comentario] → cómo te sientes hoy"
     )
 

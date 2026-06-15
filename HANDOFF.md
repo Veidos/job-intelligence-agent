@@ -88,6 +88,13 @@
 - **Fix:** `OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")`. Añadido `import os`. `.env.example` actualizado con la variable.
 - **Tests:** 223 passed, 0 regresiones
 
+### 🔴 Fix: send.py — validación de tokens + footer dinámico (#5 + #7)
+- **Problema #5:** `TELEGRAM_TOKEN` y `TELEGRAM_CHAT_ID` sin validación. Si `.env` falta, la URL queda `.../bot/sendMessage` y el error llega tarde (HTTP request fallido, mensaje críptico).
+- **Fix #5:** `_validate_config()` perezosa (no a nivel de módulo para no romper tests). Llamada al inicio de `send_message()` y `send_daily()`.
+- **Problema #7:** `process_feedback()` acepta `/f1`–`/f5` pero el footer de `send_daily()` solo listaba `/f1 /f2 /f3`. Inconsistencia de contrato.
+- **Fix #7:** Footer genera `/f1`...`/fN` dinámicamente según `len(offers)`. `range(1, 6)` se mantiene como cota máxima flexible.
+- **Tests:** 223 passed, 0 regresiones
+
 ---
 
 ## Auditoría intensiva completa (2026-06-15)
