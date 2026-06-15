@@ -20,12 +20,10 @@ load_dotenv()
 
 from src.db.init_db import get_connection
 from src.pipeline.fetch import parse_skills_required
+from src.utils.candidate_profile import CandidateProfile
 
 from src.pipeline.evaluate import (
     load_perfil,
-    load_skills_from_perfil,
-    load_gap_from_perfil,
-    load_experience_years_from_perfil,
     compute_skill_score,
     compute_experience_score,
     get_gap_multiplier,
@@ -91,11 +89,11 @@ def run():
     reset_test_offers(TEST_IDS)
 
     perfil = load_perfil()
+    profile = CandidateProfile.from_perfil(perfil)
     offers = fetch_offers_by_id(TEST_IDS)
-    candidate_skills_list = load_skills_from_perfil(perfil)
-    candidate_skills_map = {s["name"]: s["level"] for s in candidate_skills_list}
-    employment_gap = load_gap_from_perfil(perfil)
-    candidate_years = load_experience_years_from_perfil(perfil)
+    candidate_skills_map = profile.skills_map
+    employment_gap = profile.employment_gap
+    candidate_years = profile.experience_years
 
     log.info("=" * 75)
     log.info("TEST: evaluate.py — 5 ofertas (con fix candidate_years)")

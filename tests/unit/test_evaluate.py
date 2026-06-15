@@ -77,77 +77,75 @@ class TestGetRating:
 
 
 class TestLoadSkillsFromPerfil:
-    """Tests para load_skills_from_perfil(perfil)."""
+    """Tests para CandidateProfile.skills_map desde PERFIL.md."""
 
     def test_parsea_skills_con_nivel(self, sample_perfil_text):
-        from src.pipeline.evaluate import load_skills_from_perfil
+        from src.utils.candidate_profile import CandidateProfile
 
-        skills = load_skills_from_perfil(sample_perfil_text)
+        profile = CandidateProfile.from_perfil(sample_perfil_text)
+        skills_map = profile.skills_map
 
-        assert len(skills) >= 4
-        names = {s["name"] for s in skills}
-        assert "Python" in names
-        assert "SQL" in names
-        assert "Pandas" in names
-        for s in skills:
-            assert s["level"] in ("básico", "intermedio", "avanzado")
+        assert len(skills_map) >= 4
+        assert "Python" in skills_map
+        assert "SQL" in skills_map
+        assert "Pandas" in skills_map
+        all(lv in ("básico", "intermedio", "avanzado") for lv in skills_map.values())
 
-    def test_devuelve_lista_vacia_cuando_no_hay_skills(self):
-        from src.pipeline.evaluate import load_skills_from_perfil
+    def test_devuelve_vacio_cuando_no_hay_skills(self):
+        from src.utils.candidate_profile import CandidateProfile
 
         perfil_sin_skills = "# PERFIL\n\n## Datos base\n\n- **Nombre:** Test"
-        skills = load_skills_from_perfil(perfil_sin_skills)
+        profile = CandidateProfile.from_perfil(perfil_sin_skills)
 
-        assert skills == []
+        assert profile.skills_map == {}
 
-    def test_devuelve_lista_vacia_con_seccion_vacia(self):
-        from src.pipeline.evaluate import load_skills_from_perfil
+    def test_devuelve_vacio_con_seccion_vacia(self):
+        from src.utils.candidate_profile import CandidateProfile
 
         perfil_vacio = "# PERFIL\n\n## Skills técnicas\n\n"
-        skills = load_skills_from_perfil(perfil_vacio)
+        profile = CandidateProfile.from_perfil(perfil_vacio)
 
-        assert skills == []
+        assert profile.skills_map == {}
 
     def test_niveles_extraidos_correctamente(self, sample_perfil_text):
-        from src.pipeline.evaluate import load_skills_from_perfil
+        from src.utils.candidate_profile import CandidateProfile
 
-        skills = load_skills_from_perfil(sample_perfil_text)
+        profile = CandidateProfile.from_perfil(sample_perfil_text)
 
-        python_skill = next((s for s in skills if s["name"] == "Python"), None)
-        assert python_skill is not None
-        assert python_skill["level"] == "básico"
+        assert "Python" in profile.skills_map
+        assert profile.skills_map["Python"] == "básico"
 
 
 class TestLoadGapFromPerfil:
-    """Tests para load_gap_from_perfil(perfil)."""
+    """Tests para CandidateProfile.employment_gap."""
 
     def test_parsea_gap_correctamente(self, sample_perfil_text):
-        from src.pipeline.evaluate import load_gap_from_perfil
+        from src.utils.candidate_profile import CandidateProfile
 
-        gap = load_gap_from_perfil(sample_perfil_text)
+        profile = CandidateProfile.from_perfil(sample_perfil_text)
 
-        assert gap == 2.5
+        assert profile.employment_gap == 2.5
 
     def test_devuelve_none_cuando_no_hay_gap(self):
-        from src.pipeline.evaluate import load_gap_from_perfil
+        from src.utils.candidate_profile import CandidateProfile
 
         perfil_sin_gap = "# PERFIL\n\n## Datos base\n\n- **Nombre:** Test"
-        gap = load_gap_from_perfil(perfil_sin_gap)
+        profile = CandidateProfile.from_perfil(perfil_sin_gap)
 
-        assert gap is None
+        assert profile.employment_gap is None
 
     def test_devuelve_none_con_seccion_gap_vacia(self):
-        from src.pipeline.evaluate import load_gap_from_perfil
+        from src.utils.candidate_profile import CandidateProfile
 
         perfil_vacio = "# PERFIL\n\n## Gap de empleo\n\n"
-        gap = load_gap_from_perfil(perfil_vacio)
+        profile = CandidateProfile.from_perfil(perfil_vacio)
 
-        assert gap is None
+        assert profile.employment_gap is None
 
     def test_parsea_gap_decimal(self):
-        from src.pipeline.evaluate import load_gap_from_perfil
+        from src.utils.candidate_profile import CandidateProfile
 
         perfil = "# PERFIL\n\n## Gap de empleo\n\n- **Años:** 3.7"
-        gap = load_gap_from_perfil(perfil)
+        profile = CandidateProfile.from_perfil(perfil)
 
-        assert gap == 3.7
+        assert profile.employment_gap == 3.7

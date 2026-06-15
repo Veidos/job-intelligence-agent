@@ -23,11 +23,10 @@ class TestEvaluateTechnical:
     def test_technical_core_match(
         self, test_db, test_conn, sample_offer, sample_perfil_text
     ):
-        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
+        from src.pipeline.evaluate import evaluate_technical
+        from src.utils.candidate_profile import CandidateProfile
 
-        candidate_skills_map = {
-            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
-        }
+        candidate_skills_map = CandidateProfile.from_perfil(sample_perfil_text).skills_map
         mock_response = CASSETTES["evaluate_technical_core"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
@@ -40,11 +39,10 @@ class TestEvaluateTechnical:
         assert "reasoning" in result
 
     def test_technical_senior_mismatch(self, sample_offer_senior, sample_perfil_text):
-        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
+        from src.pipeline.evaluate import evaluate_technical
+        from src.utils.candidate_profile import CandidateProfile
 
-        candidate_skills_map = {
-            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
-        }
+        candidate_skills_map = CandidateProfile.from_perfil(sample_perfil_text).skills_map
         mock_response = CASSETTES["evaluate_technical_senior"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
@@ -58,11 +56,10 @@ class TestEvaluateTechnical:
     def test_technical_junior_no_exp_required(
         self, sample_offer_no_exp, sample_perfil_text
     ):
-        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
+        from src.pipeline.evaluate import evaluate_technical
+        from src.utils.candidate_profile import CandidateProfile
 
-        candidate_skills_map = {
-            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
-        }
+        candidate_skills_map = CandidateProfile.from_perfil(sample_perfil_text).skills_map
         mock_response = CASSETTES["evaluate_technical_junior"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:
@@ -74,11 +71,10 @@ class TestEvaluateTechnical:
         assert result["skills_present"][1]["present"] is True
 
     def test_technical_devuelve_dict_no_string(self, sample_offer, sample_perfil_text):
-        from src.pipeline.evaluate import evaluate_technical, load_skills_from_perfil
+        from src.pipeline.evaluate import evaluate_technical
+        from src.utils.candidate_profile import CandidateProfile
 
-        candidate_skills_map = {
-            s["name"]: s["level"] for s in load_skills_from_perfil(sample_perfil_text)
-        }
+        candidate_skills_map = CandidateProfile.from_perfil(sample_perfil_text).skills_map
         mock_response = CASSETTES["evaluate_technical_core"]
 
         with patch("src.pipeline.evaluate.ollama_call") as mock:

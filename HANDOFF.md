@@ -73,6 +73,11 @@
 - **Fix:** `_get_engine()` perezoso dentro de `load_dotenv()`, `DB_PATH` leído con `os.getenv("DB_PATH", "data/jobs.db")`
 - **Tests:** `pytest tests/ -q` → 223 passed
 
+### 🔴 Fix: evaluate.py — elimina duplicación de CandidateProfile
+- **Problema:** `load_skills_from_perfil()`, `load_gap_from_perfil()`, `load_location_from_perfil()`, `load_experience_years_from_perfil()`, `MONTH_NAMES`, `_month_from_name()` — código idéntico al que ya existe en `CandidateProfile`. Dos implementaciones paralelas que pueden divergir.
+- **Fix:** eliminadas las 6 definiciones (~164 líneas). `run_evaluate()` ya usaba `CandidateProfile.from_perfil()` desde el refactor anterior. Tests actualizados para importar desde `CandidateProfile`.
+- **Tests:** 223 passed, 0 regresiones
+
 ---
 
 ## Auditoría intensiva completa (2026-06-15)
