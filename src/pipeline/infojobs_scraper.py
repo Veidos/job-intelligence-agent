@@ -177,6 +177,27 @@ class InfoJobsParser:
 
         # Bloques principales
         details = InfoJobsParser._parse_header_details(soup)
+        if not details.get("work_mode"):
+            for sel in [
+                "[data-testid='condition-mode']",
+                "[class*='condition'] span",
+                ".ij-Chip",
+                "[class*='tag']",
+            ]:
+                chip = soup.select_one(sel)
+                if chip:
+                    t = chip.get_text(strip=True).lower()
+                    if t in ("remoto", "teletrabajo", "presencial", "híbrido", "hibrido"):
+                        details["work_mode"] = t.capitalize()
+                        break
+            if not details.get("work_mode"):
+                title_lower = title.lower()
+                if "teletrabajo" in title_lower or "remoto" in title_lower:
+                    details["work_mode"] = "Teletrabajo"
+                    log.warning("work_mode fallback via title: offer_id=%s title=%s", offer_id, title[:60])
+                elif "híbrido" in title_lower or "hibrido" in title_lower:
+                    details["work_mode"] = "Híbrido"
+                    log.warning("work_mode fallback via title: offer_id=%s title=%s", offer_id, title[:60])
         requisitos = InfoJobsParser._parse_requisitos(soup)
         desc_html, desc_text = InfoJobsParser._parse_description(soup)
         salary = InfoJobsParser._extract_salary(details.get("salary", ""))

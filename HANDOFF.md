@@ -47,6 +47,20 @@
 - Sin regresiones por zombie columns (ninguna referenciada en dashboard)
 - skill_detail, scoring breakdown (M_core, F_exp, etc.) poblados correctamente
 
+### Fix: work_mode desde título (fallback)
+- `_parse_header_details()`: si el header no da modalidad, prueba chips/tags alternativos
+- Si tampoco, fallback desde el título con `log.warning()` para monitoreo
+- 3/8 ofertas sin work_mode corregidas vía re-scrape (scraper_lab/reparse_work_mode.py)
+
+### Fix: skills gap empty state
+- `renderSkillsGap()` ahora muestra mensaje informativo cuando gap está vacío
+- En vez de return silencioso que dejaba el contenedor gris vacío
+
+### Follow-up (próxima sesión)
+- **5 ofertas siguen sin `work_mode`** porque InfoJobs no publica modalidad en esas páginas. Aparecen en la tabla como "—". El usuario reporta que no las ve — posible error de frontend a diagnosticar.
+- **BI Specialist con "Teletrabajo 100%"** no se corrigió en re-scrape porque `_extract_offer_id()` falló en esa página en concreto. Opción: re-scrapear manualmente o aceptar que se corrija en el próximo fetch diario.
+- **2 ofertas bloqueadas** en DB, pero usuario solo ve 1 en dashboard. La segunda (Investigador/a senior toxicología) está entre las que no aparecen en tabla. Investigar por qué no se renderiza.
+
 ### Tests
 - **221 tests passing** (sin cambios en tests)
 

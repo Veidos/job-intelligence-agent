@@ -1085,7 +1085,10 @@ function renderSkillsSecondary(offers) {
 function renderSkillsGap(offers) {
   const { gap } = computeSkillsData(offers);
   destroyChart('chartSkillsGap');
-  if (!gap.length) return;
+  if (!gap.length) {
+    $('chartSkillsGap').innerHTML = '<div class="empty-state-skills" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:32px;color:#a1a1aa;font-size:14px;">✓ Tus skills cubren todas las skills core de las ofertas analizadas</div>';
+    return;
+  }
   charts.chartSkillsGap = new Chart($('chartSkillsGap'), {
     type: 'bar',
     data: {
