@@ -17,6 +17,51 @@ enriquece empresas con otro modelo, y envía un resumen diario por Telegram.
 
 ---
 
+## ARQUITECTURA VIGENTE
+
+> Estado post-auditoría 2026-06-15. Estas decisiones están en vigor — no cambiarlas sin ADR.
+
+### Acceso a base de datos
+- **`sqlite3` raw en todo el proyecto.** Sin ORM. Sin SQLAlchemy.
+- `src/db/schema.sql` es la **única fuente de verdad del schema**. Nunca duplicar columnas en otros archivos.
+- Conexiones siempre con `contextlib.closing(get_connection())` — nunca `conn.close()` manual.
+- `src/db/migrate.py` parsea `schema.sql` directamente para detectar columnas faltantes.
+
+### Imports y packaging
+- **`pyproject.toml` + `pip install -e .`** — el proyecto es un paquete instalado.
+- **Sin `sys.path.insert` en ningún módulo.** Si aparece uno, es un error.
+- Dependencias de runtime: `requirements.txt`. Herramientas de desarrollo: `requirements-dev.txt`.
+
+### Configuración
+- **Todas las variables sensibles en `.env`.** Ningún valor hardcodeado en código.
+- Variables obligatorias: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `DB_PATH` (opcional, default `data/jobs.db`), `OLLAMA_BASE_URL` (opcional, default `http://localhost:11434`).
+- `send.py` valida tokens al inicio — fallo rápido y explícito.
+
+### Perfil del candidato
+- `src/utils/candidate_profile.py` → `CandidateProfile` es la **única fuente de verdad del perfil**.
+- `CandidateProfile.from_perfil(text)` / `from_perfil_path(path)` para construir desde `PERFIL.md`.
+- Nunca reimplementar `load_skills_from_perfil()` u otros helpers en otros módulos.
+
+### Constantes compartidas
+- `src/utils/constants.py` — `MONTH_NAMES`, `month_from_name()`. Importar desde aquí, nunca redefinir.
+
+### match_score
+- Se almacena como `INTEGER 0–100` en DB (`final_score * 100`, redondeado).
+- `evaluate.py` convierte float 0–1 → integer en `_build_evaluation_params()`.
+- `send.py` compara contra umbral en escala 0–100 (ej. `>= 35`).
+- El dashboard muestra el valor directamente como porcentaje. No hay conversión adicional.
+
+### Tests
+- 223 tests passing. Estructura: `tests/unit/`, `tests/integration/`, `tests/manual/`.
+- Fixtures HTML como cassettes en `tests/snapshots/`. No hacer requests reales en tests.
+- Antes de cerrar sesión: `pytest tests/ -q` debe pasar con 0 regresiones.
+
+### Deuda pendiente (no urgente)
+- `uv lock` o `pip-compile --generate-hashes` para reproducibilidad con hashes.
+- Si el proyecto crece a múltiples entornos: Alembic para migraciones versionadas.
+
+---
+
 ## ÍNDICE DE DOCUMENTACIÓN
 
 | Archivo | Descripción |
