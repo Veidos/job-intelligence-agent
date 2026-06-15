@@ -1,18 +1,27 @@
 """
 SQLAlchemy models for Job Intelligence Agent.
-Única fuente de verdad: PERFIL.md
+Schema source of truth: src/db/schema.sql
 """
 
 import json
 import logging
+import os
 
+from dotenv import load_dotenv
 from sqlalchemy import Column, DateTime, Integer, String, create_engine, func, select
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 log = logging.getLogger(__name__)
 
-DB_PATH = "data/jobs.db"
-engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
+load_dotenv()
+
+
+def _get_engine():
+    db_path = os.getenv("DB_PATH", "data/jobs.db")
+    return create_engine(f"sqlite:///{db_path}", echo=False)
+
+
+engine = _get_engine()
 SessionLocal = sessionmaker(bind=engine)
 
 
