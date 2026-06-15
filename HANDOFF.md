@@ -83,6 +83,11 @@
 - **Fix:** `with contextlib.closing(get_connection()) as conn:` en los 8 endpoints (`api_stats`, `api_offers`, `api_offer_detail`, `api_companies`, `api_feedback`, `api_applications`, `api_delete_application`, `api_runs`). Eliminados todos los `conn.close()` manuales. Los early returns dentro del `with` son seguros.
 - **Tests:** 223 passed, 0 regresiones
 
+### 🔴 Fix: ollama_client.py — OLLAMA_BASE_URL lee de variable de entorno
+- **Problema:** `OLLAMA_BASE_URL = "http://localhost:11434"` hardcodeado, ignoraba el `.env`. Imposible apuntar a Ollama remoto sin tocar código.
+- **Fix:** `OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")`. Añadido `import os`. `.env.example` actualizado con la variable.
+- **Tests:** 223 passed, 0 regresiones
+
 ---
 
 ## Auditoría intensiva completa (2026-06-15)

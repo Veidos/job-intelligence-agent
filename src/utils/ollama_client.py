@@ -5,6 +5,7 @@ Modelos secuenciales — nunca en paralelo (VRAM limitada).
 
 import json
 import logging
+import os
 import time
 from typing import Any
 
@@ -34,7 +35,7 @@ def reset_llm_metrics() -> None:
         _metrics[k] = 0
 
 
-OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_TIMEOUT = 180
 
 MODEL_TECHNICAL = "gemma4:e4b"
