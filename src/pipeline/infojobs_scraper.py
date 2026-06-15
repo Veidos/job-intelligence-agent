@@ -169,7 +169,9 @@ class InfoJobsParser:
         # Datos básicos del header
         title = InfoJobsParser._extract_title(soup)
         company = InfoJobsParser._extract_company(soup)
-        offer_id = InfoJobsParser._extract_offer_id(soup, html)
+        offer_id = InfoJobsParser._extract_offer_id_from_url(
+            url
+        ) or InfoJobsParser._extract_offer_id(soup, html[:8192])
 
         # Bloques principales
         details = InfoJobsParser._parse_header_details(soup)
@@ -267,6 +269,14 @@ class InfoJobsParser:
                 if m:
                     return m.group(1)
         return None
+
+    @staticmethod
+    def _extract_offer_id_from_url(url: str | None) -> str | None:
+        """Extrae el offer ID desde la URL de InfoJobs."""
+        if not url:
+            return None
+        m = re.search(r"/of-([a-zA-Z0-9]+)", url)
+        return m.group(1) if m else None
 
     @staticmethod
     def _extract_offer_id(soup: BeautifulSoup, raw_html: str) -> str:

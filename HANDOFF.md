@@ -100,6 +100,11 @@
 - **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
 - **Tests:** 223 passed, 0 regresiones
 
+### 🟠 Fix: infojobs_scraper — _extract_offer_id optimizado (#13)
+- **Problema:** regex sobre HTML completo (~976KB por oferta) para extraer el ID, cuando la URL ya lo contiene.
+- **Fix:** `_extract_offer_id_from_url(url)` prueba la URL primero. Fallback con `html[:8192]` (~1% del HTML original). `_extract_offer_id` se conserva para tests sin URL.
+- **Tests:** 223 passed, 0 regresiones
+
 ### 🟠 Fix: server.py — allowlist _OFFER_FILTER_COLUMNS (#11)
 - **Problema:** SQL dinámico en `api_offers()` construido con f-string + `where_sql`. Aunque los valores iban parametrizados, no había documentación explícita de qué columnas son filtrables.
 - **Fix:** constante `_OFFER_FILTER_COLUMNS` como frozenset + comentario de seguridad. Sin cambios en lógica (ya era segura) — documentación defensiva para futuros desarrolladores.
