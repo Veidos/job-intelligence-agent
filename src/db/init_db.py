@@ -5,16 +5,14 @@ Uso: python src/db/init_db.py
 
 import logging
 import os
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -58,9 +56,7 @@ def apply_migrations(conn):
     ensure_migration_log(conn)
     applied = get_applied_migrations(conn)
 
-    migration_files = sorted(
-        f.name for f in MIGRATIONS_DIR.iterdir() if f.suffix == ".sql"
-    )
+    migration_files = sorted(f.name for f in MIGRATIONS_DIR.iterdir() if f.suffix == ".sql")
 
     for filename in migration_files:
         if filename in applied:
@@ -87,9 +83,7 @@ def init_db() -> None:
         apply_migrations(conn)
 
         # Verificar tablas
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = [row[0] for row in cursor.fetchall()]
     log.info("Tablas en DB (%d): %s", len(tables), ", ".join(tables))
 

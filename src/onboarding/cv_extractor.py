@@ -145,9 +145,7 @@ def parse_experience_dates(
         year = int(years[-1])  # Tomar el último año (fecha fin)
 
         # Buscar mes (cerca del último año)
-        month_match = re.search(
-            r"(\w{3})\s+" + str(year) + r"$", duration, re.IGNORECASE
-        )
+        month_match = re.search(r"(\w{3})\s+" + str(year) + r"$", duration, re.IGNORECASE)
         month = 9  # default: si no se parsea, asumir septiembre
         if month_match:
             month_str = month_match.group(1).lower()[:3]

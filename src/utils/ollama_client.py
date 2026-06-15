@@ -65,9 +65,7 @@ def _call_ollama_raw(
     num_ctx: int = 4096,
 ) -> str:
     """Llamada directa a la API de Ollama. Sin reintentos."""
-    temp = (
-        temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)
-    )
+    temp = temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)
     payload = {
         "model": model,
         "prompt": prompt,
@@ -181,9 +179,7 @@ def check_ollama_connection() -> dict[str, bool]:
         r.raise_for_status()
         available = {m["name"] for m in r.json().get("models", [])}
         for model in status:
-            status[model] = any(
-                m == model or m.startswith(model.split(":")[0]) for m in available
-            )
+            status[model] = any(m == model or m.startswith(model.split(":")[0]) for m in available)
             log.info("[%s] %s", "OK" if status[model] else "FALTA", model)
     except requests.exceptions.ConnectionError:
         log.error("Ollama no esta ejecutandose en %s", OLLAMA_BASE_URL)

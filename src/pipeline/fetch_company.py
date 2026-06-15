@@ -11,12 +11,9 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv
 
@@ -63,10 +60,7 @@ def get_companies_to_enrich(conn) -> list[dict[str, Any]]:
         ORDER BY o.employer_id
         """,
     ).fetchall()
-    return [
-        {"employer_id": r[0], "company_name": r[1] or "Empresa Desconocida"}
-        for r in rows
-    ]
+    return [{"employer_id": r[0], "company_name": r[1] or "Empresa Desconocida"} for r in rows]
 
 
 def get_aggregated_offers(conn, employer_id: str) -> dict[str, Any]:
@@ -258,7 +252,7 @@ def run(limit: int = 50) -> dict[str, Any]:
         conn.close()
         return {"enriched": 0, "linked": linked, "errors": 0, "pending": 0}
 
-    batch = companies_to_enrich[:limit if limit > 0 else None]
+    batch = companies_to_enrich[: limit if limit > 0 else None]
     enriched_count = 0
     error_count = 0
     skipped_count = 0

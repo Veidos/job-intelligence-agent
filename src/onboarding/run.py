@@ -58,9 +58,7 @@ def generate_perfil_md(profile: dict) -> str:
                 if exp.get("role") == last_role:
                     last_company = exp.get("company", "desconocida")
                     duration = exp.get("duration", "")
-                    lines += [
-                        f"- **Último trabajo:** {last_role} @ {last_company} ({duration})"
-                    ]
+                    lines += [f"- **Último trabajo:** {last_role} @ {last_company} ({duration})"]
                     break
             if not any("Último trabajo" in line for line in lines):
                 lines += [f"- **Último trabajo:** {last_role}"]
@@ -75,10 +73,7 @@ def generate_perfil_md(profile: dict) -> str:
     lines += ["## Educación", ""]
     for edu in profile.get("education", []):
         year = edu.get("year", "N/A")
-        lines += [
-            f"- **{edu.get('degree', 'N/A')}** — "
-            f"{edu.get('institution', 'N/A')} ({year})"
-        ]
+        lines += [f"- **{edu.get('degree', 'N/A')}** — {edu.get('institution', 'N/A')} ({year})"]
     lines += [""]
 
     # Experiencia
@@ -108,13 +103,9 @@ def generate_perfil_md(profile: dict) -> str:
 
     # Preferencias laborales
     lines += ["## Preferencias laborales", ""]
-    lines += [
-        f"- **Modalidad preferida:** {profile.get('work_mode_preference', 'N/A')}"
-    ]
+    lines += [f"- **Modalidad preferida:** {profile.get('work_mode_preference', 'N/A')}"]
     lines += [f"- **Ubicación preferida:** {profile.get('location_preference', 'N/A')}"]
-    lines += [
-        f"- **Condiciones de mudanza:** {profile.get('relocation_conditions', 'N/A')}"
-    ]
+    lines += [f"- **Condiciones de mudanza:** {profile.get('relocation_conditions', 'N/A')}"]
     lines += [""]
 
     # Personal concerns (íntegro, sin resumir)

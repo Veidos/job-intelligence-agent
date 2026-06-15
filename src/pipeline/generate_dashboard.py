@@ -836,9 +836,7 @@ def generate(records: list[dict], meta: dict) -> str:
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     log.info("Fetching data from %s", DB)
     records, meta = fetch_data()
     log.info("Fetched %d evaluation records", meta["n_offers"])

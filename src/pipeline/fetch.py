@@ -8,18 +8,13 @@ import dataclasses
 import json
 import logging
 import re
-import sys
 from datetime import datetime
-from dotenv import load_dotenv
-from pathlib import Path
 from typing import Any
 
-# Asegurar que la raíz del proyecto está en sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
-
 
 log = logging.getLogger(__name__)
 
@@ -198,9 +193,7 @@ Responde SOLO con el JSON, sin markdown."""
             num_ctx=8192,
         )
         if isinstance(result, dict):
-            result["skills_required"] = parse_skills_required(
-                result.get("skills_required")
-            )
+            result["skills_required"] = parse_skills_required(result.get("skills_required"))
             return result
         return {}
     except Exception as e:
@@ -408,8 +401,9 @@ def run_fetch_scraper(
 
     El scraper construye sus propias URLs de búsqueda internamente.
     """
-    from src.pipeline.infojobs_scraper import InfoJobsScraper
     from datetime import timezone
+
+    from src.pipeline.infojobs_scraper import InfoJobsScraper
 
     # Leer search_config desde DB si no se pasa explícitamente
     if not search_config:
@@ -473,9 +467,7 @@ if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser(
-        description="Fetch offers from InfoJobs vía scraper propio"
-    )
+    parser = argparse.ArgumentParser(description="Fetch offers from InfoJobs vía scraper propio")
     parser.add_argument(
         "--max-items",
         type=int,

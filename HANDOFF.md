@@ -100,6 +100,12 @@
 - **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
 - **Tests:** 223 passed, 0 regresiones
 
+### 🟠 Fix: pyproject.toml + eliminación de sys.path.insert (#8)
+- **Problema:** `sys.path.insert(0, ...)` en 8 módulos para resolver imports. Síntoma de ausencia de packaging.
+- **Fix:** `pyproject.toml` con `[tool.setuptools.packages.find]` + `pip install -e .`. Eliminados `sys.path.insert` de 6 archivos (3 con remoción completa de `sys` + `Path`, 3 solo de `import sys`). `run.py` no se tocó (usa `sys` y `Path` para otras cosas).
+- **Archivos editados:** `evaluate.py` (import sys), `fetch.py` (ambos), `fetch_company.py` (import sys), `server.py` (import sys), `handlers.py` (ambos), `send.py` (ambos). `run.py` y `role_classifier.py` sin cambios.
+- **Tests:** 223 passed, 0 regresiones. Imports verificados manualmente.
+
 ---
 
 ## Auditoría intensiva completa (2026-06-15)

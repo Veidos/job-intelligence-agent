@@ -7,15 +7,11 @@ PERFIL.md es la única fuente de verdad del candidato.
 
 import json
 import logging
-import sys
 import time
 from pathlib import Path
 
-from tqdm import tqdm
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 load_dotenv()
 
@@ -150,10 +146,7 @@ def compute_location_score(
         return 0.7
     if not candidate_city or not offer_city:
         return 0.5
-    if (
-        candidate_city.lower() in offer_city.lower()
-        or offer_city.lower() in candidate_city.lower()
-    ):
+    if candidate_city.lower() in offer_city.lower() or offer_city.lower() in candidate_city.lower():
         return 0.5
     return 0.2
 
@@ -223,9 +216,7 @@ def evaluate_technical(
         return {"skills_present": [], "reasoning": "sin skills estructuradas en oferta"}
 
     candidate_skills_formatted = (
-        "\n".join(
-            f"  - {name}: {level}" for name, level in candidate_skills_map.items()
-        )
+        "\n".join(f"  - {name}: {level}" for name, level in candidate_skills_map.items())
         or "  (sin skills registradas)"
     )
 
@@ -552,8 +543,7 @@ def update_evaluation_final(offer_id: int, final: dict) -> None:
     relevance_corrected = final.get("relevance_corrected")
     if relevance_corrected not in VALID_RELEVANCE:
         log.warning(
-            "relevance_corrected '%s' fuera del enum válido (offer_id=%d), "
-            "persistiendo como está",
+            "relevance_corrected '%s' fuera del enum válido (offer_id=%d), persistiendo como está",
             relevance_corrected,
             offer_id,
         )
@@ -757,9 +747,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     limit = args.limit if args.limit > 0 else 1000
     stats = run_evaluate(limit=limit)
     log.info("Completado: %s", stats)

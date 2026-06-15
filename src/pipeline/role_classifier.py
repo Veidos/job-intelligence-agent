@@ -6,10 +6,10 @@ Uses gemma4 for classification.
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sqlite3
-import argparse
 from pathlib import Path
 from typing import Any
 
@@ -103,9 +103,7 @@ def ensure_columns_exist(conn: sqlite3.Connection) -> None:
 def get_role_catalog(conn: sqlite3.Connection) -> list[str]:
     """Get role catalog from search_config, or create initial one."""
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, role_catalog FROM search_config ORDER BY id DESC LIMIT 1"
-    )
+    cursor.execute("SELECT id, role_catalog FROM search_config ORDER BY id DESC LIMIT 1")
     row = cursor.fetchone()
 
     if row is None:
@@ -300,9 +298,7 @@ def classify_offer(
             try:
                 result = json.loads(result)
             except json.JSONDecodeError:
-                logger.warning(
-                    f"Failed to parse gemma4 response for offer {offer.get('id')}"
-                )
+                logger.warning(f"Failed to parse gemma4 response for offer {offer.get('id')}")
                 return None
         required_fields = [
             "role_normalized",
@@ -313,14 +309,10 @@ def classify_offer(
         ]
         for field in required_fields:
             if field not in result:
-                logger.warning(
-                    f"Missing field {field} in response for offer {offer.get('id')}"
-                )
+                logger.warning(f"Missing field {field} in response for offer {offer.get('id')}")
                 return None
         role_reasoning = result.get("role_reasoning", "")
-        if any(
-            p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING
-        ):
+        if any(p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
             logger.warning(
                 f"role_reasoning contaminated with profile for offer {offer.get('id')} — retrying with stricter instruction"
             )
@@ -338,17 +330,14 @@ def classify_offer(
                 if isinstance(retry, dict) and all(f in retry for f in required_fields):
                     retry_reasoning = retry.get("role_reasoning", "")
                     if not any(
-                        p.lower() in retry_reasoning.lower()
-                        for p in FORBIDDEN_IN_ROLE_REASONING
+                        p.lower() in retry_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING
                     ):
                         result = retry
                         logger.info("Retry succeeded for offer %s", offer.get("id"))
             except Exception:
                 logger.warning("Retry also failed for offer %s", offer.get("id"))
         role_reasoning = result.get("role_reasoning", "")
-        if any(
-            p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING
-        ):
+        if any(p.lower() in role_reasoning.lower() for p in FORBIDDEN_IN_ROLE_REASONING):
             logger.warning(
                 f"Fallback: storing contaminated result for offer {offer.get('id')} without role_reasoning"
             )
@@ -356,9 +345,7 @@ def classify_offer(
             result["_contaminated"] = True
         raw_gaps = result.get("gap_types", [])
         if not isinstance(raw_gaps, list):
-            logger.warning(
-                f"gap_types is not a list: {type(raw_gaps).__name__} = {raw_gaps!r}"
-            )
+            logger.warning(f"gap_types is not a list: {type(raw_gaps).__name__} = {raw_gaps!r}")
             raw_gaps = []
         # Ensure all elements are strings (gemma4 may return dicts)
         clean_gaps = [str(g) if not isinstance(g, str) else g for g in raw_gaps]
@@ -366,8 +353,7 @@ def classify_offer(
         gap_type = result["gap_type"]
         if gap_type not in GAP_TO_FLAG:
             logger.warning(
-                "gap_type '%s' no está en GAP_TO_FLAG (offer_id=%s), "
-                "defaulting a 'stretch'",
+                "gap_type '%s' no está en GAP_TO_FLAG (offer_id=%s), defaulting a 'stretch'",
                 gap_type,
                 offer.get("id"),
             )
@@ -380,9 +366,7 @@ def classify_offer(
 
 def _run_logic(limit: int | None) -> None:
     """Core logic for classifying offers."""
-    logger.info(
-        "Starting role classifier (limit=%s)", limit if limit is not None else "all"
-    )
+    logger.info("Starting role classifier (limit=%s)", limit if limit is not None else "all")
     perfil_path = Path(__file__).resolve().parent.parent.parent / "PERFIL.md"
     if not perfil_path.exists():
         logger.error("PERFIL.md not found. Cannot continue.")
@@ -469,9 +453,7 @@ def _run_logic(limit: int | None) -> None:
 def run_classifier(limit: int = 0) -> int:
     """Función exportable para el orquestador. Devuelve número de ofertas clasificadas."""
     conn = get_connection()
-    count = conn.execute(
-        "SELECT COUNT(*) FROM offers WHERE relevance_flag IS NULL"
-    ).fetchone()[0]
+    count = conn.execute("SELECT COUNT(*) FROM offers WHERE relevance_flag IS NULL").fetchone()[0]
     conn.close()
     if count == 0:
         return 0
@@ -481,9 +463,7 @@ def run_classifier(limit: int = 0) -> int:
 
 def main() -> None:
     """Main function to classify unclassified offers."""
-    parser = argparse.ArgumentParser(
-        description="Classify unclassified job offers using gemma4."
-    )
+    parser = argparse.ArgumentParser(description="Classify unclassified job offers using gemma4.")
     parser.add_argument(
         "--limit",
         type=int,

@@ -15,16 +15,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv  # noqa: E402
-from telegram import Update  # noqa: E402
 from telegram.ext import (  # noqa: E402
     Application,
     CommandHandler,
     ContextTypes,
-    filters,
     MessageHandler,
+    filters,
 )
 
 from src.telegram.handlers import get_latest_daily_offers, save_feedback  # noqa: E402
+from telegram import Update  # noqa: E402
 
 load_dotenv()
 
@@ -142,9 +142,7 @@ async def dia_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     success = save_feedback("dia", feedback_text, None, user_id)
 
     if success:
-        await update.message.reply_text(
-            "Estado del día registrado ✓\n\nGracias por compartir."
-        )
+        await update.message.reply_text("Estado del día registrado ✓\n\nGracias por compartir.")
     else:
         await update.message.reply_text("Error al guardar. Intenta de nuevo.")
 

@@ -112,10 +112,7 @@ def run_pipeline(
                 log.warning("[CV] PERFIL.md no actualizado → pipeline detenido")
                 return
         else:
-            log.warning(
-                "[CV] CV actualizado. Ejecuta: "
-                "PYTHONPATH=. python src/onboarding/run.py"
-            )
+            log.warning("[CV] CV actualizado. Ejecuta: PYTHONPATH=. python src/onboarding/run.py")
             log.warning("[CV] Pipeline abortado — CV nuevo sin PERFIL.md actualizado")
             return
 
@@ -282,13 +279,9 @@ def _write_hash(path: Path, hash_value: str) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--skip-fetch", action="store_true", help="Saltar fetch de InfoJobs"
-    )
+    parser.add_argument("--skip-fetch", action="store_true", help="Saltar fetch de InfoJobs")
     parser.add_argument("--dry-run", action="store_true", help="No enviar a Telegram")
-    parser.add_argument(
-        "--skip-cv-check", action="store_true", help="Saltar verificación de CV"
-    )
+    parser.add_argument("--skip-cv-check", action="store_true", help="Saltar verificación de CV")
     parser.add_argument(
         "--limit-eval",
         type=int,

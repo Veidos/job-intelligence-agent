@@ -194,9 +194,7 @@ def migrate_table(conn, table_name: str, columns: list[tuple]) -> list[str]:
     for col_name, col_def in columns:
         if col_name.lower() not in {c.lower() for c in existing}:
             try:
-                conn.execute(
-                    f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"
-                )
+                conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}")
                 added.append(col_name)
                 log.info("  Añadida columna %s.%s", table_name, col_name)
             except Exception as e:
@@ -320,9 +318,7 @@ def run_migration() -> dict:
             updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
         )
     """)
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_applications_offer_id ON applications(offer_id)"
-    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_applications_offer_id ON applications(offer_id)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_applications_applied_at ON applications(applied_at)"
     )

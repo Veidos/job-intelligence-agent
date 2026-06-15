@@ -120,9 +120,7 @@ def save_to_search_config(keywords: list[str], conn=None) -> bool:
                 """,
                 (role_hierarchy_json, row[0]),
             )
-            log.info(
-                "search_config id=%d actualizado con %d keywords", row[0], len(keywords)
-            )
+            log.info("search_config id=%d actualizado con %d keywords", row[0], len(keywords))
         else:
             cursor.execute(
                 """
@@ -177,9 +175,7 @@ def manage_keywords() -> None:
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, role_hierarchy FROM search_config ORDER BY id DESC LIMIT 1"
-        )
+        cursor.execute("SELECT id, role_hierarchy FROM search_config ORDER BY id DESC LIMIT 1")
         row = cursor.fetchone()
         if not row:
             print("No hay keywords guardadas en search_config.")
@@ -190,9 +186,7 @@ def manage_keywords() -> None:
         for i, kw in enumerate(keywords, 1):
             print(f"  {i}. {kw}")
         print("────────────────────────────────────────────────────")
-        raw = input(
-            "\nNúmeros a conservar (ej: 1 2 4 6 8) o Enter para mantener todas: "
-        ).strip()
+        raw = input("\nNúmeros a conservar (ej: 1 2 4 6 8) o Enter para mantener todas: ").strip()
         if not raw:
             print("Sin cambios.")
             return

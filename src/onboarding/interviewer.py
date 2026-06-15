@@ -26,9 +26,7 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
 
     # 1. Modalidad + mudanza (fusionado, abierto)
     print("1. ¿Modalidad de trabajo y disponibilidad de mudanza?")
-    print(
-        "   (ej: 'remoto total', 'híbrido en Sevilla', 'presencial si pagan reubicación')"
-    )
+    print("   (ej: 'remoto total', 'híbrido en Sevilla', 'presencial si pagan reubicación')")
     relocation_raw = input("   > ").strip()
 
     # 2. Salario mínimo viable (opcional)
@@ -53,9 +51,7 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
     print("   (déjalo vacío si no aplica)")
     personal_raw = input("   > ").strip()
 
-    result["personal_concerns"] = (
-        personal_raw if personal_raw else "Sin información adicional"
-    )
+    result["personal_concerns"] = personal_raw if personal_raw else "Sin información adicional"
 
     # 4. Motivación profesional
     print("\n4. ¿Qué buscas en tu próximo rol profesional?")
@@ -71,9 +67,7 @@ def run_interview(cv_data: dict) -> dict[str, Any]:
     # 5. Sectores preferidos / a evitar
     print("\n5. ¿Hay sectores o tipos de empresa que te atraigan especialmente?")
     print("   ¿Y alguno que prefieras evitar?")
-    print(
-        "   (ej: 'me gusta tecnología y energía renovable, evitar banca tradicional')"
-    )
+    print("   (ej: 'me gusta tecnología y energía renovable, evitar banca tradicional')")
     env_raw = input("   > ").strip()
 
     # Procesar respuestas con gemma4

@@ -17,8 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv  # noqa: E402
+
 from src.db.init_db import get_connection  # noqa: E402
-from src.utils.ollama_client import ollama_call, MODEL_TECHNICAL  # noqa: E402
+from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call  # noqa: E402
 
 load_dotenv()
 
@@ -92,9 +93,7 @@ def save_psychology(summary: str, key_insights: str, raw_feedback: str) -> None:
     conn = get_connection()
     cur = conn.cursor()
 
-    existing = cur.execute(
-        "SELECT id FROM user_psychology ORDER BY id DESC LIMIT 1"
-    ).fetchone()
+    existing = cur.execute("SELECT id FROM user_psychology ORDER BY id DESC LIMIT 1").fetchone()
 
     if existing:
         cur.execute(
@@ -127,11 +126,7 @@ def build_prompt(feedbacks: list[dict], previous_summary: str | None) -> str:
         if fb_type in grouped:
             grouped[fb_type].append(fb["raw_text"])
 
-    context = (
-        f"Resumen previo del usuario:\n{previous_summary}\n\n"
-        if previous_summary
-        else ""
-    )
+    context = f"Resumen previo del usuario:\n{previous_summary}\n\n" if previous_summary else ""
 
     prompt = f"""Eres un asistente que analiza feedback de un candidato sobre ofertas de trabajo.
 
@@ -204,9 +199,7 @@ def run() -> dict:
     summary = result.get("patrones_preferencia", "")
     key_insights = json.dumps(result, ensure_ascii=False)
 
-    raw_text = "\n".join(
-        f"[{fb['feedback_type']}] {fb['raw_text']}" for fb in feedbacks
-    )
+    raw_text = "\n".join(f"[{fb['feedback_type']}] {fb['raw_text']}" for fb in feedbacks)
 
     save_psychology(summary, key_insights, raw_text)
 

@@ -137,16 +137,12 @@ class InfoJobsParser:
 
         # Texto de salario visible en la card (crudo)
         salary_el = card.select_one(
-            ".ij-OfferCardContent-description-salary, "
-            "[class*='salary'], "
-            "[class*='Salary']"
+            ".ij-OfferCardContent-description-salary, [class*='salary'], [class*='Salary']"
         )
         salary_text = salary_el.get_text(strip=True) if salary_el else None
 
         # Fecha de publicación
-        published_el = card.select_one(
-            "time, [datetime], [class*='date'], [class*='Date']"
-        )
+        published_el = card.select_one("time, [datetime], [class*='date'], [class*='Date']")
         published = (
             published_el.get("datetime") or published_el.get_text(strip=True)
             if published_el
@@ -194,10 +190,14 @@ class InfoJobsParser:
                 title_lower = title.lower()
                 if "teletrabajo" in title_lower or "remoto" in title_lower:
                     details["work_mode"] = "Teletrabajo"
-                    log.warning("work_mode fallback via title: offer_id=%s title=%s", offer_id, title[:60])
+                    log.warning(
+                        "work_mode fallback via title: offer_id=%s title=%s", offer_id, title[:60]
+                    )
                 elif "híbrido" in title_lower or "hibrido" in title_lower:
                     details["work_mode"] = "Híbrido"
-                    log.warning("work_mode fallback via title: offer_id=%s title=%s", offer_id, title[:60])
+                    log.warning(
+                        "work_mode fallback via title: offer_id=%s title=%s", offer_id, title[:60]
+                    )
         requisitos = InfoJobsParser._parse_requisitos(soup)
         desc_html, desc_text = InfoJobsParser._parse_description(soup)
         salary = InfoJobsParser._extract_salary(details.get("salary", ""))
@@ -293,9 +293,7 @@ class InfoJobsParser:
         if not container:
             return result
 
-        items = container.select(
-            ".ij-OfferDetailHeader-detailsList-item p.ij-BaseTypography"
-        )
+        items = container.select(".ij-OfferDetailHeader-detailsList-item p.ij-BaseTypography")
         for p_tag in items:
             text = p_tag.get_text(strip=True)
 
@@ -408,9 +406,7 @@ class InfoJobsParser:
         return result
 
     @staticmethod
-    def _assign_requisito(
-        result: dict[str, Any], label: str, value: str, dd_tag: Tag
-    ) -> None:
+    def _assign_requisito(result: dict[str, Any], label: str, value: str, dd_tag: Tag) -> None:
         """Asigna el valor del <dd> al campo correcto según el label del <dt>."""
         if "estudio" in label:
             result["education_min"] = value
@@ -672,9 +668,7 @@ class InfoJobsScraper:
         try:
             from curl_cffi import requests as cffi_requests
         except ImportError:
-            raise ImportError(
-                "curl_cffi no está instalado. Ejecuta: pip install curl_cffi"
-            )
+            raise ImportError("curl_cffi no está instalado. Ejecuta: pip install curl_cffi")
 
         fp = random.choice(self._FINGERPRINTS)
         self.session = cffi_requests.Session(impersonate=fp)

@@ -9,14 +9,11 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
-import contextlib
 import sqlite3
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv
 
@@ -69,9 +66,7 @@ def api_stats():
         avg_score = cur.execute(
             "SELECT ROUND(AVG(match_score), 1) FROM offer_evaluations WHERE match_score IS NOT NULL"
         ).fetchone()[0]
-        max_score = cur.execute(
-            "SELECT MAX(match_score) FROM offer_evaluations"
-        ).fetchone()[0]
+        max_score = cur.execute("SELECT MAX(match_score) FROM offer_evaluations").fetchone()[0]
 
         rec_counts = _rows(
             cur.execute(
@@ -254,9 +249,7 @@ def api_offer_detail(offer_id):
             "SELECT * FROM applications WHERE offer_id = ? ORDER BY applied_at DESC LIMIT 1",
             (offer_id,),
         ).fetchone()
-        application = (
-            dict(zip([d[0] for d in cur.description], app_row)) if app_row else None
-        )
+        application = dict(zip([d[0] for d in cur.description], app_row)) if app_row else None
 
     return jsonify(offer=r, feedback=feedback, application=application)
 
@@ -375,9 +368,7 @@ def api_runs():
     with contextlib.closing(get_connection()) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        rows = _rows(
-            cur.execute("""SELECT * FROM search_runs ORDER BY ran_at DESC LIMIT 50""")
-        )
+        rows = _rows(cur.execute("""SELECT * FROM search_runs ORDER BY ran_at DESC LIMIT 50"""))
     return jsonify(rows)
 
 

@@ -7,14 +7,11 @@ Escucha comandos /f1 /f2 /f3 /dia para feedback.
 import json
 import logging
 import os
-import sys
 from datetime import date
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from dotenv import load_dotenv
 import requests
+from dotenv import load_dotenv
+
 from src.db.init_db import get_connection
 from src.db.models import get_user_settings
 
@@ -30,8 +27,7 @@ BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 def _validate_config() -> None:
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         raise EnvironmentError(
-            "TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID son obligatorios. "
-            "Revisa tu archivo .env"
+            "TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID son obligatorios. Revisa tu archivo .env"
         )
 
 
@@ -176,9 +172,7 @@ def send_daily() -> None:
     today = date.today().strftime("%d %b %Y")
 
     if not offers:
-        send_message(
-            f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\nSin ofertas relevantes hoy."
-        )
+        send_message(f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\nSin ofertas relevantes hoy.")
         return
 
     header = f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"

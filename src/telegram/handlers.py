@@ -7,10 +7,6 @@ No contiene HTTP ni lógica de Telegram (eso está en bot.py).
 from __future__ import annotations
 
 import logging
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dotenv import load_dotenv
 
