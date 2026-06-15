@@ -18,30 +18,9 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from src.utils.constants import month_from_name
+
 log = logging.getLogger(__name__)
-
-MONTH_NAMES: dict[str, int] = {
-    "jan": 1,
-    "feb": 2,
-    "mar": 3,
-    "apr": 4,
-    "may": 5,
-    "jun": 6,
-    "jul": 7,
-    "aug": 8,
-    "sep": 9,
-    "oct": 10,
-    "nov": 11,
-    "dec": 12,
-    "ene": 1,
-    "abr": 4,
-    "ago": 8,
-    "dic": 12,
-}
-
-
-def _month_from_name(name: str) -> int | None:
-    return MONTH_NAMES.get(name.lower().strip()[:3])
 
 
 # Secciones de PERFIL.md y sus regex de extracción
@@ -223,8 +202,8 @@ class CandidateProfile:
 
         all_months: list[int] = []
         for sm, sy, em, ey in dates:
-            sm_i = _month_from_name(sm)
-            em_i = _month_from_name(em)
+            sm_i = month_from_name(sm)
+            em_i = month_from_name(em)
             if sm_i is not None and em_i is not None:
                 all_months.append(int(sy) * 12 + sm_i)
                 all_months.append(int(ey) * 12 + em_i)

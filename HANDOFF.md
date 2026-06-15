@@ -100,6 +100,20 @@
 - **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
 - **Tests:** 223 passed, 0 regresiones
 
+### 🟡 Fix: requirements-dev.txt + ruff movido (#14)
+- **Problema:** `ruff` (herramienta de desarrollo) en `requirements.txt` de producción.
+- **Fix:** creado `requirements-dev.txt` con `ruff==0.6.9`, eliminado de `requirements.txt`.
+- **Lock file (#19):** pendiente — decisión de infraestructura (uv lock o pip-compile).
+
+### 🟡 Fix: MONTH_NAMES unificado en constants.py (#15)
+- **Problema:** `MONTH_NAMES` definido en 3 sitios (ya se limpió en #2, solo quedaba `candidate_profile.py`). `infojobs_scraper.py` tenía `MESES` inline con los mismos valores.
+- **Fix:** `src/utils/constants.py` creado con `MONTH_NAMES` y `month_from_name()`. `candidate_profile.py` importa desde constants. `infojobs_scraper.py` reemplazó `MESES` inline por `month_from_name()`.
+- **Archivos tocados:** `candidate_profile.py`, `infojobs_scraper.py`, nuevo `constants.py`.
+
+### 🟡 Fix: scripts muertos eliminados (#16 + #17)
+- **Problema:** 6 versiones de reporte (`scripts/reporte_v3.py`–`v6.py`, `reporte_evaluate_v1.py`) y 3 scripts one-off (`scraper_lab/fix_published_at.py`, `reparse_*.py`) que ya cumplieron su función.
+- **Fix:** `git rm` de los 8 archivos. `snapshots/` y `test_bypass.py` conservados (usados por tests).
+
 ### 🟠 Fix: models.py — SQLAlchemy eliminado, UserSettings como dataclass (#10)
 - **Problema:** SQLAlchemy solo para `UserSettings` (1 tabla), el resto del proyecto usa sqlite3 raw. Dos estrategias de acceso a DB en el mismo codebase.
 - **Fix:** `models.py` reescrito: `UserSettings` es un `@dataclass`, `get_user_settings()` usa sqlite3 raw con query columnar. SQLAlchemy eliminado de `requirements.txt` y desinstalado. Columna zombie `value TEXT` ignorada.

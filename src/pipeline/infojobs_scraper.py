@@ -581,24 +581,12 @@ class InfoJobsParser:
                 return (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
             # "29 may", "3 jun", "15 ene" — fecha literal sin año
-            MESES = {
-                "ene": 1,
-                "feb": 2,
-                "mar": 3,
-                "abr": 4,
-                "may": 5,
-                "jun": 6,
-                "jul": 7,
-                "ago": 8,
-                "sep": 9,
-                "oct": 10,
-                "nov": 11,
-                "dic": 12,
-            }
+            from src.utils.constants import month_from_name
+
             m = re.search(r"(\d{1,2})\s+([a-záéíóú]{3})", text)
             if m:
                 day = int(m.group(1))
-                month = MESES.get(m.group(2)[:3])
+                month = month_from_name(m.group(2))
                 if month:
                     year = now.year
                     candidate = datetime(year, month, day, tzinfo=timezone.utc)
