@@ -1,7 +1,7 @@
 # HANDOFF.md — Estado de sesión (actualizar al cerrar)
 
-**Última actualización:** 2026-06-15
-**Fase activa:** Borrón y cuenta nueva + fixes scraper + pipeline completo
+**Última actualización:** 2026-06-15 (v2)
+**Fase activa:** Dashboard work_mode canonical fix + doc updates
 
 ## Cambios de la sesión actual (2026-06-15)
 
@@ -56,13 +56,17 @@
 - `renderSkillsGap()` ahora muestra mensaje informativo cuando gap está vacío
 - En vez de return silencioso que dejaba el contenedor gris vacío
 
-### Follow-up (próxima sesión)
-- **5 ofertas siguen sin `work_mode`** porque InfoJobs no publica modalidad en esas páginas. Aparecen en la tabla como "—". El usuario reporta que no las ve — posible error de frontend a diagnosticar.
-- **BI Specialist con "Teletrabajo 100%"** no se corrigió en re-scrape porque `_extract_offer_id()` falló en esa página en concreto. Opción: re-scrapear manualmente o aceptar que se corrija en el próximo fetch diario.
-- **2 ofertas bloqueadas** en DB, pero usuario solo ve 1 en dashboard. La segunda (Investigador/a senior toxicología) está entre las que no aparecen en tabla. Investigar por qué no se renderiza.
+### Fix: mapa canónico WORK_MODE_CANONICAL + normalización de variantes scraper
+- **Bug #1 (vuelta 1):** `work_mode=""` (6 ofertas) filtrado porque `""` no está en `allowedModes`. **Fix:** guardia `d.work_mode &&`
+- **Bug #2 (vuelta 2):** `work_mode="Teletrabajo"` (2 ofertas, IDs 34, 38) filtrado porque `"Teletrabajo"` no está en `allowedModes` (solo `"Solo teletrabajo"`). Causa: el scraper produce `"Teletrabajo"` como variante.
+- **Bug #3:** chart `Modalidad de trabajo` mostraba categorías `-` (6 vacías) y `Teletrabajo` (2) mezcladas con Presencial/Híbrido/Remoto
+- **Causa raíz:** fragmentación de la normalización de `work_mode`: `workModeLabel()` y `workModeValue()` tenían mapas paralelos e incompletos
+- **Fix estructural:** constante única `WORK_MODE_CANONICAL` que mapea las 4 variantes del scraper (`Solo teletrabajo`, `Teletrabajo`, `Híbrido`, `Presencial`) a 3 categorías (`Remoto`, `Híbrido`, `Presencial`). `workModeLabel()`, `workModeValue()` y `allowedModes` comparten el mismo namespace canónico.
+- **Fix chart:** `renderWorkModeChart()` filtra solo categorías conocidas via `WORK_MODE_COLORS`, excluye vacíos y variantes no mapeadas
+- **Tests:** `test_api_offers_work_mode_null` + `test_api_offers_work_mode_teletrabajo`
 
 ### Tests
-- **221 tests passing** (sin cambios en tests)
+- **223 tests passing** (20 dashboard + 203 resto) — 2 tests nuevos, 0 regresiones
 
 ### Bloqueadores
 - Ninguno

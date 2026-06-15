@@ -3,8 +3,9 @@
 > **Próximo paso:** Fase 2 (branding + microcopy dashboard) / Fase 4 (role_discovery, market_signals, strategic_advisor)
 > T-8 ✅ — Feedback bot funcional y natural
 > T-10 ✅ — Dashboard test checklist completado (ADR-015)
-> **Sesión 2026-06-15:** Borrón y cuenta nueva, fixes scraper (403/dry-run/run_id/limit=0/published_at), pipeline completo 65 ofertas, 65 evaluadas, 3 "Aplicar" ✅
-> **221 tests passing, pipeline funcional con scraper propio**
+> **Sesión 2026-06-15 (v1):** Borrón y cuenta nueva, fixes scraper (403/dry-run/run_id/limit=0/published_at), pipeline completo 65 ofertas, 65 evaluadas, 3 "Aplicar" ✅
+> **Sesión 2026-06-15 (v2):** Dashboard work_mode — mapa canónico WORK_MODE_CANONICAL, normalización de variantes scraper, chart limpio con 3 categorías ✅
+> **223 tests passing, pipeline funcional con scraper propio**
 
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo
@@ -62,6 +63,7 @@
   [x] Empresas clickeables → filtran ofertas
   [x] T-10 Dashboard test checklist en TESTING.md
   [x] T-5g — Rediseño profesional: 4 secciones jerárquicas (Ofertas, Aplicaciones, Empresas, Monitor), tabla 10 columnas (score, título, empresa, ubicación, modalidad, publicado, salario, recomendación, señal, bloqueo), modal con sticky CTA + descripción colapsable + enlace InfoJobs, apps con inline status, empresas charts, monitor narrativo, filterBlocked off por defecto, bugfixes skills/salary/fallback (ADR-015)
+  [x] Fix work_mode normalization: mapa canónico WORK_MODE_CANONICAL unifica variantes del scraper (Solo teletrabajo, Teletrabajo → Remoto), filtraje correcto en tabla, chart limpio con 3 categorías
 
 ## TESTS
 [x] tests/conftest.py con fixtures DB (temp file + rollback)
@@ -72,7 +74,7 @@
 [x] Integration cassettes: test_evaluate_cassettes.py, test_classifier_cassettes.py, test_fetch_cassettes.py (30 tests cassette-based)
 [x] Pipeline tests: test_pipeline.py (10 tests, flujo completo con cassettes)
 [x] Scraper tests: test_scraper.py (39 tests: parser, published_at, skills dedup)
-[x] 221 tests passing total (203 originales + 18 dashboard server API)
+[x] 223 tests passing total (203 originales + 20 dashboard server API)
 
 ## BUGS DETECTADOS (TESTS Y REVISIÓN)
   [x] save_evaluation: añadidas 7 columnas faltantes al INSERT (cv_version_id, company_fit_score, etc.)

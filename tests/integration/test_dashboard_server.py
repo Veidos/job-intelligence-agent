@@ -341,3 +341,109 @@ class TestDashboardAPI:
     def test_favicon_no_content(self, client):
         resp = client.get("/favicon.ico")
         assert resp.status_code == 204
+
+    def test_api_offers_work_mode_null(self, client, test_engine):
+        """Verifica que ofertas con work_mode NULL aparecen en /api/offers.
+
+        Regression test: el filtro de modalidad en frontend ocultaba ofertas
+        sin work_mode porque allowedModes no incluye '' (empty string).
+        """
+        cur = test_engine.cursor()
+        cur.execute(
+            """INSERT INTO offers (
+                source_id, title, company_name, work_mode, url,
+                description_clean, published_at, is_evaluated, is_active,
+                relevance_flag, role_normalized
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "DASH-TEST-WM-NULL",
+                "Oferta sin modalidad",
+                "TestCorp",
+                None,
+                "https://infojobs.net/of-wm-null",
+                "Descripción sin modalidad",
+                "2026-06-15",
+                1,
+                1,
+                "core",
+                "data_analyst",
+            ),
+        )
+        offer_id = cur.execute("SELECT last_insert_rowid()").fetchone()[0]
+        cur.execute(
+            """INSERT INTO offer_evaluations (
+                offer_id, skills_hard_match, experience_match, location_match,
+                scoring_detail, match_score, recommendation, model_technical, model_hr
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (offer_id, 0, 0, 0, "{}", 30, "No aplicar", "gemma4:e4b", "gemma4:e4b"),
+        )
+        test_engine.commit()
+
+        resp = client.get("/api/offers")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        matching = [o for o in data if o["id"] == offer_id]
+        assert len(matching) == 1, (
+            f"Oferta con work_mode=NULL debería aparecer en /api/offers. "
+            f"match_score={matching[0]['match_score'] if matching else 'N/A'}"
+        )
+        assert matching[0]["work_mode"] == ""
+
+        # cleanup
+        cur.execute("DELETE FROM offer_evaluations WHERE offer_id = ?", (offer_id,))
+        cur.execute("DELETE FROM offers WHERE id = ?", (offer_id,))
+        test_engine.commit()
+
+    def test_api_offers_work_mode_teletrabajo(self, client, test_engine):
+        """Regression: work_mode='Teletrabajo' debe normalizarse a 'Remoto' y aparecer.
+
+        El scraper puede producir 'Teletrabajo' como variante de 'Solo teletrabajo'.
+        El frontend normaliza via WORK_MODE_CANONICAL, pero la API debe
+        devolver la oferta sin filtrarla.
+        """
+        cur = test_engine.cursor()
+        cur.execute(
+            """INSERT INTO offers (
+                source_id, title, company_name, work_mode, url,
+                description_clean, published_at, is_evaluated, is_active,
+                relevance_flag, role_normalized
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "DASH-TEST-WM-TELETRABAJO",
+                "Oferta teletrabajo variante",
+                "TestCorp",
+                "Teletrabajo",
+                "https://infojobs.net/of-wm-teletrabajo",
+                "Descripción teletrabajo",
+                "2026-06-15",
+                1,
+                1,
+                "core",
+                "data_analyst",
+            ),
+        )
+        offer_id = cur.execute("SELECT last_insert_rowid()").fetchone()[0]
+        cur.execute(
+            """INSERT INTO offer_evaluations (
+                offer_id, skills_hard_match, experience_match, location_match,
+                scoring_detail, match_score, recommendation, model_technical, model_hr
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (offer_id, 0, 0, 0, "{}", 30, "No aplicar", "gemma4:e4b", "gemma4:e4b"),
+        )
+        test_engine.commit()
+
+        resp = client.get("/api/offers")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        matching = [o for o in data if o["id"] == offer_id]
+        assert len(matching) == 1, (
+            "Oferta con work_mode='Teletrabajo' debería aparecer en /api/offers"
+        )
+        # La API devuelve el valor raw de la BD, no normalizado
+        assert matching[0]["work_mode"] == "Teletrabajo"
+        assert matching[0]["match_score"] == 30
+
+        # cleanup
+        cur.execute("DELETE FROM offer_evaluations WHERE offer_id = ?", (offer_id,))
+        cur.execute("DELETE FROM offers WHERE id = ?", (offer_id,))
+        test_engine.commit()

@@ -65,9 +65,15 @@ function fullDate(d) {
   return `${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
+const WORK_MODE_CANONICAL = {
+  'Solo teletrabajo': 'Remoto',
+  'Teletrabajo':      'Remoto',
+  'Híbrido':          'Híbrido',
+  'Presencial':       'Presencial',
+};
+
 function workModeLabel(w) {
-  const map = {'Solo teletrabajo':'Remoto','Híbrido':'Híbrido','Presencial':'Presencial'};
-  return map[w] || w || '\u2014';
+  return WORK_MODE_CANONICAL[w] || w || '\u2014';
 }
 
 function tag(text, clsName) {
@@ -96,9 +102,7 @@ function blockTag(b) {
 }
 
 function workModeValue(w) {
-  if (!w) return 'unknown';
-  if (w === 'Solo teletrabajo') return 'Remoto';
-  return w;
+  return WORK_MODE_CANONICAL[w] || '';
 }
 
 /* ── Age & follow-up helpers ── */
@@ -188,7 +192,7 @@ function getFilteredData() {
   const wmHybrid = $('filterHybrid').checked;
   const wmOnsite = $('filterOnsite').checked;
   const allowedModes = [];
-  if (wmRemote) allowedModes.push('Solo teletrabajo');
+  if (wmRemote) allowedModes.push('Remoto');
   if (wmHybrid) allowedModes.push('Híbrido');
   if (wmOnsite) allowedModes.push('Presencial');
 
@@ -199,7 +203,7 @@ function getFilteredData() {
     if (!showBlocked && d.apply_block && d.apply_block !== 'null') return false;
     if (hideApplied && appliedIds.has(d.id)) return false;
     if (hideExpired && isExpired(d.published_at)) return false;
-    if (allowedModes.length && !allowedModes.includes(d.work_mode)) return false;
+    if (allowedModes.length && d.work_mode && !allowedModes.includes(workModeValue(d.work_mode))) return false;
     if (search && !(d.title.toLowerCase().includes(search) || d.company_name.toLowerCase().includes(search))) return false;
     return true;
   });
@@ -1393,14 +1397,16 @@ function renderCityModeChart(offers) {
 }
 
 /* ── Work mode chart ── */
+const WORK_MODE_LABELS = ['Presencial', 'H\u00edbrido', 'Remoto'];
+const WORK_MODE_COLORS = { 'Presencial': '#ef4444', 'H\u00edbrido': '#eab308', 'Remoto': '#22c55e' };
+
 function renderWorkModeChart(offers) {
   const freq = {};
   offers.forEach(o => {
-    const m = workModeLabel(o.work_mode);
-    freq[m] = (freq[m] || 0) + 1;
+    const label = workModeLabel(o.work_mode);
+    if (WORK_MODE_COLORS[label]) freq[label] = (freq[label] || 0) + 1;
   });
-  const labels = Object.keys(freq);
-  const colors = { 'Presencial': '#ef4444', 'H\u00edbrido': '#eab308', 'Remoto': '#22c55e' };
+  const labels = WORK_MODE_LABELS.filter(l => freq[l]);
 
   destroyChart('chartWorkMode');
   if (!labels.length) return;
@@ -1408,7 +1414,7 @@ function renderWorkModeChart(offers) {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label: 'Ofertas', data: labels.map(l => freq[l]), backgroundColor: labels.map(l => colors[l] || '#6366f1') }],
+      datasets: [{ label: 'Ofertas', data: labels.map(l => freq[l]), backgroundColor: labels.map(l => WORK_MODE_COLORS[l]) }],
     },
     options: {
       responsive: true,

@@ -13,14 +13,14 @@
 - Fixture principal: `test_db` — temp file con schema.sql, rollback por test
 - Fixture `test_conn` — wrapper sqlite3 compatible con save_evaluation
 - Fixtures de datos: `sample_perfil_text`, `sample_offer`, `sample_offer_senior`, `sample_offer_no_exp`, `sample_offer_temporal`, `sample_offer_with_impossible_requirements`
-- 171 tests: 121 unit/integration, 30 cassette-based integration, 10 pipeline — todos passing
+- 223 tests: 203 originales + 20 dashboard server API — todos passing
 - Ollama cassettes: 13 JSON fixtures en tests/fixtures/ollama/ (no vcrpy)
 - test_classifier_cassettes.py: usa test_engine (Connection) no test_db (Cursor) — role_classifier usa conn.cursor()
 - test_evaluate_cassettes.py: cassettes directos (no wrapped), mock_ollama_call con side_effect para secuencias
 - test_fetch_cassettes.py: call_args.kwargs para extraer prompt (no call_args[0][1])
 - test_pipeline.py: flujo completo con stateful mocks (call_count++) para secuencias de llamadas
 - ruff fix eliminó 6 imports sin usar de test_pipeline.py
-- PLANS.md actualizado con 171 tests passing
+- PLANS.md actualizado con 223 tests passing
 
 ## Extracción de CV (cv_extractor.py)
 - Usa gemma4:e4b para extracción estructurada de CV
@@ -639,3 +639,11 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - Zombie columns eliminadas (7 columnas de offer_evaluations) — ninguna referenciada en dashboard
 - `skill_detail` como objeto categorizado (no array) — dashboard lo maneja correctamente
 - Pipeline completo verificado: 65 ofertas, 176 companies, 65 evaluaciones, todas las APIs respondiendo
+
+### Dashboard — Bug filtro modalidad + normalización canónica (junio 2026)
+- **Bug 1:** `!allowedMoves.includes(d.work_mode)` sin guardia para `""` → 6 ofertas sin modalidad invisibles
+- **Bug 2:** `workModeValue("Teletrabajo")` devolvía `"Teletrabajo"` (no normalizado) → el filtro por `includes()` no matcheaba `"Solo teletrabajo"` en `allowedModes` → 2 ofertas con esta variante del scraper invisibles
+- **Bug 3:** `workModeLabel("Teletrabajo")` y `workModeLabel("")` creaban categorías `"Teletrabajo"` y `"-"` en el chart de modalidad
+- **Causa raíz:** fragmentación de la normalización — `workModeLabel()` y `workModeValue()` tenían mapas paralelos e incompletos. El scraper produce 4 variantes: `Presencial`, `Híbrido`, `Solo teletrabajo`, `Teletrabajo` (sin "Solo") y vacío. El frontend solo mapeaba 3.
+- **Fix estructural:** constante canónica única `WORK_MODE_CANONICAL` que mapea las 4 variantes del scraper a 3 categorías normalizadas: `Remoto`, `Híbrido`, `Presencial`. `workModeLabel()`, `workModeValue()` y el chart consumen el mismo mapa.
+- **Lección:** cuando un valor de dominio viene de múltiples fuentes (scraper/API/input), la normalización debe vivir en un único punto canónico. Si el scraper añade una variante nueva, solo hay que tocar `WORK_MODE_CANONICAL`. El filtro usa `workModeValue(d.work_mode)` para comparar contra `allowedModes` (que ya emite valores normalizados).

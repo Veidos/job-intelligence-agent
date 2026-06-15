@@ -229,6 +229,7 @@ pytest tests/ -v
 | 10.13 | 👤 | Filtros de tabla operan correctamente | Score min, recomendación, señal, tipo, texto libre |
 | 10.14 | 👤 | Empresas clickable filtra ofertas | Click en empresa muestra solo sus ofertas |
 | 10.15 | 👤 | Timeline muestra aplicaciones agrupadas por semana | Agrupación semanal con estados |
+| 10.16 | 🤖 | work_mode='Teletrabajo' se normaliza a 'Remoto' en filtros y chart | Oferta con work_mode='Teletrabajo' visible en /api/offers y chart solo muestra Presencial/Híbrido/Remoto |
 
 ```bash
 # Arrancar servidor (en background o segunda terminal)

@@ -162,7 +162,8 @@ python src/dashboard/server.py
 | filterHideExpired default = on | Ocultar ofertas >30 días (checkbox en Ofertas) |
 | Age badge (🟢🟡🟠🔴⚫) | Días desde published_at, sin cambios en DB |
 | Follow-up badges (Esperando/Follow-up/Insistir/Descartar) | 7/14/21 días desde applied_at, badge + overdue (🔔) |
-| Follow-up table in Monitor | KPIs + tabla ordenada por urgencia (seguimiento próximo)
+| Follow-up table in Monitor | KPIs + tabla ordenada por urgencia (seguimiento próximo) |
+| work_mode normalization via WORK_MODE_CANONICAL | Mapa único en app.js que normaliza variantes del scraper (Teletrabajo, Solo teletrabajo → Remoto). Filtros, display labels y charts comparten el mismo namespace. |
 
 ### API REST
 
