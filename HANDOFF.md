@@ -100,6 +100,12 @@
 - **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
 - **Tests:** 223 passed, 0 regresiones
 
+### 🟠 Fix: models.py — SQLAlchemy eliminado, UserSettings como dataclass (#10)
+- **Problema:** SQLAlchemy solo para `UserSettings` (1 tabla), el resto del proyecto usa sqlite3 raw. Dos estrategias de acceso a DB en el mismo codebase.
+- **Fix:** `models.py` reescrito: `UserSettings` es un `@dataclass`, `get_user_settings()` usa sqlite3 raw con query columnar. SQLAlchemy eliminado de `requirements.txt` y desinstalado. Columna zombie `value TEXT` ignorada.
+- **Backward compat:** `send.py` importa `get_user_settings` y accede a `.max_offers_day` — misma API.
+- **Tests:** 223 passed, 0 regresiones
+
 ### 🟠 Fix: infojobs_scraper — _extract_offer_id optimizado (#13)
 - **Problema:** regex sobre HTML completo (~976KB por oferta) para extraer el ID, cuando la URL ya lo contiene.
 - **Fix:** `_extract_offer_id_from_url(url)` prueba la URL primero. Fallback con `html[:8192]` (~1% del HTML original). `_extract_offer_id` se conserva para tests sin URL.

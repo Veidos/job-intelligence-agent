@@ -1,43 +1,26 @@
 """
-SQLAlchemy models for Job Intelligence Agent.
+DB helpers for Job Intelligence Agent.
 Schema source of truth: src/db/schema.sql
 """
 
+from __future__ import annotations
+
 import json
 import logging
-import os
+from dataclasses import dataclass
 
-from dotenv import load_dotenv
-from sqlalchemy import Column, DateTime, Integer, String, create_engine, func, select
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from src.db.init_db import get_connection
 
 log = logging.getLogger(__name__)
 
-load_dotenv()
-
-
-def _get_engine():
-    db_path = os.getenv("DB_PATH", "data/jobs.db")
-    return create_engine(f"sqlite:///{db_path}", echo=False)
-
-
-engine = _get_engine()
-SessionLocal = sessionmaker(bind=engine)
-
-
-class Base(DeclarativeBase):
-    pass
-
 
 def json_serialize(data) -> str:
-    """Serializa un objeto Python a JSON string para almacenar en TEXT."""
     if data is None:
         return json.dumps(None)
     return json.dumps(data, ensure_ascii=False)
 
 
 def json_deserialize(text: str):
-    """Deserializa un JSON string desde TEXT a objeto Python."""
     if text is None or text == "":
         return None
     try:
@@ -47,28 +30,40 @@ def json_deserialize(text: str):
         return None
 
 
-class UserSettings(Base):
-    __tablename__ = "user_settings"
-
-    id = Column(Integer, primary_key=True)
-    updated_at = Column(DateTime, default=func.datetime("now"))
-    send_time = Column(String, default="09:00")
-    max_offers_day = Column(Integer, default=3)
-    send_mode = Column(String, default="morning")
-    min_score_send = Column(Integer, default=35)
-    weekly_summary = Column(Integer, default=1)
-    strategic_alerts = Column(Integer, default=1)
+@dataclass
+class UserSettings:
+    id: int | None = None
+    send_time: str = "09:00"
+    max_offers_day: int = 3
+    send_mode: str = "morning"
+    min_score_send: int = 35
+    weekly_summary: int = 1
+    strategic_alerts: int = 1
 
 
 def get_user_settings() -> UserSettings:
-    """Devuelve el registro de user_settings, o crea uno con defaults."""
-    with SessionLocal() as session:
-        stmt = select(UserSettings).order_by(UserSettings.id).limit(1)
-        record = session.scalar(stmt)
-        if record is None:
-            record = UserSettings()
-            session.add(record)
-            session.commit()
-            session.refresh(record)
-            log.info("user_settings creado con valores por defecto")
-        return record
+    """Devuelve el registro de user_settings, o crea uno con defaults.
+
+    TODO: INSERT defaults si se necesita persistencia.
+    Por ahora los defaults se devuelven en memoria sin tocar la DB.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    row = cur.execute(
+        """SELECT send_time, max_offers_day, send_mode,
+                  min_score_send, weekly_summary, strategic_alerts
+           FROM user_settings ORDER BY id LIMIT 1"""
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        return UserSettings()
+
+    return UserSettings(
+        send_time=row[0] or "09:00",
+        max_offers_day=int(row[1] or 3),
+        send_mode=row[2] or "morning",
+        min_score_send=int(row[3] or 35),
+        weekly_summary=int(row[4] or 1),
+        strategic_alerts=int(row[5] or 1),
+    )
