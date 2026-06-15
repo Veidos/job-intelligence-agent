@@ -78,6 +78,11 @@
 - **Fix:** eliminadas las 6 definiciones (~164 líneas). `run_evaluate()` ya usaba `CandidateProfile.from_perfil()` desde el refactor anterior. Tests actualizados para importar desde `CandidateProfile`.
 - **Tests:** 223 passed, 0 regresiones
 
+### 🔴 Fix: server.py — conexiones con context manager
+- **Problema:** 8 endpoints usaban `conn = get_connection()` + `conn.close()` manual. Cualquier excepción no capturada dejaba la conexión abierta (leak).
+- **Fix:** `with contextlib.closing(get_connection()) as conn:` en los 8 endpoints (`api_stats`, `api_offers`, `api_offer_detail`, `api_companies`, `api_feedback`, `api_applications`, `api_delete_application`, `api_runs`). Eliminados todos los `conn.close()` manuales. Los early returns dentro del `with` son seguros.
+- **Tests:** 223 passed, 0 regresiones
+
 ---
 
 ## Auditoría intensiva completa (2026-06-15)
