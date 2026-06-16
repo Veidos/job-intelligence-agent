@@ -655,7 +655,7 @@ class InfoJobsScraper:
     BASE_URL = "https://www.infojobs.net"
     SEARCH_PATH = "/jobsearch/search-results/list.xhtml"
 
-    _FINGERPRINTS = ["chrome131", "safari17", "chrome124"]
+    _FINGERPRINTS = ["chrome131", "chrome124"]
 
     def __init__(
         self,

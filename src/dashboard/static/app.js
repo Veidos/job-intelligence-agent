@@ -157,11 +157,18 @@ function loadOffers(filters) {
   }
   const qs = params.toString();
   if (qs) url += '?' + qs;
+  const isFullLoad = !filters || Object.keys(filters || {}).length === 0;
   return fetch(url).then(r => r.json()).then(data => {
     OFFERS = data;
-    const isFullLoad = !filters || Object.keys(filters).length === 0;
-    if (isFullLoad) { ALL_OFFERS = data; renderWeeklySparkline(ALL_OFFERS); }
+    if (isFullLoad) { ALL_OFFERS = data; }
     recalcOffers();
+    if (isFullLoad) {
+      try { renderWeeklySparkline(ALL_OFFERS); } catch (e) { console.warn('Sparkline no disponible:', e); }
+    }
+  }).catch(err => {
+    console.error('Error cargando ofertas:', err);
+    const tbody = $('offersTbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty" style="color:var(--red)">Error al cargar datos</td></tr>';
   });
 }
 
