@@ -52,7 +52,12 @@ def send_message(text: str, parse_mode: str = "HTML") -> bool:
 
 
 def get_top_offers(max_offers: int = 3) -> list[dict]:
-    """Selecciona top ofertas evaluadas no enviadas, priorizando score."""
+    """Selecciona top ofertas evaluadas no enviadas.
+
+    Prioriza por recommendation → llm_apply_signal → match_score.
+    Así, dentro de "Aplicar" se envían primero las con señal "yes",
+    y nunca se salta un "Aplicar/yes" por un "Con expectativas bajas/yes" con más score.
+    """
     conn = get_connection()
     cur = conn.cursor()
     rows = cur.execute(
@@ -67,7 +72,20 @@ def get_top_offers(max_offers: int = 3) -> list[dict]:
         JOIN offers o ON o.id = e.offer_id
         WHERE e.sent_via_telegram = 0
           AND e.match_score >= 35
-        ORDER BY e.match_score DESC
+        ORDER BY
+          CASE e.recommendation
+            WHEN 'Aplicar'              THEN 0
+            WHEN 'Con expectativas bajas' THEN 1
+            WHEN 'No aplicar'           THEN 2
+            ELSE 3
+          END,
+          CASE e.llm_apply_signal
+            WHEN 'yes'   THEN 0
+            WHEN 'maybe' THEN 1
+            WHEN 'no'    THEN 2
+            ELSE 3
+          END,
+          e.match_score DESC
         LIMIT ?
     """,
         (max_offers,),
