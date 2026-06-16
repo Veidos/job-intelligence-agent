@@ -872,6 +872,18 @@ function loadRuns() {
 /* ── Charts ── */
 function renderCharts() {
   if (!ALL_OFFERS.length) return;
+
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js no disponible — gráficas omitidas');
+    document.querySelectorAll('.monitor-section-title').forEach(function (el) {
+      var note = document.createElement('p');
+      note.style.cssText = 'color:var(--text2);font-size:13px;padding:8px';
+      note.textContent = '📊 Gráficas no disponibles (Chart.js no cargó)';
+      el.insertAdjacentElement('afterend', note);
+    });
+    return;
+  }
+
   const data = ALL_OFFERS;
 
   // Bar: recommendation distribution
@@ -1186,6 +1198,7 @@ function renderWeeklyActivity(offers) {
 
 /* ── Sparkline en header de Ofertas ── */
 function renderWeeklySparkline(offers) {
+  if (typeof Chart === 'undefined') return;
   const weeks = {};
   offers.forEach(o => {
     const dt = _parseDate(o.published_at);
