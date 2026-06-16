@@ -1,258 +1,57 @@
-# HANDOFF.md — Estado de sesión (actualizar al cerrar)
+# HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-06-15 (v2)
-**Fase activa:** Dashboard work_mode canonical fix + doc updates
+**Última actualización:** 2026-06-16
+**Fase activa:** Dashboard fixes + send priority + evaluación resultados
 
-## Cambios de la sesión actual (2026-06-15)
+## Cambios de la sesión actual (2026-06-16)
 
-### Reseteo de DB
-- `data/jobs.db` respaldado como `data/jobs.db.v1` (8.7 MB)
-- Tablas reseteadas: offers, offer_evaluations, scraper_raw_responses, apify_raw_responses, applications, user_feedback, search_runs
-- Companies, search_config, user_settings, user_psychology preservados
+### Pipeline ejecutado
+- **Fetch:** 25 ofertas nuevas (fix safari17 aplicado — fingerprint eliminado)
+- **Classify:** 25 clasificadas
+- **Enrich:** 5 empresas enriquecidas, 0 errores
+- **Evaluate:** 25 evaluadas, 0 errores, 0 JSON parse failures (100 LLM calls)
+- **Send:** 3 ofertas enviadas a Telegram
+- **Pipeline completado:** ~98 min (5892544 ms)
 
-### Fixes de scraper (403 Forbidden)
-- `delay` aumentado de 2.0s → 4.0s + jitter aleatorio 2.0s
-- Fingerprint rotado: `chrome131`/`safari17`/`chrome124` (random)
-- `random` import añadido a `infojobs_scraper.py`
+### Fix: safari17 eliminado de _FINGERPRINTS
+- **Problema:** `curl_cffi==0.15.0` no soporta `safari17` como fingerprint. `Impersonating safari17 is not supported` al iniciar sesión.
+- **Fix:** `_FINGERPRINTS = ["chrome131", "chrome124"]` (línea 658)
+- **Archivo:** `src/pipeline/infojobs_scraper.py`
 
-### Fix: `_upsert_from_scraper_raw()` filtraba por `run_id`
-- `WHERE run_id = ? AND processed = 0` → `WHERE processed = 0`
-- Ejecuciones abortadas ya no dejan filas huérfanas
+### Fix: Dashboard tabla de ofertas no se renderizaba
+- **Problema:** `renderWeeklySparkline()` en `loadOffers()` se ejecutaba ANTES que `recalcOffers()`. Si Chart.js fallaba (CDN incorrecta), la excepción impedía renderizar la tabla.
+- **Fix #1:** CDN revertida de unpkg (404) a jsdelivr (200) en `dashboard.html`
+- **Fix #2:** `recalcOffers()` ejecutado antes de `renderWeeklySparkline()` en `loadOffers()`
+- **Fix #3:** Sparkline envuelto en `try/catch` dentro de `loadOffers()`
+- **Fix #4:** `.catch()` añadido a `loadOffers()` con mensaje visible en tabla
+- **Fix #5:** Guard profesional `typeof Chart === 'undefined'` en `renderCharts()` con mensaje informativo al usuario
+- **Archivos:** `src/dashboard/static/app.js`, `src/dashboard/templates/dashboard.html`
 
-### Fix: `--dry-run` no llegaba a fetch.py
-- `run_fetch_scraper()` ahora acepta `dry_run: bool = False`
-- En dry_run: no abre conexión, no persiste raw, no upsert
-- `run.py` pasa `dry_run` correctamente
+### Fix: Prioridad de envío en send.py
+- **Problema:** `get_top_offers()` ordenaba solo por `match_score DESC`. Ofertas con "Con expectativas bajas"/señal "no" podían enviarse antes que "Aplicar"/señal "yes".
+- **Fix:** ORDER BY por 3 niveles: `recommendation` → `llm_apply_signal` → `match_score DESC`
+- **Archivo:** `src/telegram/send.py`
 
-### Fix: `--limit-eval 0` y `--limit-enrich 0` como "sin límite"
-- `evaluate.py:get_pending_offers()`: `limit=0` → `-1` (SQLite LIMIT -1 = sin límite)
-- `fetch_company.py:run()`: batch slice `companies_to_enrich[:limit if limit > 0 else None]`
-- `run.py`: help actualizado documentando que `0` = sin límite
-
-### Fix: `published_at` nulo en scraper
-- Fallback: si `_extract_published_at()` devuelve `None`, usar `datetime.now().strftime("%Y-%m-%d")`
-- Previene acumulación de ofertas sin fecha en dashboard
-
-### Pipeline resultados
-- **65 ofertas** fetch + classify (5 core, 20 adjacent, 38 stretch, 2 temporal)
-- **14 empresas enriquecidas** → 176 total, 100% pobladas
-- **65/65 evaluadas**, 0 errores
-- **3 "Aplicar"**: CONSULTOR DATA SCIENCE @ Management Solutions (0.70), Ingeniero/a procesos @ CADE (0.67), Data Scientist/ML Analyst @ Solutia (0.61)
-- **Avg score**: 0.253 | 197 LLM calls, 0 fallos JSON
-- **Pipeline**: ~3h45min total (ambos runs), Telegram enviado con 3 ofertas
-
-### Dashboard
-- Servidor Flask en `http://localhost:8080`
-- Todos los endpoints API verificados: stats, offers, companies, runs
-- Sin regresiones por zombie columns (ninguna referenciada en dashboard)
-- skill_detail, scoring breakdown (M_core, F_exp, etc.) poblados correctamente
-
-### Fix: work_mode desde título (fallback)
-- `_parse_header_details()`: si el header no da modalidad, prueba chips/tags alternativos
-- Si tampoco, fallback desde el título con `log.warning()` para monitoreo
-- 3/8 ofertas sin work_mode corregidas vía re-scrape (scraper_lab/reparse_work_mode.py)
-
-### Fix: skills gap empty state
-- `renderSkillsGap()` ahora muestra mensaje informativo cuando gap está vacío
-- En vez de return silencioso que dejaba el contenedor gris vacío
-
-### Fix: mapa canónico WORK_MODE_CANONICAL + normalización de variantes scraper
-- **Bug #1 (vuelta 1):** `work_mode=""` (6 ofertas) filtrado porque `""` no está en `allowedModes`. **Fix:** guardia `d.work_mode &&`
-- **Bug #2 (vuelta 2):** `work_mode="Teletrabajo"` (2 ofertas, IDs 34, 38) filtrado porque `"Teletrabajo"` no está en `allowedModes` (solo `"Solo teletrabajo"`). Causa: el scraper produce `"Teletrabajo"` como variante.
-- **Bug #3:** chart `Modalidad de trabajo` mostraba categorías `-` (6 vacías) y `Teletrabajo` (2) mezcladas con Presencial/Híbrido/Remoto
-- **Causa raíz:** fragmentación de la normalización de `work_mode`: `workModeLabel()` y `workModeValue()` tenían mapas paralelos e incompletos
-- **Fix estructural:** constante única `WORK_MODE_CANONICAL` que mapea las 4 variantes del scraper (`Solo teletrabajo`, `Teletrabajo`, `Híbrido`, `Presencial`) a 3 categorías (`Remoto`, `Híbrido`, `Presencial`). `workModeLabel()`, `workModeValue()` y `allowedModes` comparten el mismo namespace canónico.
-- **Fix chart:** `renderWorkModeChart()` filtra solo categorías conocidas via `WORK_MODE_COLORS`, excluye vacíos y variantes no mapeadas
-- **Tests:** `test_api_offers_work_mode_null` + `test_api_offers_work_mode_teletrabajo`
+### Hallazgos de la evaluación de resultados
+- **⚠️ Inconsistencia:** `llm_apply_signal='no'` pero `apply_recommendation` dice "Con expectativas bajas" en 5 ofertas. Es comportamiento esperado: el threshold (≥35) gana sobre la señal LLM.
+- **✅ Sin falsos negativos:** 0 ofertas con score < 35 que tengan "Aplicar"
+- **✅ Calidad LLM:** gemma_verdicts sustantivos, sin boilerplate, específicos por oferta
+- **✅ apply_block:** 75% imposibles reales, 25% geográfico (debatible como bloqueo duro)
+- **🔴 Bug conocido (no fix):** `send.py` no filtra `apply_block` — oferta bloqueada (score 53, requisito_imposible de geografía) se envió al usuario. Se documenta pero no se corrige por ahora.
 
 ### Tests
-- **223 tests passing** (20 dashboard + 203 resto) — 2 tests nuevos, 0 regresiones
+- **223 tests passing**
+- **Ruff:** sin errores
 
-### 🔴 Fix: models.py — DB_PATH ahora lee variable de entorno
-- **Problema:** `DB_PATH = "data/jobs.db"` hardcodeado, engine instanciado al importar el módulo, antes de cualquier `load_dotenv()`. Ignoraba `DB_PATH` del `.env`.
-- **Fix:** `_get_engine()` perezoso dentro de `load_dotenv()`, `DB_PATH` leído con `os.getenv("DB_PATH", "data/jobs.db")`
-- **Tests:** `pytest tests/ -q` → 223 passed
+## Comandos principales
+```bash
+python src/pipeline/run.py                    # Pipeline completo
+python src/dashboard/server.py                # Dashboard en :8080
+ruff check src/ && ruff format src/ --check   # Lint
+pytest tests/ -q                              # Tests
+```
 
-### 🔴 Fix: evaluate.py — elimina duplicación de CandidateProfile
-- **Problema:** `load_skills_from_perfil()`, `load_gap_from_perfil()`, `load_location_from_perfil()`, `load_experience_years_from_perfil()`, `MONTH_NAMES`, `_month_from_name()` — código idéntico al que ya existe en `CandidateProfile`. Dos implementaciones paralelas que pueden divergir.
-- **Fix:** eliminadas las 6 definiciones (~164 líneas). `run_evaluate()` ya usaba `CandidateProfile.from_perfil()` desde el refactor anterior. Tests actualizados para importar desde `CandidateProfile`.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🔴 Fix: server.py — conexiones con context manager
-- **Problema:** 8 endpoints usaban `conn = get_connection()` + `conn.close()` manual. Cualquier excepción no capturada dejaba la conexión abierta (leak).
-- **Fix:** `with contextlib.closing(get_connection()) as conn:` en los 8 endpoints (`api_stats`, `api_offers`, `api_offer_detail`, `api_companies`, `api_feedback`, `api_applications`, `api_delete_application`, `api_runs`). Eliminados todos los `conn.close()` manuales. Los early returns dentro del `with` son seguros.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🔴 Fix: ollama_client.py — OLLAMA_BASE_URL lee de variable de entorno
-- **Problema:** `OLLAMA_BASE_URL = "http://localhost:11434"` hardcodeado, ignoraba el `.env`. Imposible apuntar a Ollama remoto sin tocar código.
-- **Fix:** `OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")`. Añadido `import os`. `.env.example` actualizado con la variable.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🔴 Fix: send.py — validación de tokens + footer dinámico (#5 + #7)
-- **Problema #5:** `TELEGRAM_TOKEN` y `TELEGRAM_CHAT_ID` sin validación. Si `.env` falta, la URL queda `.../bot/sendMessage` y el error llega tarde (HTTP request fallido, mensaje críptico).
-- **Fix #5:** `_validate_config()` perezosa (no a nivel de módulo para no romper tests). Llamada al inicio de `send_message()` y `send_daily()`.
-- **Problema #7:** `process_feedback()` acepta `/f1`–`/f5` pero el footer de `send_daily()` solo listaba `/f1 /f2 /f3`. Inconsistencia de contrato.
-- **Fix #7:** Footer genera `/f1`...`/fN` dinámicamente según `len(offers)`. `range(1, 6)` se mantiene como cota máxima flexible.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🔴 #6 — No era bug, solo documentación faltante
-- **Diagnóstico:** `evaluate.py` ya convierte `float 0-1 → INTEGER 0-100` en `_build_evaluation_params()` con `round(final_score * 100)`. `send.py` compara contra `>= 35` (escala 0-100). Dashboard muestra porcentaje. Pipeline consistente.
-- **Fix:** comentario inline en `schema.sql`: `match_score INTEGER,   -- 0-100 (final_score * 100, redondeado)`
-- **Tests:** 223 passed, 0 regresiones
-
-### 🟡 Fix: requirements-dev.txt + ruff movido (#14)
-- **Problema:** `ruff` (herramienta de desarrollo) en `requirements.txt` de producción.
-- **Fix:** creado `requirements-dev.txt` con `ruff==0.6.9`, eliminado de `requirements.txt`.
-- **Lock file (#19):** pendiente — decisión de infraestructura (uv lock o pip-compile).
-
-### 🟡 Fix: MONTH_NAMES unificado en constants.py (#15)
-- **Problema:** `MONTH_NAMES` definido en 3 sitios (ya se limpió en #2, solo quedaba `candidate_profile.py`). `infojobs_scraper.py` tenía `MESES` inline con los mismos valores.
-- **Fix:** `src/utils/constants.py` creado con `MONTH_NAMES` y `month_from_name()`. `candidate_profile.py` importa desde constants. `infojobs_scraper.py` reemplazó `MESES` inline por `month_from_name()`.
-- **Archivos tocados:** `candidate_profile.py`, `infojobs_scraper.py`, nuevo `constants.py`.
-
-### 🟡 Fix: scripts muertos eliminados (#16 + #17)
-- **Problema:** 6 versiones de reporte (`scripts/reporte_v3.py`–`v6.py`, `reporte_evaluate_v1.py`) y 3 scripts one-off (`scraper_lab/fix_published_at.py`, `reparse_*.py`) que ya cumplieron su función.
-- **Fix:** `git rm` de los 8 archivos. `snapshots/` y `test_bypass.py` conservados (usados por tests).
-
-### 🟠 Fix: models.py — SQLAlchemy eliminado, UserSettings como dataclass (#10)
-- **Problema:** SQLAlchemy solo para `UserSettings` (1 tabla), el resto del proyecto usa sqlite3 raw. Dos estrategias de acceso a DB en el mismo codebase.
-- **Fix:** `models.py` reescrito: `UserSettings` es un `@dataclass`, `get_user_settings()` usa sqlite3 raw con query columnar. SQLAlchemy eliminado de `requirements.txt` y desinstalado. Columna zombie `value TEXT` ignorada.
-- **Backward compat:** `send.py` importa `get_user_settings` y accede a `.max_offers_day` — misma API.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🟠 Fix: infojobs_scraper — _extract_offer_id optimizado (#13)
-- **Problema:** regex sobre HTML completo (~976KB por oferta) para extraer el ID, cuando la URL ya lo contiene.
-- **Fix:** `_extract_offer_id_from_url(url)` prueba la URL primero. Fallback con `html[:8192]` (~1% del HTML original). `_extract_offer_id` se conserva para tests sin URL.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🟠 Fix: server.py — allowlist _OFFER_FILTER_COLUMNS (#11)
-- **Problema:** SQL dinámico en `api_offers()` construido con f-string + `where_sql`. Aunque los valores iban parametrizados, no había documentación explícita de qué columnas son filtrables.
-- **Fix:** constante `_OFFER_FILTER_COLUMNS` como frozenset + comentario de seguridad. Sin cambios en lógica (ya era segura) — documentación defensiva para futuros desarrolladores.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🟠 Fix: migrate.py — SCHEMA_DEFINITIONS reemplazado por parseo de schema.sql (#9)
-- **Problema:** `SCHEMA_DEFINITIONS` (~150 líneas) duplicaba manualmente las columnas de schema.sql. Riesgo de divergencia entre ambos.
-- **Fix:** nueva función `_parse_schema_columns()` que parsea los `CREATE TABLE` de schema.sql con regex. Maneja comentarios inline (`--`), paréntesis anidados (`datetime('now')`), y omite constraints/índices. `SCHEMA_DEFINITIONS` eliminado.
-- **Verificación:** `python -m src.db.migrate` → "Schema ya actualizado". 223 tests passing.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🟠 Fix: run.py — guarda logging duplicado (#12)
-- **Problema:** `setup_logging()` añadía handlers cada vez que se llamaba. En tests o re-ejecuciones, cada log se emitía N veces.
-- **Fix:** guarda `if root.handlers: return` al inicio.
-- **Tests:** 223 passed, 0 regresiones
-
-### 🟠 Fix: pyproject.toml + eliminación de sys.path.insert (#8)
-- **Problema:** `sys.path.insert(0, ...)` en 8 módulos para resolver imports. Síntoma de ausencia de packaging.
-- **Fix:** `pyproject.toml` con `[tool.setuptools.packages.find]` + `pip install -e .`. Eliminados `sys.path.insert` de 6 archivos (3 con remoción completa de `sys` + `Path`, 3 solo de `import sys`). `run.py` no se tocó (usa `sys` y `Path` para otras cosas).
-- **Archivos editados:** `evaluate.py` (import sys), `fetch.py` (ambos), `fetch_company.py` (import sys), `server.py` (import sys), `handlers.py` (ambos), `send.py` (ambos). `run.py` y `role_classifier.py` sin cambios.
-- **Tests:** 223 passed, 0 regresiones. Imports verificados manualmente.
-
----
-
-## Auditoría intensiva completa (2026-06-15)
-
-He leído y analizado metódicamente cada archivo del repositorio. Auditoría completa ordenada por severidad:
-
-### 🔴 Críticos — Bugs o riesgos reales
-
-1. **src/db/models.py** — `DB_PATH` hardcodeado, engine creado antes de `load_dotenv()` → **✅ FIXED (parcial)**
-   - Engine se instancia al importar, antes de que `load_dotenv()` se ejecute.
-   - Fix: `_get_engine()` perezoso + `load_dotenv()` dentro del módulo.
-   - **⚠️ Limitación:** `load_dotenv()` en models.py es redundante si otro módulo ya lo llamó. El engine sigue creándose al importar, pero ahora respeta `DB_PATH` del `.env`. El `load_dotenv()` extra es ruido inofensivo. Se eliminará naturalmente al abordar el ítem #8 (pyproject.toml + punto de entrada único).
-
-2. **src/pipeline/evaluate.py** — Duplicación total de lógica de parseo ya refactorizada
-   - `load_skills_from_perfil()`, `load_gap_from_perfil()`, `load_experience_years_from_perfil()`, `MONTH_NAMES` — código idéntico al que ya existe en `CandidateProfile` (`src/utils/candidate_profile.py`).
-   - `evaluate.py` debería simplemente: `from src.utils.candidate_profile import CandidateProfile; profile = CandidateProfile.from_perfil(perfil_text)` y usar `profile.skills_map`, `profile.employment_gap`, etc.
-
-3. **src/dashboard/server.py** — Conexiones SQLite sin context manager (leak garantizado en error)
-   - 6 endpoints usan `conn = get_connection()` + `conn.close()` manual. Si hay una excepción, `conn` nunca se cierra.
-   - Fix: `with get_connection() as conn:` (requiere que `get_connection()` devuelva context manager, o usar `contextlib.closing()`).
-
-4. **src/utils/ollama_client.py** — `OLLAMA_BASE_URL` hardcodeado
-   - `OLLAMA_BASE_URL = "http://localhost:11434"` ignora el `.env`. Hace imposible apuntar a Ollama remoto sin tocar el código.
-
-5. **src/telegram/send.py** — Sin validación de tokens vacíos
-   - Si `.env` no existe o los tokens están vacíos, la URL queda como `.../bot/sendMessage` y el error llega tarde (en el request HTTP), con mensaje críptico.
-   - Fix: `if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: raise EnvironmentError(...)`
-
-6. **Schema SQL** — `match_score INTEGER` vs float 0-1
-   - Schema define `match_score INTEGER`, pero `evaluate.py` calcula scores como float en rango `0.0–1.0`. En `send.py` se compara con `>= 35` y en el dashboard se muestra como porcentaje `/100`. La conversión `*100` implícita hace el código frágil: si se cambia en un sitio, el resto falla silenciosamente.
-
-7. **src/telegram/send.py** — `process_feedback` hardcodea `range(1, 6)` pero el docstring documenta `/f1–/f3`
-   - `for i in range(1, 6):` acepta `/f1` a `/f5`, pero el mensaje enviado a Telegram solo lista `/f1 /f2 /f3`. Inconsistencia de contrato.
-
-### 🟠 Mayores — Deuda técnica real
-
-8. **`sys.path.insert(0, ...)` en 8+ módulos** — ausencia de packaging
-   - Aparece en `evaluate.py`, `fetch.py`, `run.py`, `server.py`, `handlers.py`, `send.py`...
-   - Solución: `pyproject.toml` con `[tool.setuptools.packages.find]` + `pip install -e .` elimina todos los `sys.path.insert`.
-
-9. **src/db/migrate.py** — Segunda fuente de verdad del schema
-   - `SCHEMA_DEFINITIONS` en `migrate.py` duplica exactamente `schema.sql`. Si añades una columna en `schema.sql` y olvidas `migrate.py` (o viceversa), las instalaciones nuevas y las existentes tienen schemas distintos.
-
-10. **src/db/models.py** — SQLAlchemy solo para `UserSettings`, raw `sqlite3` para todo lo demás
-    - El proyecto mezcla ORM y raw en el mismo codebase. Decisión: eliminar SQLAlchemy completamente y quedarse con `sqlite3` raw (más simple, ya tienes el schema), o modelar todas las tablas en ORM.
-
-11. **src/dashboard/server.py** — SQL dinámico con f-string en `api_offers`
-    - `where_sql = " AND ".join(wheres)` construido desde `request.args`. Los valores van parametrizados, pero si alguien añade `request.args.get("order_by")` directamente abre inyección SQL. Usar allowlist explícito de columnas filtrables.
-
-12. **src/pipeline/run.py** — `setup_logging()` añade handlers duplicados
-    - Si `run_pipeline()` se llama más de una vez (ej. tests), los handlers se acumulan y cada log se emite N veces. Fix: `logging.getLogger().handlers = []` antes de añadir, o comprobar `if not root_logger.handlers`.
-
-13. **`_extract_offer_id`** — Regex sobre el HTML completo (O(n) innecesario)
-    - Se pasa el HTML completo de la oferta (>100KB) cuando el ID ya está disponible en la URL que se pasó al scraper.
-
-### 🟡 Menores — Calidad y limpieza
-
-14. **requirements.txt** — `ruff` en producción
-    - `ruff==0.6.9` es herramienta de desarrollo. No debería estar en el mismo archivo que las dependencias de runtime. Lo correcto: `requirements-dev.txt` o `pyproject.toml` con `[project.optional-dependencies] dev = ["ruff"]`.
-
-15. **`MONTH_NAMES` definido en 3 sitios**
-    - `evaluate.py`, `candidate_profile.py`, e `infojobs_scraper.py` definen el mismo diccionario. Debería vivir en `src/utils/` como constante compartida.
-
-16. **`scripts/`** — Versiones muertas `reporte_v1` a `reporte_v6`
-    - Seis versiones acumuladas de scripts de reporte. Si no se usan, deben eliminarse (están en git, siempre recuperables).
-
-17. **`scraper_lab/`** — Scripts de fix one-off
-    - `fix_published_at.py`, `reparse_*.py` ya cumplieron su función. Mover a un branch de historia o eliminar del main.
-
-18. **src/db/models.py** — Docstring incorrecto
-    - `Única fuente de verdad: PERFIL.md` → incorrecto. La fuente de verdad del schema es `schema.sql`, no `PERFIL.md`.
-
-19. **requirements.txt** — Sin `uv.lock` o `requirements.lock`
-    - Pins con `==` dan reproducibilidad, pero sin lock file con hashes hay riesgo de supply chain. Aceptable para proyecto personal.
-
-### ✅ Lo que está bien — Reconocimiento explícito
-
-- **`CandidateProfile`** — el refactor es correcto: dataclass, single-pass parsing, `from_perfil`/`from_perfil_path`, `excerpt()`. Falta solo que `evaluate.py` lo use.
-- **`schema.sql`** — excelente: comentarios de diseño, FK dependency order explícito, `PRAGMA foreign_keys=ON`, `PRAGMA journal_mode=WAL`, índices bien colocados, `UNIQUE(offer_id)` en scraper_raw para idempotencia.
-- **`ollama_client.py`** — tenacity para reintentos, `_extract_json` con múltiples estrategias de extracción, métricas en `_metrics`, separación clara entre `_call_ollama_raw` y `ollama_call`.
-- **`InfoJobsParser`** — dataclasses `frozen=True` para `SearchStub` y `RawOfferDetail`. Parseable sin HTTP (testeable con snapshots HTML).
-- **`GAP_MULTIPLIER` y `RATING` como tablas fijas** — determinismo correcto. No usar LLM para umbrales numéricos es la decisión correcta.
-- **`WORK_MODE_CANONICAL`** — el fix estructural es la solución correcta: una sola constante, todos los consumers la comparten.
-- **Tests** — estructura unit/integration/manual, fixtures JSON como cassettes, 223 tests passing. Para un proyecto personal esto es excepcional.
-- **AGENTS.md + HANDOFF.md** — documentación de sesión de nivel profesional. El sistema de "fuente de verdad del candidato" y las reglas de cierre de sesión son prácticas maduras.
-
-### Tabla resumen de prioridades
-
-| # | Archivo | Problema | Prioridad |
-|---|---------|----------|-----------|
-| 1 | `models.py` | DB_PATH hardcodeado + engine global pre-env | 🔴 **✅ FIXED** |
-| 2 | `evaluate.py` | Duplica todo CandidateProfile | 🔴 |
-| 3 | `server.py` | Conexiones sin context manager | 🔴 |
-| 4 | `ollama_client.py` | OLLAMA_BASE_URL hardcodeado | 🔴 |
-| 5 | `send.py` | Sin validación de tokens vacíos | 🔴 |
-| 6 | Schema | match_score INTEGER vs float 0-1 | 🔴 **✅ NO BUG** |
-| 7 | `send.py` | range(1,6) vs /f1–/f3 docs | 🔴 **✅ FIXED** |
-| 8 | Todo | sys.path.insert x8 | 🟠 |
-| 9 | `migrate.py` | Duplica schema.sql | 🟠 |
-| 10 | `models.py` | ORM parcial (solo UserSettings) | 🟠 |
-| 11 | `server.py` | SQL dinámico sin allowlist | 🟠 |
-| 12 | `run.py` | Handler logging duplicado | 🟠 |
-| 13 | scraper | Regex HTML completo O(n) | 🟠 |
-| 14 | requirements.txt | ruff en producción | 🟡 |
-| 15 | Global | MONTH_NAMES x3 | 🟡 |
-| 16 | scripts/ | Versiones muertas v1–v6 | 🟡 |
-| 17 | scraper_lab/ | Scripts one-off | 🟡 |
-| 18 | models.py | Docstring incorrecto | 🟡 |
-| 19 | requirements.txt | Sin lock file | 🟡 |
+## Próximos pasos naturales
+1. Decidir si filtrar `apply_block` en `send.py` (geográfico como bloqueo vs penalización)
+2. Lock file (`uv lock` o `pip-compile --generate-hashes`)
+3. Coverage de tests para el dashboard

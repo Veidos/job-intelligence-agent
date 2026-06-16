@@ -5,6 +5,7 @@
 > T-10 ✅ — Dashboard test checklist completado (ADR-015)
 > **Sesión 2026-06-15 (v1):** Borrón y cuenta nueva, fixes scraper (403/dry-run/run_id/limit=0/published_at), pipeline completo 65 ofertas, 65 evaluadas, 3 "Aplicar" ✅
 > **Sesión 2026-06-15 (v2):** Dashboard work_mode — mapa canónico WORK_MODE_CANONICAL, normalización de variantes scraper, chart limpio con 3 categorías ✅
+> **Sesión 2026-06-16:** Dashboard fixes (recalcOffers antes que sparkline + guard Chart.js), send priority (recommendation→llm_signal→score), safari17 eliminado, evaluación de resultados pipeline ✅
 > **223 tests passing, pipeline funcional con scraper propio**
 
 ## FASE 1 — Cimientos
