@@ -215,12 +215,21 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
         log.warning("source_id vacío en RawOfferDetail, saltando")
         return False
 
-    skills_required = json.dumps(
-        {
-            "core": [{"name": s} for s in (detail.skills or [])],
-            "secondary": [],
-        }
-    )
+    # Skills del scraper (del <dl> de Requisitos) como base
+    base_skills = {"core": [{"name": s} for s in (detail.skills or [])], "secondary": []}
+
+    # Enriquecer con LLM que clasifica core vs secondary desde la descripción
+    try:
+        llm_item = {"title": detail.title or "", "description": detail.description_text or ""}
+        llm_result = extract_fields_with_llm(llm_item)
+        llm_skills = llm_result.get("skills_required")
+        if llm_skills and isinstance(llm_skills, dict):
+            skills_required = json.dumps(llm_skills)
+        else:
+            skills_required = json.dumps(base_skills)
+    except Exception:
+        log.warning("LLM enrichment failed for %s, usando skills base", detail.title)
+        skills_required = json.dumps(base_skills)
     raw_data = json.dumps(dataclasses.asdict(detail), ensure_ascii=False)
     now = datetime.now().isoformat()
 
