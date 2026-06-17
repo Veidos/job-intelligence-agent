@@ -398,7 +398,7 @@ def api_pipeline_runs():
                     THEN 1 ELSE 0 END)                            AS score_ge_35,
                 SUM(CASE WHEN e.match_score >= 50
                     THEN 1 ELSE 0 END)                            AS score_ge_50,
-                SUM(e.sent_via_telegram)                           AS sent,
+                SUM(COALESCE(e.sent_via_telegram, 0))               AS sent,
                 ROUND(AVG(e.match_score), 1)                      AS avg_score,
                 ROUND(AVG(e.skills_hard_match), 1)                AS avg_m_core,
                 ROUND(AVG(e.experience_match), 1)                 AS avg_f_exp,

@@ -948,34 +948,11 @@ function renderCharts() {
     },
     options: {
       responsive: true,
-      plugins: { title: { display: true, text: 'Recomendaci\u00f3n \u00d7 Relevance', color: '#e4e4e7' } },
+      plugins: {
+        legend: { position: 'top', labels: { color: '#e4e4e7', font: { size: 11 } } },
+        title: { display: true, text: 'Recomendaci\u00f3n \u00d7 Relevance', color: '#e4e4e7' },
+      },
       scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { color: '#8a8a95' } } },
-    },
-  });
-
-  // Signal by recommendation
-  const sigByRec = {};
-  data.forEach(d => {
-    const rec = d.recommendation || 'No aplicar';
-    const sig = d.llm_apply_signal || 'no';
-    if (!sigByRec[rec]) sigByRec[rec] = { yes: 0, maybe: 0, no: 0 };
-    if (sigByRec[rec][sig] != null) sigByRec[rec][sig]++;
-  });
-  destroyChart('chartSignalByRec');
-  charts.chartSignalByRec = new Chart($('chartSignalByRec'), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(sigByRec),
-      datasets: [
-        { label: 'Yes', data: Object.values(sigByRec).map(v => v.yes || 0), backgroundColor: '#22c55e' },
-        { label: 'Maybe', data: Object.values(sigByRec).map(v => v.maybe || 0), backgroundColor: '#eab308' },
-        { label: 'No', data: Object.values(sigByRec).map(v => v.no || 0), backgroundColor: '#ef4444' },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { title: { display: true, text: 'Se\u00f1al \u00d7 Recomendaci\u00f3n', color: '#e4e4e7' } },
-      scales: { x: {}, y: { beginAtZero: true, ticks: { color: '#8a8a95' } } },
     },
   });
 
@@ -1016,7 +993,10 @@ function renderCharts() {
     },
     options: {
       responsive: true,
-      plugins: { title: { display: true, text: 'Score promedio por fecha de publicaci\u00f3n', color: '#e4e4e7' } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Score promedio por fecha de publicaci\u00f3n', color: '#e4e4e7' },
+      },
       scales: { x: { ticks: { color: '#8a8a95', maxRotation: 45 } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
     },
   });
@@ -1087,7 +1067,10 @@ function renderSkillsCore(offers) {
 function renderSkillsSecondary(offers) {
   const { secondary } = computeSkillsData(offers);
   destroyChart('chartSkillsSecondary');
-  if (!secondary.length) return;
+  if (!secondary.length) {
+    $('chartSkillsSecondary').innerHTML = '<div class="empty-state-skills" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:32px;color:#a1a1aa;font-size:14px;">— Sin datos de skills secundarios en las ofertas analizadas</div>';
+    return;
+  }
   charts.chartSkillsSecondary = new Chart($('chartSkillsSecondary'), {
     type: 'bar',
     data: {
@@ -1407,7 +1390,7 @@ function renderCityModeChart(offers) {
       layout: { padding: { right: 16 } },
       plugins: {
         title: { display: true, text: 'Ofertas por localidad y modalidad', color: '#e4e4e7' },
-        legend: { position: 'right', labels: { color: '#e4e4e7', font: { size: 11 } } },
+        legend: { position: 'top', labels: { color: '#e4e4e7', font: { size: 11 } } },
       },
       scales: {
         x: { stacked: true, ticks: { color: '#8a8a95' }, beginAtZero: true },
@@ -1450,6 +1433,8 @@ function renderWorkModeChart(offers) {
 }
 
 /* ── Pipeline run ── */
+let _pipelineAllOffers = null;
+
 function loadPipelineRuns() {
   fetch('/api/pipeline-runs').then(r => r.json()).then(data => {
     if (!data.length) {
@@ -1458,15 +1443,35 @@ function loadPipelineRuns() {
     }
     const sel = $('pipelineRunDate');
     sel.innerHTML = data.map(d => `<option value="${d.run_date}">${d.run_date}</option>`).join('');
+
+    function onRun(run) {
+      renderPipelineRun(run, data);
+      if (_pipelineAllOffers) {
+        const runOffers = _pipelineAllOffers.filter(o =>
+          o.evaluated_at && o.evaluated_at.startsWith(run.run_date)
+        );
+        renderScatterChart(runOffers);
+        renderSignalRecomChart(runOffers);
+      }
+    }
+
     sel.onchange = function () {
       const run = data.find(d => d.run_date === this.value);
-      if (run) renderPipelineRun(run);
+      if (run) onRun(run);
     };
-    renderPipelineRun(data[0]);
+
+    if (_pipelineAllOffers) {
+      onRun(data[0]);
+    } else {
+      fetch('/api/offers').then(r => r.json()).then(offers => {
+        _pipelineAllOffers = offers;
+        onRun(data[0]);
+      });
+    }
   });
 }
 
-function renderPipelineRun(run) {
+function renderPipelineRun(run, allRuns) {
   $('pipelineRunLabel').textContent = `Último: ${run.run_date}`;
 
   // ── Funnel ──
@@ -1501,12 +1506,17 @@ function renderPipelineRun(run) {
 
   // ── Actionable offers table ──
   renderActionableTable(run);
+
+  // ── Summary table ──
+  if (allRuns) renderPipelineRunsTable(allRuns);
 }
 
 function renderCompBandsChart(run) {
   if (typeof Chart === 'undefined') return;
   const bands = run.bands || [];
   if (!bands.length) return;
+  const bandOrder = { lt_30: 0, grey: 1, gt_50: 2 };
+  bands.sort((a, b) => (bandOrder[a.band] ?? 99) - (bandOrder[b.band] ?? 99));
 
   const labels = bands.map(b => ({ lt_30: '<30', grey: '30–49', gt_50: '50+' })[b.band] || b.band);
   const mCore    = bands.map(b => b.m_core);
@@ -1521,10 +1531,10 @@ function renderCompBandsChart(run) {
     data: {
       labels,
       datasets: [
-        { label: 'M_core', data: mCore, backgroundColor: '#6366f1' },
-        { label: 'F_exp',  data: fExp,  backgroundColor: '#22c55e' },
-        { label: 'Ubic.',  data: loc,   backgroundColor: '#eab308' },
-        { label: 'Mercado',data: market,backgroundColor: '#f97316' },
+        { label: 'Skills core', data: mCore, backgroundColor: '#6366f1' },
+        { label: 'Experiencia', data: fExp,  backgroundColor: '#22c55e' },
+        { label: 'Ubicación',   data: loc,   backgroundColor: '#eab308' },
+        { label: 'Fit cultural',data: market,backgroundColor: '#f97316' },
       ],
     },
     options: {
@@ -1659,6 +1669,140 @@ function renderActionableTable(run) {
       <tbody>${rows}</tbody>
     </table>
   `;
+}
+
+function renderScatterChart(offers) {
+  if (typeof Chart === 'undefined') return;
+  if (!offers.length) return;
+  const colors = { yes: '#22c55e', maybe: '#eab308', no: '#ef4444' };
+  const labels = { yes: 'Sí', maybe: 'Quizás', no: 'No' };
+  const datasets = ['yes', 'maybe', 'no'].map(signal => ({
+    label: labels[signal],
+    data: offers.filter(o => o.llm_apply_signal === signal).map(o => ({
+      x: (o.M_core ?? 0) * 100,
+      y: (o.F_fit ?? 0) * 100,
+      title: o.title,
+      company: o.company_name,
+      score: o.match_score,
+    })),
+    backgroundColor: colors[signal],
+    borderColor: colors[signal],
+    pointRadius: 5,
+  }));
+  destroyChart('chartScatterMcoreFfit');
+  charts.chartScatterMcoreFfit = new Chart($('chartScatterMcoreFfit'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#e4e4e7', font: { size: 11 } },
+          onClick: null,
+        },
+        tooltip: {
+          callbacks: {
+            title() { return ''; },
+            label(ctx) {
+              const p = ctx.raw;
+              return `${p.title} — ${p.company} (Score: ${p.score})`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          min: 0, max: 100,
+          title: { display: true, text: 'Skills core (%)', color: '#e4e4e7' },
+          ticks: { color: '#8a8a95' },
+        },
+        y: {
+          min: 0, max: 100,
+          title: { display: true, text: 'Fit cultural (%)', color: '#e4e4e7' },
+          ticks: { color: '#8a8a95' },
+        },
+      },
+    },
+    plugins: [{
+      id: 'diagonalLine',
+      beforeDraw(chart) {
+        const ctx = chart.ctx;
+        const xS = chart.scales.x;
+        const yS = chart.scales.y;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(xS.getPixelForValue(0), yS.getPixelForValue(0));
+        ctx.lineTo(xS.getPixelForValue(100), yS.getPixelForValue(100));
+        ctx.stroke();
+        ctx.restore();
+      },
+    }],
+  });
+}
+
+function renderSignalRecomChart(offers) {
+  if (typeof Chart === 'undefined') return;
+  if (!offers.length) return;
+  const recOrder = ['Prioritario', 'Aplicar', 'Con expectativas bajas', 'No aplicar'];
+  const signals = ['yes', 'maybe', 'no'];
+  const colors = { yes: '#22c55e', maybe: '#eab308', no: '#ef4444' };
+  const labels = { yes: 'Sí', maybe: 'Quizás', no: 'No' };
+  const counts = {};
+  offers.forEach(o => {
+    const rec = o.recommendation || 'Sin recom.';
+    const sig = o.llm_apply_signal || 'no';
+    if (!counts[rec]) counts[rec] = { yes: 0, maybe: 0, no: 0 };
+    counts[rec][sig]++;
+  });
+  const availRecs = recOrder.filter(r => counts[r]);
+  destroyChart('chartSignalRecom');
+  charts.chartSignalRecom = new Chart($('chartSignalRecom'), {
+    type: 'bar',
+    data: {
+      labels: availRecs,
+      datasets: signals.map(sig => ({
+        label: labels[sig],
+        data: availRecs.map(r => counts[r][sig] || 0),
+        backgroundColor: colors[sig],
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#e4e4e7', font: { size: 11 } } },
+      },
+      scales: {
+        x: { ticks: { color: '#8a8a95' } },
+        y: { beginAtZero: true, ticks: { color: '#8a8a95', stepSize: 1 } },
+      },
+    },
+  });
+}
+
+function renderPipelineRunsTable(allRuns) {
+  const cols = [
+    { key: 'run_date', label: 'Fecha' },
+    { key: 'fetched', label: 'Captadas' },
+    { key: 'classified', label: 'Clasificadas' },
+    { key: 'evaluated', label: 'Evaluadas' },
+    { key: 'score_ge_50', label: '≥50 pts' },
+    { key: 'sent', label: 'Enviadas' },
+    { key: 'avg_score', label: 'Score medio' },
+  ];
+  const html = `
+    <table>
+      <thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+      <tbody>${allRuns.map(r => `
+        <tr>${cols.map(c => `<td>${r[c.key] ?? '\u2014'}</td>`).join('')}</tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+  $('pipelineRunsTable').innerHTML = html;
 }
 
 /* ── Init ── */
