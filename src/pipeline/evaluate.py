@@ -391,6 +391,8 @@ def _build_evaluation_params(
     final_score: float,
     recommendation: str,
     processing_ms: int,
+    w_core: float = W_CORE,
+    w_sec: float = W_SEC,
 ) -> tuple:
     final_dict = final or {}
     return (
@@ -407,10 +409,11 @@ def _build_evaluation_params(
                 "F_exp": round(F_exp, 4),
                 "F_fit": round(F_fit, 4),
                 "weights": {
-                    "W_CORE": W_CORE,
-                    "W_SEC": W_SEC,
+                    "W_CORE": w_core,
+                    "W_SEC": w_sec,
                     "W_EXP": W_EXP,
                     "W_FIT": W_FIT,
+                    "secondary_redistributed": w_sec == 0.0,
                 },
                 "skill_detail": skill_detail,
             },
@@ -485,6 +488,8 @@ def save_evaluation(
     recommendation: str,
     processing_ms: int,
     partial: bool = False,
+    w_core: float = W_CORE,
+    w_sec: float = W_SEC,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
@@ -502,6 +507,8 @@ def save_evaluation(
         final_score,
         recommendation,
         processing_ms,
+        w_core=w_core,
+        w_sec=w_sec,
     )
 
     existing = cur.execute(
@@ -620,6 +627,11 @@ def run_evaluate(limit: int = 10) -> dict:
             # Parsear skills de la oferta (backward-compat con legacy flat array)
             offer_skills = parse_skills_required(offer.get("skills_required"))
 
+            # Pesos dinámicos: si no hay skills secundarias, redistribuir W_SEC a M_core
+            has_secondary = bool(offer_skills.get("secondary"))
+            w_core = W_CORE + W_SEC if not has_secondary else W_CORE
+            w_sec = 0.0 if not has_secondary else W_SEC
+
             # Paso 1: LLM detecta presencia de skills (sin inventar números)
             technical_llm = evaluate_technical(offer, candidate_skills_map)
 
@@ -676,7 +688,7 @@ def run_evaluate(limit: int = 10) -> dict:
             final_score = round(
                 min(
                     max(
-                        W_CORE * M_core + W_SEC * M_sec + W_EXP * F_exp + W_FIT * F_fit,
+                        w_core * M_core + w_sec * M_sec + W_EXP * F_exp + W_FIT * F_fit,
                         0.0,
                     ),
                     1.0,
@@ -703,6 +715,8 @@ def run_evaluate(limit: int = 10) -> dict:
                 recommendation,
                 ms,
                 partial=True,
+                w_core=w_core,
+                w_sec=w_sec,
             )
 
             # Paso 6: Validación final (relevance + bloqueos)

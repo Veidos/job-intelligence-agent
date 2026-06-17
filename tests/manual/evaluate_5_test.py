@@ -168,10 +168,13 @@ def run():
             )
 
             # Paso 5: Score final
+            has_secondary = bool(offer_skills.get("secondary"))
+            w_core = W_CORE + W_SEC if not has_secondary else W_CORE
+            w_sec = 0.0 if not has_secondary else W_SEC
             final_score = round(
                 min(
                     max(
-                        W_CORE * M_core + W_SEC * M_sec + W_EXP * F_exp + W_FIT * F_fit,
+                        w_core * M_core + w_sec * M_sec + W_EXP * F_exp + W_FIT * F_fit,
                         0.0,
                     ),
                     1.0,
@@ -181,7 +184,7 @@ def run():
             recommendation = get_rating(final_score)
             log.info(f"  Step 5: Score={final_score:.4f} → {recommendation}")
             log.info(
-                f"    Desglose: core={W_CORE * M_core:.4f} + sec={W_SEC * M_sec:.4f} + exp={W_EXP * F_exp:.4f} + fit={W_FIT * F_fit:.4f}"
+                f"    Desglose: core={w_core * M_core:.4f} + sec={w_sec * M_sec:.4f} + exp={W_EXP * F_exp:.4f} + fit={W_FIT * F_fit:.4f}"
             )
 
             ms = int((time.monotonic() - t0) * 1000)
@@ -201,6 +204,8 @@ def run():
                 recommendation,
                 ms,
                 partial=True,
+                w_core=w_core,
+                w_sec=w_sec,
             )
 
             # Paso 6: Validación final
