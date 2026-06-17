@@ -474,3 +474,40 @@ tr td:first-child { padding-left: 14px; }
   color: var(--accent);
 }
 .btn-link-icon:hover { opacity: .7; }
+
+/* ── Pipeline run select ── */
+.pipeline-run-select {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.pipeline-run-select label { font-size: 13px; color: var(--text2); }
+.pipeline-run-select select {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 12px; font-size: 13px;
+}
+
+/* ── Funnel ── */
+.funnel-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow-x: auto; margin-bottom: 16px;
+}
+.funnel-step {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 80px; text-align: center;
+}
+.funnel-step .val {
+  font-size: 22px; font-weight: 700; color: var(--text);
+}
+.funnel-step .pct {
+  font-size: 11px; color: var(--text2); margin-top: 2px;
+}
+.funnel-step .label {
+  font-size: 11px; color: var(--text2); margin-top: 4px;
+  white-space: nowrap;
+}
+.funnel-arrow {
+  color: var(--text2); font-size: 16px; margin: 0 6px;
+  flex-shrink: 0;
+}

@@ -1,37 +1,46 @@
 # HANDOFF.md — Estado de sesión
 
 **Última actualización:** 2026-06-17
-**Fase activa:** Date scope + fallback histórico en send.py
+**Fase activa:** Pipeline Run dashboard + análisis de datos
 
-## Cambios de la sesión actual (2026-06-17)
+## Logros de la sesión
 
-### Pipeline ejecutado (2026-06-16)
-- **Fetch:** 27 nuevas (safari17 fix OK)
-- **Classify:** 27 clasificadas: 18 stretch, 9 adjacent. 2 roles nuevos (data_governance_analyst, medical_specialist)
-- **Enrich:** 8 nuevas, 11 actualizadas, 0 errores
-- **Evaluate:** 27 evaluadas, 0 errores, 114 LLM calls, score avg 0.269
-- **Send:** 3 ofertas (Ing. industrial 63, Ing. procesos 58, Data Tech Analyst 52)
-- **Pipeline:** 107 min
+### 1. Date scope + fallback histórico (send.py)
+- `get_top_offers(date_scope='latest')` filtra por `MAX(date(fetched_at))`
+- `send_daily()`: intenta últimas ofertas; si no hay, cae a backlog histórico con header y fecha visibles
+- 3 tests nuevos, 225 total
 
-### Fix: Date scope + fallback histórico en send.py
-- **Problema:** `get_top_offers()` mezclaba ofertas de distintos días. "Ingeniero de redacción de patentes" (score 36, 2026-06-11, signal=yes) se envió antes que "Data - Technology Analyst Junior" (score 52, 2026-06-16, signal=maybe) porque `llm_apply_signal='yes'` pesaba más que la fecha.
-- **Fix:**
-  - `get_top_offers(date_scope='latest')` filtra por `MAX(date(fetched_at))` — solo ofertas del día más reciente
-  - `get_top_offers(date_scope='all')` mantiene comportamiento anterior (sin filtro de fecha)
-  - `send_daily()` intenta `'latest'` primero; si no hay ofertas, cae a `'all'` como fallback histórico
-  - Ofertas del fallback llevan `📅 fecha` visible y header "Hoy no hay ofertas nuevas que encajen, pero estas de días anteriores merecen un vistazo:"
-  - Si no hay ofertas en absoluto: "Sin ofertas relevantes disponibles."
-- **Archivo:** `src/telegram/send.py`
-- **3 tests nuevos:** `test_get_top_offers_date_scope_latest`, `test_get_top_offers_date_scope_all`, más el existente `test_top_offers_excluye_bajo_score`
+### 2. Pipeline Run dashboard (nueva pestaña)
+Nuevo botón **Pipeline** en el nav del dashboard con:
 
-### Tests
-- **225 tests passing** (+2)
-- **Ruff:** 0 errores nuevos (7 pre-existentes en otros archivos)
+- **Selector de ejecución**: dropdown con todas las fechas de run, default al último
+- **Funnel horizontal**: Fetch → Clasif. → Eval. → ≥35 → ≥50 → Enviadas, cada paso con número + % acumulado
+- **Componentes por banda**: barras agrupadas <30 / 30–49 / 50+ con M_core, F_exp, Ubic., Mercado — valores numéricos sobre cada barra
+- **Compatibilidad con el entorno (F_fit)**: stacked bar con tooltip de % por categoría alta/media/baja
+- **Tabla de accionables**: ofertas score ≥ 50 sin apply_block, con enlace a detalle
 
-## Comandos principales
+### 3. Análisis de scoring (hallazgos)
+- **Cuello de botella: M_core** — skills_hard_match pasa de 7.5 (<30) a 75.5 (50+), es el factor que realmente discrimina
+- **F_fit no discrimina** — environment_compatibility es plana entre bandas de score
+- **Ubicación penaliza parejo** — location_match plano (38-43) sin correlación con score
+
+## Archivos tocados
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/dashboard/server.py` | + endpoint `GET /api/pipeline-runs` (stats agrupadas por fecha) |
+| `src/dashboard/templates/dashboard.html` | + nav link "Pipeline" + section con funnel/charts/tabla |
+| `src/dashboard/static/app.js` | + `loadPipelineRuns()` + `renderPipelineRun()` + sub-renderers |
+| `src/dashboard/static/style.css` | + estilos `.pipeline-run-select`, `.funnel-row`, `.funnel-step` |
+
+## Tests
+- **225 tests passing** (sin cambios en tests — funcionalidad nueva)
+- **Ruff:** 0 errores nuevos
+
+## Comandos
 ```bash
+python src/dashboard/server.py                # Dashboard en :8080 (incluye pestaña Pipeline)
 python src/pipeline/run.py                    # Pipeline completo
-python src/dashboard/server.py                # Dashboard en :8080
 ruff check src/ && ruff format src/ --check   # Lint
 pytest tests/ -q                              # Tests
 ```

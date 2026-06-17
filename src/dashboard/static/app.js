@@ -25,6 +25,7 @@ document.querySelectorAll('.nav-link').forEach(el => {
     switchTab(el.dataset.section);
     if (el.dataset.section === 'aplicaciones') loadApplications();
     if (el.dataset.section === 'empresas') loadCompanies();
+    if (el.dataset.section === 'pipeline') loadPipelineRuns();
     if (el.dataset.section === 'monitor') {
       loadStats(); renderCharts(); loadRuns();
       fetch('/api/applications').then(r => r.json()).then(apps => {
@@ -1446,6 +1447,218 @@ function renderWorkModeChart(offers) {
       scales: { x: { ticks: { color: '#8a8a95' } }, y: { beginAtZero: true, ticks: { color: '#8a8a95' } } },
     },
   });
+}
+
+/* ── Pipeline run ── */
+function loadPipelineRuns() {
+  fetch('/api/pipeline-runs').then(r => r.json()).then(data => {
+    if (!data.length) {
+      $('pipelineRunLabel').textContent = 'Sin datos';
+      return;
+    }
+    const sel = $('pipelineRunDate');
+    sel.innerHTML = data.map(d => `<option value="${d.run_date}">${d.run_date}</option>`).join('');
+    sel.onchange = function () {
+      const run = data.find(d => d.run_date === this.value);
+      if (run) renderPipelineRun(run);
+    };
+    renderPipelineRun(data[0]);
+  });
+}
+
+function renderPipelineRun(run) {
+  $('pipelineRunLabel').textContent = `Último: ${run.run_date}`;
+
+  // ── Funnel ──
+  const steps = [
+    { key: 'fetched',    label: 'Fetch' },
+    { key: 'classified', label: 'Clasif.' },
+    { key: 'evaluated',  label: 'Eval.' },
+    { key: 'score_ge_35', label: '≥35' },
+    { key: 'score_ge_50', label: '≥50' },
+    { key: 'sent',       label: 'Enviadas' },
+  ];
+  const funnelHtml = steps.map((s, i) => {
+    const val = run[s.key];
+    const base = run.fetched || 1;
+    const pct = i === 0 ? '100%' : (base ? `${(val / base * 100).toFixed(0)}%` : '0%');
+    return `
+      <div class="funnel-step">
+        <div class="val">${val}</div>
+        <div class="pct">${pct}</div>
+        <div class="label">${s.label}</div>
+      </div>
+      ${i < steps.length - 1 ? '<div class="funnel-arrow">→</div>' : ''}
+    `;
+  }).join('');
+  $('pipelineFunnel').innerHTML = funnelHtml;
+
+  // ── Component bands chart ──
+  renderCompBandsChart(run);
+
+  // ── Environment compatibility chart ──
+  renderEnvCompatChart(run);
+
+  // ── Actionable offers table ──
+  renderActionableTable(run);
+}
+
+function renderCompBandsChart(run) {
+  if (typeof Chart === 'undefined') return;
+  const bands = run.bands || [];
+  if (!bands.length) return;
+
+  const labels = bands.map(b => ({ lt_30: '<30', grey: '30–49', gt_50: '50+' })[b.band] || b.band);
+  const mCore    = bands.map(b => b.m_core);
+  const fExp     = bands.map(b => b.f_exp);
+  const loc      = bands.map(b => b.loc);
+  const market   = bands.map(b => b.market);
+  const counts   = bands.map(b => b.n);
+
+  destroyChart('chartCompBands');
+  charts.chartCompBands = new Chart($('chartCompBands'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'M_core', data: mCore, backgroundColor: '#6366f1' },
+        { label: 'F_exp',  data: fExp,  backgroundColor: '#22c55e' },
+        { label: 'Ubic.',  data: loc,   backgroundColor: '#eab308' },
+        { label: 'Mercado',data: market,backgroundColor: '#f97316' },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: `Componentes promedio por banda (n: ${counts.join(', ')})`,
+          color: '#e4e4e7',
+        },
+        legend: { labels: { color: '#e4e4e7', font: { size: 11 } } },
+      },
+      scales: {
+        x: { ticks: { color: '#8a8a95' } },
+        y: { beginAtZero: true, max: 100, ticks: { color: '#8a8a95', callback: v => v + '%' } },
+      },
+    },
+    plugins: [{
+      id: 'barLabels',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, dsIdx) => {
+          const meta = chart.getDatasetMeta(dsIdx);
+          meta.data.forEach((bar, idx) => {
+            const v = ds.data[idx];
+            if (v == null || v === 0) return;
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(v, bar.x, bar.y - 2);
+          });
+        });
+      },
+    }],
+  });
+}
+
+function renderEnvCompatChart(run) {
+  if (typeof Chart === 'undefined') return;
+  const env = run.env_compat || {};
+  const labels = Object.keys(env);
+  const vals = Object.values(env);
+  const total = vals.reduce((a, b) => a + b, 0);
+  if (!total) return;
+  const colors = { alta: '#22c55e', media: '#eab308', baja: '#ef4444' };
+
+  destroyChart('chartEnvCompat');
+  charts.chartEnvCompat = new Chart($('chartEnvCompat'), {
+    type: 'bar',
+    data: {
+      labels: ['Ajuste del entorno'],
+      datasets: labels.map(l => ({
+        label: l,
+        data: [env[l]],
+        backgroundColor: colors[l] || '#6366f1',
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        title: { display: true, text: 'Compatibilidad con el entorno (F_fit)', color: '#e4e4e7' },
+        legend: { labels: { color: '#e4e4e7', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const pct = ((ctx.raw / total) * 100).toFixed(0);
+              return `${ctx.dataset.label}: ${ctx.raw} (${pct}%)`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#8a8a95', callback: v => v + '' } },
+        y: { stacked: true, ticks: { color: '#8a8a95' } },
+      },
+    },
+    plugins: [{
+      id: 'envPercentLabels',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta.data.length) return;
+        const totalW = chart.chartArea.right - chart.chartArea.left;
+        let xOff = 0;
+        chart.data.datasets.forEach((ds, dsIdx) => {
+          const m = chart.getDatasetMeta(dsIdx);
+          const bar = m.data[0];
+          if (!bar) return;
+          const w = bar.width || 20;
+          const pct = ((ds.data[0] / total) * 100).toFixed(0);
+          if (pct < 8) return;
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${pct}%`, bar.x, bar.y);
+          xOff += w;
+        });
+      },
+    }],
+  });
+}
+
+function renderActionableTable(run) {
+  const items = run.actionable || [];
+  const tbody = $('pipelineActionable');
+  if (!items.length) {
+    tbody.innerHTML = '<p style="color:var(--text2);padding:12px">Sin ofertas accionables en esta ejecución.</p>';
+    return;
+  }
+  const rows = items.map(o => `
+    <tr>
+      <td class="num">${o.match_score}</td>
+      <td><a href="#" onclick="openOffer(${o.id});return false">${o.title}</a></td>
+      <td>${o.company_name}</td>
+      <td>${o.city || '\u2014'}</td>
+      <td>${o.work_mode || '\u2014'}</td>
+      <td>${recTag(o.recommendation)}</td>
+      <td>${signalTag(o.llm_apply_signal)}</td>
+    </tr>
+  `).join('');
+  tbody.innerHTML = `
+    <table>
+      <thead><tr>
+        <th class="num">Score</th><th>Título</th><th>Empresa</th>
+        <th>Ubicación</th><th>Modalidad</th><th>Recom.</th><th>Señal</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
 }
 
 /* ── Init ── */

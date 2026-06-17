@@ -380,6 +380,133 @@ def api_runs():
     return jsonify(rows)
 
 
+@app.route("/api/pipeline-runs")
+def api_pipeline_runs():
+    with contextlib.closing(get_connection()) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        # --- aggregated stats per run date ---
+        rows = _rows(cur.execute("""
+            SELECT
+                date(o.fetched_at) as run_date,
+                COUNT(*)                                          AS fetched,
+                SUM(CASE WHEN o.relevance_flag IS NOT NULL
+                    THEN 1 ELSE 0 END)                            AS classified,
+                SUM(o.is_evaluated)                               AS evaluated,
+                SUM(CASE WHEN e.match_score >= 35
+                    THEN 1 ELSE 0 END)                            AS score_ge_35,
+                SUM(CASE WHEN e.match_score >= 50
+                    THEN 1 ELSE 0 END)                            AS score_ge_50,
+                SUM(e.sent_via_telegram)                           AS sent,
+                ROUND(AVG(e.match_score), 1)                      AS avg_score,
+                ROUND(AVG(e.skills_hard_match), 1)                AS avg_m_core,
+                ROUND(AVG(e.experience_match), 1)                 AS avg_f_exp,
+                ROUND(AVG(e.location_match), 1)                   AS avg_location,
+                ROUND(AVG(e.market_competitiveness), 1)           AS avg_market
+            FROM offers o
+            JOIN offer_evaluations e ON o.id = e.offer_id
+            WHERE e.match_score IS NOT NULL
+            GROUP BY run_date
+            ORDER BY run_date DESC
+        """))
+
+        # --- environment_compatibility breakdown per run ---
+        env_rows = _rows(cur.execute("""
+            SELECT
+                date(o.fetched_at) as run_date,
+                e.environment_compatibility as env,
+                COUNT(*) as cnt
+            FROM offer_evaluations e
+            JOIN offers o ON o.id = e.offer_id
+            WHERE e.match_score IS NOT NULL
+              AND e.environment_compatibility IS NOT NULL
+            GROUP BY run_date, env
+            ORDER BY run_date DESC, env
+        """))
+        env_by_run: dict[str, dict[str, int]] = {}
+        for r in env_rows:
+            env_by_run.setdefault(r["run_date"], {})[r["env"]] = r["cnt"]
+
+        # --- component bands per run ---
+        band_rows = _rows(cur.execute("""
+            SELECT
+                date(o.fetched_at) as run_date,
+                CASE
+                    WHEN e.match_score < 30  THEN 'lt_30'
+                    WHEN e.match_score < 50  THEN 'grey'
+                    ELSE                          'gt_50'
+                END as band,
+                COUNT(*)                                     AS n,
+                ROUND(AVG(e.skills_hard_match), 1)           AS m_core,
+                ROUND(AVG(e.experience_match), 1)            AS f_exp,
+                ROUND(AVG(e.location_match), 1)              AS loc,
+                ROUND(AVG(e.market_competitiveness), 1)      AS market
+            FROM offer_evaluations e
+            JOIN offers o ON o.id = e.offer_id
+            WHERE e.match_score IS NOT NULL
+            GROUP BY run_date, band
+            ORDER BY run_date DESC, band
+        """))
+        bands_by_run: dict[str, list] = {}
+        for r in band_rows:
+            bands_by_run.setdefault(r["run_date"], []).append({
+                "band": r["band"],
+                "n": r["n"],
+                "m_core": r["m_core"],
+                "f_exp": r["f_exp"],
+                "loc": r["loc"],
+                "market": r["market"],
+            })
+
+        # --- actionable offers (score >= 50, no block) per run ---
+        act_rows = _rows(cur.execute("""
+            SELECT
+                o.id, o.title, o.company_name, o.city, o.work_mode,
+                e.match_score, e.recommendation, e.llm_apply_signal,
+                date(o.fetched_at) as run_date
+            FROM offer_evaluations e
+            JOIN offers o ON o.id = e.offer_id
+            WHERE e.match_score >= 50
+              AND (e.apply_block IS NULL OR e.apply_block = '')
+            ORDER BY o.fetched_at DESC, e.match_score DESC
+        """))
+        actionable_by_run: dict[str, list] = {}
+        for r in act_rows:
+            actionable_by_run.setdefault(r["run_date"], []).append({
+                "id": r["id"],
+                "title": r["title"],
+                "company_name": r["company_name"],
+                "city": r["city"],
+                "work_mode": r["work_mode"],
+                "match_score": r["match_score"],
+                "recommendation": r["recommendation"],
+                "llm_apply_signal": r["llm_apply_signal"],
+            })
+
+    result = []
+    for r in rows:
+        rd = r["run_date"]
+        result.append({
+            "run_date": rd,
+            "fetched": r["fetched"],
+            "classified": r["classified"],
+            "evaluated": r["evaluated"],
+            "score_ge_35": r["score_ge_35"],
+            "score_ge_50": r["score_ge_50"],
+            "sent": r["sent"],
+            "avg_score": r["avg_score"],
+            "avg_m_core": r["avg_m_core"],
+            "avg_f_exp": r["avg_f_exp"],
+            "avg_location": r["avg_location"],
+            "avg_market": r["avg_market"],
+            "env_compat": env_by_run.get(rd, {}),
+            "bands": bands_by_run.get(rd, []),
+            "actionable": actionable_by_run.get(rd, []),
+        })
+    return jsonify(result)
+
+
 # ── Serve static files & SPA ──────────────────────────────────────────
 STATIC_DIR = Path(__file__).parent / "static"
 TEMPLATE_DIR = Path(__file__).parent / "templates"

@@ -14,6 +14,7 @@
     <a href="#" class="nav-link active" data-section="ofertas">Ofertas</a>
     <a href="#" class="nav-link" data-section="aplicaciones">Aplicaciones</a>
     <a href="#" class="nav-link" data-section="empresas">Empresas</a>
+    <a href="#" class="nav-link" data-section="pipeline">Pipeline</a>
     <a href="#" class="nav-link" data-section="monitor">Monitor</a>
   </div>
 </nav>
@@ -134,6 +135,31 @@
         <tbody id="companiesTbody"></tbody>
       </table>
     </div>
+  </section>
+
+  <!-- === PIPELINE === -->
+  <section id="section-pipeline" class="section">
+    <div class="section-header">
+      <h2>Pipeline</h2>
+      <span id="pipelineRunLabel" class="count-badge"></span>
+    </div>
+
+    <div class="pipeline-run-select" id="pipelineRunSelect">
+      <label for="pipelineRunDate">Ejecución:</label>
+      <select id="pipelineRunDate"></select>
+    </div>
+
+    <h3 class="monitor-section-title">Embudo</h3>
+    <div class="funnel-row" id="pipelineFunnel"></div>
+
+    <h3 class="monitor-section-title">Componentes por banda de score</h3>
+    <div class="charts-grid">
+      <div class="chart-box chart-box-tall"><canvas id="chartCompBands"></canvas></div>
+      <div class="chart-box"><canvas id="chartEnvCompat"></canvas></div>
+    </div>
+
+    <h3 class="monitor-section-title">Ofertas accionables (score ≥ 50, sin bloqueo)</h3>
+    <div id="pipelineActionable" class="table-wrap"></div>
   </section>
 
   <!-- === MONITOR === -->
