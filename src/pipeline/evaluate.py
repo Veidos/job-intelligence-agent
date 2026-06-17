@@ -288,16 +288,16 @@ PERFIL DEL CANDIDATO:
 OFERTA:
 Título: {offer["title"]} | Empresa: {offer["company_name"]}
 Sector empresa: {company_sector or "desconocido"} | Tamaño: {company_size or "desconocido"}
-Ubicación: {offer.get("city")} | Modalidad: {offer.get("work_mode")}
 Descripción: {(offer.get("description_clean") or "")[:1200]}
 
 EVALÚA el context_fit (0.0-1.0) considerando SOLO:
 - ¿La cultura/sector de la empresa es compatible con el perfil del candidato?
-- ¿La modalidad y ubicación son viables?
 - ¿El perfil personal (motivación, reconversión, TDAH) encaja con el entorno laboral?
 - ¿La empresa suele contratar perfiles de reconversión para este tipo de rol?
 
 NO penalices el gap ni las skills — eso ya está capturado en los scores técnicos.
+NO penalices ubicación ni modalidad en context_fit. La geografía ya está
+capturada en otro componente del score. Evalúa SOLO cultura, sector y fit personal.
 
 Devuelve SOLO este JSON:
 {{
@@ -354,7 +354,8 @@ TAREA 2 — DETECTAR BLOQUEOS REALES:
 Bloqueo real = requisito que hace inviable la candidatura independientemente del score.
 Ejemplos: convenio prácticas universitarias, certificado discapacidad obligatorio,
 nacionalidad legal, titulación académica obligatoria que el candidato no posee.
-NO son bloqueos: falta de experiencia, skills no dominadas, gap laboral.
+NO son bloqueos: falta de experiencia, skills no dominadas, gap laboral,
+incompatibilidad geográfica o de modalidad, preferencia por candidatos locales.
 
 Responde SOLO este JSON:
 {{
