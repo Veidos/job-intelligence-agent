@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -380,3 +379,81 @@ class TestPipelineTelegramFormatting:
         assert len(rows) == 1
         assert rows[0][0] == "Oferta Alta"
         assert rows[0][1] == 75
+
+    def test_get_top_offers_date_scope_latest(self, test_db, test_conn):
+        from src.telegram.send import get_top_offers
+
+        now = "2026-06-16 12:00:00"
+        yesterday = "2026-06-15 12:00:00"
+
+        test_db.execute(
+            "INSERT INTO offers (source_id, title, company_name, city, work_mode, "
+            "description_clean, skills_required, is_evaluated, is_active, relevance_flag, fetched_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("D1-OF1", "Hoy Data Analyst", "Corp", "Madrid", "Remoto", "Desc", "[]", 1, 1, "core", now),
+        )
+        oid_today = test_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        test_db.execute(
+            "INSERT INTO offer_evaluations (offer_id, match_score, recommendation, sent_via_telegram) "
+            "VALUES (?, ?, ?, 0)",
+            (oid_today, 55, "Con expectativas bajas"),
+        )
+
+        test_db.execute(
+            "INSERT INTO offers (source_id, title, company_name, city, work_mode, "
+            "description_clean, skills_required, is_evaluated, is_active, relevance_flag, fetched_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("D1-OF2", "Ayer Data Analyst", "Corp", "Madrid", "Remoto", "Desc", "[]", 1, 1, "core", yesterday),
+        )
+        oid_yesterday = test_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        test_db.execute(
+            "INSERT INTO offer_evaluations (offer_id, match_score, recommendation, sent_via_telegram) "
+            "VALUES (?, ?, ?, 0)",
+            (oid_yesterday, 72, "Aplicar"),
+        )
+
+        with patch("src.telegram.send.get_connection", return_value=test_conn):
+            result = get_top_offers(max_offers=5, date_scope='latest')
+
+        assert len(result) == 1
+        assert result[0]["title"] == "Hoy Data Analyst"
+        assert result[0]["match_score"] == 55
+
+    def test_get_top_offers_date_scope_all(self, test_db, test_conn):
+        from src.telegram.send import get_top_offers
+
+        now = "2026-06-16 12:00:00"
+        yesterday = "2026-06-15 12:00:00"
+
+        test_db.execute(
+            "INSERT INTO offers (source_id, title, company_name, city, work_mode, "
+            "description_clean, skills_required, is_evaluated, is_active, relevance_flag, fetched_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("D2-OF1", "Hoy Oferta", "Corp", "Madrid", "Remoto", "Desc", "[]", 1, 1, "core", now),
+        )
+        oid_today = test_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        test_db.execute(
+            "INSERT INTO offer_evaluations (offer_id, match_score, recommendation, sent_via_telegram) "
+            "VALUES (?, ?, ?, 0)",
+            (oid_today, 60, "Aplicar"),
+        )
+
+        test_db.execute(
+            "INSERT INTO offers (source_id, title, company_name, city, work_mode, "
+            "description_clean, skills_required, is_evaluated, is_active, relevance_flag, fetched_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("D2-OF2", "Ayer Oferta", "Corp", "Madrid", "Remoto", "Desc", "[]", 1, 1, "core", yesterday),
+        )
+        oid_yesterday = test_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        test_db.execute(
+            "INSERT INTO offer_evaluations (offer_id, match_score, recommendation, sent_via_telegram) "
+            "VALUES (?, ?, ?, 0)",
+            (oid_yesterday, 72, "Aplicar"),
+        )
+
+        with patch("src.telegram.send.get_connection", return_value=test_conn):
+            result = get_top_offers(max_offers=5, date_scope='all')
+
+        assert len(result) == 2
+        assert result[0]["match_score"] == 72
+        assert result[1]["match_score"] == 60

@@ -51,20 +51,27 @@ def send_message(text: str, parse_mode: str = "HTML") -> bool:
         return False
 
 
-def get_top_offers(max_offers: int = 3) -> list[dict]:
+def get_top_offers(max_offers: int = 3, date_scope: str = 'latest') -> list[dict]:
     """Selecciona top ofertas evaluadas no enviadas.
 
-    Prioriza por recommendation → llm_apply_signal → match_score.
-    Así, dentro de "Aplicar" se envían primero las con señal "yes",
-    y nunca se salta un "Aplicar/yes" por un "Con expectativas bajas/yes" con más score.
+    Args:
+        max_offers: Número máximo de ofertas a devolver.
+        date_scope: 'latest' → solo ofertas del día más reciente,
+                    'all'    → cualquier fecha (fallback histórico).
+
+    Prioriza por fecha (si 'latest'), luego recommendation → llm_apply_signal → match_score.
     """
+    date_filter = ""
+    if date_scope == 'latest':
+        date_filter = "AND date(o.fetched_at) = (SELECT MAX(date(fetched_at)) FROM offers)"
+
     conn = get_connection()
     cur = conn.cursor()
     rows = cur.execute(
-        """
+        f"""
         SELECT
             o.id, o.title, o.company_name, o.city, o.work_mode,
-            o.salary_min, o.salary_max, o.url,
+            o.salary_min, o.salary_max, o.url, o.fetched_at,
             e.id as eval_id, e.match_score, e.recommendation,
             e.hr_concerns, e.strengths, e.interview_prep,
             o.relevance_flag, o.role_normalized
@@ -72,6 +79,7 @@ def get_top_offers(max_offers: int = 3) -> list[dict]:
         JOIN offers o ON o.id = e.offer_id
         WHERE e.sent_via_telegram = 0
           AND e.match_score >= 35
+          {date_filter}
         ORDER BY
           CASE e.recommendation
             WHEN 'Aplicar'              THEN 0
@@ -95,7 +103,7 @@ def get_top_offers(max_offers: int = 3) -> list[dict]:
     return [dict(zip(cols, row)) for row in rows]
 
 
-def format_offer(offer: dict, position: int) -> str:
+def format_offer(offer: dict, position: int, is_historical: bool = False) -> str:
     score = offer["match_score"]
     if score >= 75:
         emoji = "🟢"
@@ -109,6 +117,11 @@ def format_offer(offer: dict, position: int) -> str:
         salary = f" | {int(offer['salary_min']):,}–{int(offer['salary_max']):,}€"
     elif offer.get("salary_min"):
         salary = f" | desde {int(offer['salary_min']):,}€"
+
+    date_note = ""
+    if is_historical and offer.get("fetched_at"):
+        fetched = offer["fetched_at"][:10] if len(offer["fetched_at"]) > 10 else offer["fetched_at"]
+        date_note = f" | 📅 {fetched}"
 
     url = offer.get("url") or ""
     if url and not url.startswith("http"):
@@ -126,7 +139,7 @@ def format_offer(offer: dict, position: int) -> str:
 
     return (
         f"[{position}] {emoji} <b>{offer['title']}</b> | {offer['company_name']}\n"
-        f"📍 {offer.get('work_mode', 'N/A')} | {offer.get('city', 'N/A')}{salary}\n"
+        f"📍 {offer.get('work_mode', 'N/A')} | {offer.get('city', 'N/A')}{salary}{date_note}\n"
         f"✅ Match: {score}/100 — {offer['recommendation']}"
         f"{first_concern}"
         f"{first_prep}"
@@ -185,21 +198,35 @@ def send_daily() -> None:
     _validate_config()
     settings = get_user_settings()
     max_offers = settings.max_offers_day if settings else 3
-
-    offers = get_top_offers(max_offers)
     today = date.today().strftime("%d %b %Y")
 
-    if not offers:
-        send_message(f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\nSin ofertas relevantes hoy.")
-        return
+    offers = get_top_offers(max_offers, date_scope='latest')
+    is_historical = False
 
-    header = f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
+    if not offers:
+        offers = get_top_offers(max_offers, date_scope='all')
+        if offers:
+            is_historical = True
+        else:
+            send_message(
+                f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
+                "Sin ofertas relevantes disponibles."
+            )
+            return
+
+    header = (
+        f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
+        if not is_historical else
+        f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
+        "Hoy no hay ofertas nuevas que encajen, "
+        "pero estas de días anteriores merecen un vistazo:\n\n"
+    )
     blocks = []
     eval_ids = []
     positions = []
 
     for i, offer in enumerate(offers, 1):
-        blocks.append(format_offer(offer, i))
+        blocks.append(format_offer(offer, i, is_historical=is_historical))
         eval_ids.append(offer["eval_id"])
         positions.append(i)
 
@@ -215,7 +242,8 @@ def send_daily() -> None:
     message = header + "\n\n".join(blocks) + footer
     if send_message(message):
         mark_sent(eval_ids, positions)
-        log.info("Mensaje diario enviado con %d ofertas", len(offers))
+        prefix = "históricas" if is_historical else ""
+        log.info("Mensaje diario enviado con %d ofertas %s", len(offers), prefix)
     else:
         log.error("Fallo enviando mensaje diario")
 
