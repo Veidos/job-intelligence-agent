@@ -201,6 +201,51 @@ Responde SOLO con el JSON, sin markdown."""
         return {}
 
 
+def _merge_scraper_skills_into_llm(
+    detail_skills: list[str],
+    llm_skills: dict,
+) -> dict:
+    """Post-merge: las skills del <dl> del scraper son siempre core.
+
+    El LLM puede añadir secondary desde la descripción, pero no puede
+    mover skills explícitas del scraper a secondary.
+
+    Reglas:
+    1. Skill del scraper en LLM secondary → mover a core
+    2. Skill del scraper ausente en LLM → añadir a core
+    3. Secondary del LLM sin coincidencia en scraper → conservar
+    """
+    def _norm(name: str) -> str:
+        return re.sub(r"[\s\-_./]", "", name.strip().lower())
+
+    scraper_normalized = {_norm(s): s.strip() for s in (detail_skills or []) if s}
+
+    llm_core = list(llm_skills.get("core") or [])
+    llm_secondary = list(llm_skills.get("secondary") or [])
+    llm_core_norm = {_norm(s.get("name", "")) for s in llm_core if s}
+
+    # Regla 1: mover de secondary a core si coincide con scraper
+    kept_secondary = []
+    for s in llm_secondary:
+        if s:
+            norm_name = _norm(s.get("name", ""))
+            if norm_name in scraper_normalized:
+                corrected = dict(s)
+                corrected["name"] = scraper_normalized[norm_name]
+                llm_core.append(corrected)
+                llm_core_norm.add(norm_name)
+            else:
+                kept_secondary.append(s)
+
+    # Regla 2: añadir skills del scraper no presentes en ninguna lista LLM
+    llm_all_norm = llm_core_norm | {_norm(s.get("name", "")) for s in kept_secondary if s}
+    for norm_name, original_name in scraper_normalized.items():
+        if norm_name not in llm_all_norm:
+            llm_core.append({"name": original_name, "level_required": None})
+
+    return {"core": llm_core, "secondary": kept_secondary}
+
+
 def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
     """Persiste RawOfferDetail directamente en offers.
 
@@ -218,13 +263,14 @@ def _upsert_offer_from_scraper(detail: Any, conn) -> bool:
     # Skills del scraper (del <dl> de Requisitos) como base
     base_skills = {"core": [{"name": s} for s in (detail.skills or [])], "secondary": []}
 
-    # Enriquecer con LLM que clasifica core vs secondary desde la descripción
+    # Enriquecer con LLM + post-merge: skills del <dl> son siempre core
     try:
         llm_item = {"title": detail.title or "", "description": detail.description_text or ""}
         llm_result = extract_fields_with_llm(llm_item)
         llm_skills = llm_result.get("skills_required")
         if llm_skills and isinstance(llm_skills, dict):
-            skills_required = json.dumps(llm_skills)
+            merged = _merge_scraper_skills_into_llm(detail.skills, llm_skills)
+            skills_required = json.dumps(merged)
         else:
             skills_required = json.dumps(base_skills)
     except Exception:

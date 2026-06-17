@@ -135,6 +135,12 @@ Ver checklist completo en docs/TESTING.md
 - [x] `level_multiplier()`, `LEVEL_ORDINAL`, `ROLE_LEVEL_TO_SKILL_LEVEL` eliminados
 - [x] ADR-017 documenta el cambio completo
 
+## FIX 3 — Post-merge scraper core (ADR-021, 2026-06-17)
+- [x] `_merge_scraper_skills_into_llm()` — post-merge determinista que fuerza skills del `<dl>` a core
+- [x] Normalización `re.sub(r"[\s\-_./]", "", name.strip().lower())` para match robusto
+- [x] 6 tests unitarios (Entity Framework, ausente, conservar, vacío, fallback, PowerBI)
+- [x] ADR-021 documenta decisión
+
 ## FASE 7 — Custom Scraper (ADR-016)
 - [x] T-A1 — Implementar scraper propio (infojobs_scraper.py) con curl_cffi + BeautifulSoup
   - [x] Validar TLS fingerprint bypass con search y detail pages reales

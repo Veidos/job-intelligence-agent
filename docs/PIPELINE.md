@@ -57,7 +57,13 @@ Opera en **dos fases secuenciales**.
    `title`, `city`, `company`, `link`, `contract_type`, `work_mode`, `description_text`,
    `salary_min`, `salary_max`, `experience_min`, `education_level`, `skills`, `languages`, `sector`, `published_at`
 4. Skills del HTML (sección `<dl>` "Conocimientos") van directamente a `core` — son requisitos estructurados del formulario de la oferta, no de la descripción libre.
-5. `enriched_at` se setea en el mismo upsert — no hay Fase 3 separada.
+5. **Post-merge (ADR-021):** skills del `<dl>` del scraper son siempre core.
+   `_merge_scraper_skills_into_llm()` fuerza la regla tras el LLM:
+   - Skill del scraper en LLM secondary → mover a core
+   - Skill del scraper ausente en LLM → añadir a core
+   - Secondary del LLM sin coincidencia en scraper → conservar
+   Normalización `re.sub(r"[\s\-_./]", "", name.strip().lower())` para match robusto.
+6. `enriched_at` se setea en el mismo upsert — no hay Fase 3 separada.
 6. On success: marca `processed = 1`
 7. On failure: guarda error en columna `error`, no bloquea el batch
 

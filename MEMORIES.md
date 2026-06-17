@@ -13,7 +13,7 @@
 - Fixture principal: `test_db` — temp file con schema.sql, rollback por test
 - Fixture `test_conn` — wrapper sqlite3 compatible con save_evaluation
 - Fixtures de datos: `sample_perfil_text`, `sample_offer`, `sample_offer_senior`, `sample_offer_no_exp`, `sample_offer_temporal`, `sample_offer_with_impossible_requirements`
-- 223 tests: 203 originales + 20 dashboard server API — todos passing
+- 231 tests: 203 originales + 20 dashboard server API + 6 fetch merge skills + 2 prev nuevos — todos passing
 - Ollama cassettes: 13 JSON fixtures en tests/fixtures/ollama/ (no vcrpy)
 - test_classifier_cassettes.py: usa test_engine (Connection) no test_db (Cursor) — role_classifier usa conn.cursor()
 - test_evaluate_cassettes.py: cassettes directos (no wrapped), mock_ollama_call con side_effect para secuencias
@@ -605,6 +605,48 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - No se pondera en el score final (status quo)
 - `F_fit` del HR LLM ya captura ubicación cualitativamente
 - El usuario evalúa caso por caso en el dashboard
+
+## Post-merge scraper core — ADR-021 (junio 2026)
+
+### Decisión
+- `extract_fields_with_llm()` clasifica skills desde la descripción libre, pero
+  skills del `<dl>` de InfoJobs ("Conocimientos") son requisitos explícitos del
+  empleador → el LLM no tiene autoridad para reclasificarlas como secondary.
+- `_merge_scraper_skills_into_llm()` aplica post-merge determinista tras el LLM.
+- 3 reglas: (1) skill del scraper en LLM secondary → mover a core,
+  (2) skill del scraper ausente en LLM → añadir a core,
+  (3) secondary del LLM sin match → conservar.
+
+### Normalización
+- Match exacto case-insensitive es frágil: "Power BI" vs "PowerBI",
+  "Scikit-learn" vs "sklearn", "Entity Framework" vs "EntityFramework".
+- Solución: `re.sub(r"[\s\-_./]", "", name.strip().lower())` — elimina
+  espacios, guiones, underscores, puntos y slashes antes del match.
+- El nombre que persiste en core es siempre el del scraper (`original_name`
+  del dict `scraper_normalized`), no la versión del LLM. Esto evita duplicados
+  con nombre LLM distinto al scraper.
+- La normalización solo se usa para el match interno; los nombres originales
+  del scraper se preservan.
+
+### Tests
+- 6 casos en `test_fetch_merge_skills.py`:
+  - Caso 1: Entity Framework en secondary LLM → core con nombre scraper
+  - Caso 2: Docker ausente en LLM → añadido a core
+  - Caso 3: Secondary Tableau sin match → conservado
+  - Caso 4: Scraper vacío → respetar LLM
+  - Caso 5: LLM vacío → fallback a scraper en core
+  - Caso 6: Normalización "Power BI" vs "PowerBI"
+
+### Lecciones
+- No confiar en el LLM para clasificar skills que ya vienen clasificadas
+  por la fuente original (el `<dl>` del HTML). El LLM es útil para descubrir
+  skills en texto libre, pero no para reclasificar datos estructurados.
+- La normalización antes del match es un patrón reusable para cualquier
+  comparación entre dos fuentes con formatos divergentes (scraper vs LLM,
+  API vs DB, etc.).
+- Si el LLM devuelve `{}` o `skills_required` vacío, el fallback
+  `base_skills` ya pone todo en core — el merge es redundante pero no daña.
+- 225 → 231 tests.
 
 ## Sesión 2026-06-15 — Borrón y cuenta nueva + fixes de pipeline
 

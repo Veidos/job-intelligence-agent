@@ -1,41 +1,34 @@
 # HANDOFF.md — Estado de sesión
 
 **Última actualización:** 2026-06-17
-**Fase activa:** Pipeline Run dashboard + análisis de datos
+**Fase activa:** Fix 3 — Post-merge scraper core (ADR-021)
 
 ## Logros de la sesión
 
-### 1. Date scope + fallback histórico (send.py)
-- `get_top_offers(date_scope='latest')` filtra por `MAX(date(fetched_at))`
-- `send_daily()`: intenta últimas ofertas; si no hay, cae a backlog histórico con header y fecha visibles
-- 3 tests nuevos, 225 total
-
-### 2. Pipeline Run dashboard (nueva pestaña)
-Nuevo botón **Pipeline** en el nav del dashboard con:
-
-- **Selector de ejecución**: dropdown con todas las fechas de run, default al último
-- **Funnel horizontal**: Fetch → Clasif. → Eval. → ≥35 → ≥50 → Enviadas, cada paso con número + % acumulado
-- **Componentes por banda**: barras agrupadas <30 / 30–49 / 50+ con M_core, F_exp, Ubic., Mercado — valores numéricos sobre cada barra
-- **Compatibilidad con el entorno (F_fit)**: stacked bar con tooltip de % por categoría alta/media/baja
-- **Tabla de accionables**: ofertas score ≥ 50 sin apply_block, con enlace a detalle
-
-### 3. Análisis de scoring (hallazgos)
-- **Cuello de botella: M_core** — skills_hard_match pasa de 7.5 (<30) a 75.5 (50+), es el factor que realmente discrimina
-- **F_fit no discrimina** — environment_compatibility es plana entre bandas de score
-- **Ubicación penaliza parejo** — location_match plano (38-43) sin correlación con score
+### Fix 3 — Post-merge scraper core (ADR-021)
+- `_merge_scraper_skills_into_llm()` implementada en `fetch.py`
+- Skills del `<dl>` de InfoJobs son siempre core — el LLM no puede moverlas
+  a secondary ni omitirlas
+- Normalización mínima `re.sub(r"[\s\-_./]", "", ...)` para match robusto
+  entre variantes del scraper y LLM ("Power BI" vs "PowerBI")
+- 6 tests unitarios en `test_fetch_merge_skills.py`
+- ADR-021 documenta la decisión
 
 ## Archivos tocados
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/dashboard/server.py` | + endpoint `GET /api/pipeline-runs` (stats agrupadas por fecha) |
-| `src/dashboard/templates/dashboard.html` | + nav link "Pipeline" + section con funnel/charts/tabla |
-| `src/dashboard/static/app.js` | + `loadPipelineRuns()` + `renderPipelineRun()` + sub-renderers |
-| `src/dashboard/static/style.css` | + estilos `.pipeline-run-select`, `.funnel-row`, `.funnel-step` |
+| `src/pipeline/fetch.py` | + `_merge_scraper_skills_into_llm()` + post-merge en `_upsert_offer_from_scraper` |
+| `tests/unit/test_fetch_merge_skills.py` | + 6 tests (3 funcionales + 3 edge) |
+| `docs/adr/ADR-021-post-merge-scraper-core.md` | Nueva ADR |
+| `HANDOFF.md` | Actualizado |
+| `PLANS.md` | Actualizado |
+| `MEMORIES.md` | + aprendizaje post-merge |
+| `docs/PIPELINE.md` | Sección fetch actualizada con regla post-merge |
 
 ## Tests
-- **225 tests passing** (sin cambios en tests — funcionalidad nueva)
-- **Ruff:** 0 errores nuevos
+- **231 tests passing** (225 + 6 nuevos en test_fetch_merge_skills.py)
+- **Ruff:** 0 errores
 
 ## Comandos
 ```bash
