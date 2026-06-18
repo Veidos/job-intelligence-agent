@@ -27,21 +27,23 @@ def get_latest_daily_offers() -> list[int]:
     Filtra por la fecha del último envío real, no por las últimas 3 evaluaciones.
     """
     conn = get_connection()
-    cur = conn.cursor()
-    rows = cur.execute(
-        """
-        SELECT offer_id FROM offer_evaluations
-        WHERE sent_via_telegram = 1
-          AND date(sent_at) = (
-              SELECT date(MAX(sent_at))
-              FROM offer_evaluations
-              WHERE sent_via_telegram = 1
-          )
-        ORDER BY daily_position ASC
-        LIMIT 3
-        """,
-    ).fetchall()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        rows = cur.execute(
+            """
+            SELECT offer_id FROM offer_evaluations
+            WHERE sent_via_telegram = 1
+              AND date(sent_at) = (
+                  SELECT date(MAX(sent_at))
+                  FROM offer_evaluations
+                  WHERE sent_via_telegram = 1
+              )
+            ORDER BY daily_position ASC
+            LIMIT 3
+            """,
+        ).fetchall()
+    finally:
+        conn.close()
     return [r[0] for r in rows]
 
 

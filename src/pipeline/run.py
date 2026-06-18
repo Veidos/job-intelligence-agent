@@ -32,7 +32,7 @@ PERFIL_PATH = PROJECT_ROOT / "PERFIL.md"
 
 
 def setup_logging() -> None:
-    """Configura logging con rotación de archivos."""
+    """Configura logging con rotación de archivos y salida a consola."""
     root = logging.getLogger()
     if root.handlers:
         return
@@ -42,21 +42,26 @@ def setup_logging() -> None:
 
     log_file = log_dir / "pipeline.log"
 
-    handler = logging.handlers.RotatingFileHandler(
+    file_handler = logging.handlers.RotatingFileHandler(
         log_file,
         maxBytes=5 * 1024 * 1024,
         backupCount=3,
     )
-    handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
         "%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(handler)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
 
 
 def run_pipeline(
@@ -68,16 +73,6 @@ def run_pipeline(
     since_date: str = "_24_HOURS",
 ) -> None:
     setup_logging()
-
-    # Configurar consola inmediatamente para que warnings se vean
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    console_format = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    console.setFormatter(console_format)
-    logging.getLogger().addHandler(console)
 
     log.info("[Migrate] Verificando schema...")
     from src.db.migrate import run_migration
@@ -141,6 +136,7 @@ def run_pipeline(
 
     errors: list[str] = []
     new_offers = 0
+    offers_fetched = 0
     evaluated = 0
 
     # PASO 1: Fetch
@@ -150,8 +146,10 @@ def run_pipeline(
         log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
         from src.pipeline.fetch import run_fetch_scraper
 
-        new_offers = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
-        log.info("[1/4] Fetch — %d ofertas nuevas", new_offers)
+        fetch_result = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
+        new_offers = fetch_result["new"]
+        offers_fetched = fetch_result["total"]
+        log.info("[1/4] Fetch — %d nuevas de %d scrapeadas", new_offers, offers_fetched)
 
     # PASO 2: Classify
     log.info("[2/4] Classify — clasificando roles...")
@@ -211,6 +209,7 @@ def run_pipeline(
     _persist_run(
         errors,
         new_offers,
+        offers_fetched,
         evaluated,
         skip_fetch,
         dry_run,
@@ -224,6 +223,7 @@ def run_pipeline(
 def _persist_run(
     errors: list[str],
     new_offers: int,
+    offers_fetched: int,
     evaluated: int,
     skip_fetch: bool,
     dry_run: bool,
@@ -250,7 +250,7 @@ def _persist_run(
                     "limit_enrich": limit_enrich,
                 }
             ),
-            0 if skip_fetch else new_offers,
+            0 if skip_fetch else offers_fetched,
             new_offers,
             evaluated,
             "; ".join(errors) if errors else None,

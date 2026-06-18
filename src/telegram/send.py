@@ -66,40 +66,42 @@ def get_top_offers(max_offers: int = 3, date_scope: str = 'latest') -> list[dict
         date_filter = "AND date(o.fetched_at) = (SELECT MAX(date(fetched_at)) FROM offers)"
 
     conn = get_connection()
-    cur = conn.cursor()
-    rows = cur.execute(
-        f"""
-        SELECT
-            o.id, o.title, o.company_name, o.city, o.work_mode,
-            o.salary_min, o.salary_max, o.url, o.fetched_at,
-            e.id as eval_id, e.match_score, e.recommendation,
-            e.hr_concerns, e.strengths, e.interview_prep,
-            o.relevance_flag, o.role_normalized
-        FROM offer_evaluations e
-        JOIN offers o ON o.id = e.offer_id
-        WHERE e.sent_via_telegram = 0
-          AND e.match_score >= 35
-          {date_filter}
-        ORDER BY
-          CASE e.recommendation
-            WHEN 'Aplicar'              THEN 0
-            WHEN 'Con expectativas bajas' THEN 1
-            WHEN 'No aplicar'           THEN 2
-            ELSE 3
-          END,
-          CASE e.llm_apply_signal
-            WHEN 'yes'   THEN 0
-            WHEN 'maybe' THEN 1
-            WHEN 'no'    THEN 2
-            ELSE 3
-          END,
-          e.match_score DESC
-        LIMIT ?
-    """,
-        (max_offers,),
-    ).fetchall()
-    cols = [d[0] for d in cur.description]
-    conn.close()
+    try:
+        cur = conn.cursor()
+        rows = cur.execute(
+            f"""
+            SELECT
+                o.id, o.title, o.company_name, o.city, o.work_mode,
+                o.salary_min, o.salary_max, o.url, o.fetched_at,
+                e.id as eval_id, e.match_score, e.recommendation,
+                e.hr_concerns, e.strengths, e.interview_prep,
+                o.relevance_flag, o.role_normalized
+            FROM offer_evaluations e
+            JOIN offers o ON o.id = e.offer_id
+            WHERE e.sent_via_telegram = 0
+              AND e.match_score >= 35
+              {date_filter}
+            ORDER BY
+              CASE e.recommendation
+                WHEN 'Aplicar'              THEN 0
+                WHEN 'Con expectativas bajas' THEN 1
+                WHEN 'No aplicar'           THEN 2
+                ELSE 3
+              END,
+              CASE e.llm_apply_signal
+                WHEN 'yes'   THEN 0
+                WHEN 'maybe' THEN 1
+                WHEN 'no'    THEN 2
+                ELSE 3
+              END,
+              e.match_score DESC
+            LIMIT ?
+        """,
+            (max_offers,),
+        ).fetchall()
+        cols = [d[0] for d in cur.description]
+    finally:
+        conn.close()
     return [dict(zip(cols, row)) for row in rows]
 
 
@@ -168,30 +170,32 @@ def mark_sent(eval_ids: list[int], positions: list[int]) -> None:
 
 def save_feedback(position: int, text: str, feedback_type: str = "offer") -> None:
     conn = get_connection()
-    cur = conn.cursor()
-    offer_id = None
-    if feedback_type == "offer":
-        row = cur.execute(
+    try:
+        cur = conn.cursor()
+        offer_id = None
+        if feedback_type == "offer":
+            row = cur.execute(
+                """
+                SELECT offer_id FROM offer_evaluations
+                WHERE sent_via_telegram = 1
+                  AND daily_position = ?
+                  AND date(sent_at) = date('now')
+                ORDER BY sent_at DESC LIMIT 1
+            """,
+                (position,),
+            ).fetchone()
+            if row:
+                offer_id = row[0]
+        cur.execute(
             """
-            SELECT offer_id FROM offer_evaluations
-            WHERE sent_via_telegram = 1
-              AND daily_position = ?
-              AND date(sent_at) = date('now')
-            ORDER BY sent_at DESC LIMIT 1
+            INSERT INTO user_feedback (offer_id, feedback_type, raw_text)
+            VALUES (?, ?, ?)
         """,
-            (position,),
-        ).fetchone()
-        if row:
-            offer_id = row[0]
-    cur.execute(
-        """
-        INSERT INTO user_feedback (offer_id, feedback_type, raw_text)
-        VALUES (?, ?, ?)
-    """,
-        (offer_id, feedback_type, text),
-    )
-    conn.commit()
-    conn.close()
+            (offer_id, feedback_type, text),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def send_daily() -> None:

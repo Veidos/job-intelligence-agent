@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS cv_versions (
     is_active INTEGER NOT NULL DEFAULT 1
 );
 
--- Registro inmutable de cada item devuelto por Apify
+-- Legacy: Apify era. Not used by current scraper (see ADR-016).
+-- Reservada para futuras fuentes (Indeed, LinkedIn...).
 -- append-only: el payload nunca se modifica tras la inserción
 CREATE TABLE IF NOT EXISTS apify_raw_responses (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,8 +105,7 @@ CREATE TABLE IF NOT EXISTS offers (
     is_active INTEGER NOT NULL DEFAULT 1,
     is_evaluated INTEGER NOT NULL DEFAULT 0,
     search_layer INTEGER,
-    role_level INTEGER,
-    role_level_label TEXT,
+    -- role_level / role_level_label eliminadas via migrate.py (zombies desde ADR-017)
     relevance_flag TEXT,
     raw_data TEXT,
     enriched_at TEXT,

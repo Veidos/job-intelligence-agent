@@ -158,6 +158,8 @@ def extract_fields_with_llm(item: dict) -> dict[str, Any]:
     Core = skills explícitamente marcadas como requisito o mencionadas múltiples veces.
     Secondary = deseables, valorables o mencionadas una vez sin énfasis.
     """
+    desc = (item.get("description") or "")[:2800]
+    safe_item = {**item, "description": desc}
     prompt = f"""Extrae los siguientes campos de esta oferta de InfoJobs en JSON válido:
 
 - description_clean: descripción limpia sin HTML, máximo 2000 caracteres
@@ -179,7 +181,7 @@ Reglas para clasificar skills:
 - Sin distinción explícita: las 3-5 skills más centrales al rol → core, el resto → secondary
 
 Oferta:
-{json.dumps(item, ensure_ascii=False)[:3000]}
+{json.dumps(safe_item, ensure_ascii=False)}
 
 Responde SOLO con el JSON, sin markdown."""
 
@@ -425,18 +427,19 @@ def _upsert_from_scraper_raw(run_id: str, conn) -> int:
                 "UPDATE scraper_raw_responses SET processed=1 WHERE id=?",
                 (raw_id,),
             )
+            conn.commit()
         except Exception as e:
             cursor.execute(
                 "UPDATE scraper_raw_responses SET error=? WHERE id=?",
                 (str(e), raw_id),
             )
+            conn.commit()
             log.warning(
                 "Error procesando scraper_raw_id=%d (offer_id=%s): %s",
                 raw_id,
                 offer_id,
                 e,
             )
-    conn.commit()
     return new_count
 
 
@@ -513,7 +516,7 @@ def run_fetch_scraper(
         new_count,
         " (DRY RUN)" if dry_run else "",
     )
-    return new_count
+    return {"new": new_count, "total": total_raw}
 
 
 if __name__ == "__main__":
@@ -537,12 +540,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    inserted = run_fetch_scraper(
+    result = run_fetch_scraper(
         search_config=None,
         since_date=args.since_date,
         max_items=args.max_items,
     )
-    print(f"Ofertas insertadas: {inserted}")
+    print(f"Ofertas nuevas: {result['new']}, total scrapeadas: {result['total']}")
 
     conn = get_connection()
     cursor = conn.cursor()

@@ -715,3 +715,59 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - **Causa raíz:** fragmentación de la normalización — `workModeLabel()` y `workModeValue()` tenían mapas paralelos e incompletos. El scraper produce 4 variantes: `Presencial`, `Híbrido`, `Solo teletrabajo`, `Teletrabajo` (sin "Solo") y vacío. El frontend solo mapeaba 3.
 - **Fix estructural:** constante canónica única `WORK_MODE_CANONICAL` que mapea las 4 variantes del scraper a 3 categorías normalizadas: `Remoto`, `Híbrido`, `Presencial`. `workModeLabel()`, `workModeValue()` y el chart consumen el mismo mapa.
 - **Lección:** cuando un valor de dominio viene de múltiples fuentes (scraper/API/input), la normalización debe vivir en un único punto canónico. Si el scraper añade una variante nueva, solo hay que tocar `WORK_MODE_CANONICAL`. El filtro usa `workModeValue(d.work_mode)` para comparar contra `allowedModes` (que ya emite valores normalizados).
+
+## Sesión 2026-06-18 — 13 ítems del análisis intensivo
+
+### Console handler duplicado
+- `setup_logging()` protegía con `if root.handlers: return`, pero `run_pipeline()` añadía un `StreamHandler` incondicionalmente fuera de esa función.
+- Fix: mover el `StreamHandler` dentro de `setup_logging()`, protegido por la misma guardia.
+- Lección: nunca añadir handlers de logging fuera de la función de setup que tiene la guardia.
+
+### Autenticación Telegram (decorador en bot.py)
+- La validación de `user_id` debe vivir en la capa de transporte (bot.py), no en la capa de datos (handlers.py).
+- Patrón establecido: `require_auth` decorator con `@wraps` que protege todos los handlers públicos.
+- `feedback_handler` (helper interno llamado por f1/f2/f3) no se decora directamente — ya está protegido por los handlers que lo llaman.
+- `ALLOWED_USER_ID` = 0 (default) desactiva la autenticación, manteniendo compatibilidad con instalaciones existentes.
+
+### sys.path.insert en módulos instalables
+- `bot.py` tenía `sys.path.insert(0, ...)` a nivel de módulo para poder importar `src.*`.
+- El proyecto es un paquete instalable (`pip install -e .` via pyproject.toml) — las importaciones absolutas funcionan sin sys.path.
+- Fix: eliminar `sys.path.insert` y los `# noqa: E402` asociados.
+- Lección: si el proyecto tiene pyproject.toml con `pip install -e .` como método oficial de instalación, ningún módulo necesita `sys.path.insert`.
+
+### run_fetch_scraper() retorna dict
+- Cambiar de `int` a `dict` (`{"new": ..., "total": ...}`) en lugar de tuple es más extensible.
+- Permite añadir más métricas en el futuro sin romper callers.
+- `_persist_run()` ahora usa `offers_fetched = total_raw` (total scrapeado) y `new_offers = new_count` (solo inserciones), que era el diseño original del schema.
+
+### try/finally en conexiones DB
+- Patrón: `conn = get_connection()` → `try:` → operaciones → `finally: conn.close()`
+- Aplica a: `models.py:get_user_settings()`, `handlers.py:get_latest_daily_offers()`, `send.py:get_top_offers()`, `send.py:save_feedback()`.
+- `handlers.py:save_feedback()` ya usaba try/finally correctamente — es la excepción, no la regla.
+
+### Commit por fila en scraper raw
+- `_upsert_from_scraper_raw()` hacía un solo `conn.commit()` al final del batch.
+- Si una iteración fallaba (ej. payload corrupto), las filas anteriores con `processed=1` quedaban sin commitar.
+- Fix: `conn.commit()` por iteración exitosa y por iteración con error.
+- Lección: batch commits son frágiles cuando cada fila debe persistir su estado individualmente.
+
+### Truncado JSON seguro
+- `json.dumps(item, ...)[:3000]` podía cortar el JSON a mitad, generando respuestas LLM inconsistentes.
+- Fix: truncar solo `item["description"]` antes de serializar, preservando la integridad del JSON.
+- Patrón: `desc = item.get("description", "")[:2800]` → `safe_item = {**item, "description": desc}`.
+
+### Acentos en compute_location_score
+- `candidate_city.lower() in offer_city.lower()` no normalizaba acentos: "Málaga" ≠ "Malaga".
+- Fix: `unicodedata.normalize("NFD", s.lower())` elimina diacríticos antes de la comparación.
+- Helper local `_norm()` definido dentro de `compute_location_score()` para mantener el scope.
+
+### Columnas zombie role_level / role_level_label
+- Ningún código las escribe (role_classifier.py no, fetch.py no, scraper no).
+- Decisiones: ADR-017 eliminó role_level_label del scoring; el scraper no necesita role_level.
+- Fix: `drop_offers_zombie_columns()` en migrate.py con SQLite 3.46.1 (soporta DROP COLUMN desde 3.35.0).
+- Guardia `if col exists` para ser seguro en re-ejecución de migración.
+
+### threading.Lock para métricas globales
+- `_metrics` dict en ollama_client.py es mutable y compartido.
+- Fix: `threading.Lock` + helper `_inc_metric()` en lugar de `_metrics[key] += 1` directo.
+- No crítico en el scope actual (single-thread), pero previene race conditions futuras.

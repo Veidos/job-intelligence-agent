@@ -9,13 +9,11 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import os
-import sys
+from functools import wraps
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from dotenv import load_dotenv  # noqa: E402
-from telegram.ext import (  # noqa: E402
+from dotenv import load_dotenv
+from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
@@ -23,8 +21,8 @@ from telegram.ext import (  # noqa: E402
     filters,
 )
 
-from src.telegram.handlers import get_latest_daily_offers, save_feedback  # noqa: E402
-from telegram import Update  # noqa: E402
+from src.telegram.handlers import get_latest_daily_offers, save_feedback
+from telegram import Update
 
 load_dotenv()
 
@@ -57,8 +55,21 @@ def setup_logging() -> None:
 log = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+ALLOWED_USER_ID = int(os.getenv("TELEGRAM_USER_ID", "0"))
 
 
+def require_auth(handler):
+    """Decorador: solo permite paso si el user_id coincide con TELEGRAM_USER_ID."""
+    @wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if ALLOWED_USER_ID and update.effective_user.id != ALLOWED_USER_ID:
+            await update.message.reply_text("No autorizado.")
+            return
+        return await handler(update, context)
+    return wrapper
+
+
+@require_auth
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para /start."""
     await update.message.reply_text(
@@ -114,18 +125,22 @@ async def feedback_handler(
         await update.message.reply_text("Error al guardar. Intenta de nuevo.")
 
 
+@require_auth
 async def f1_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await feedback_handler(update, context, "f1")
 
 
+@require_auth
 async def f2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await feedback_handler(update, context, "f2")
 
 
+@require_auth
 async def f3_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await feedback_handler(update, context, "f3")
 
 
+@require_auth
 async def dia_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para /dia."""
     text = update.message.text
@@ -147,6 +162,7 @@ async def dia_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text("Error al guardar. Intenta de nuevo.")
 
 
+@require_auth
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para mensajes que no son comandos."""
     await update.message.reply_text("Usa /start para ver los comandos disponibles.")

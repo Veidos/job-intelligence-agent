@@ -8,6 +8,7 @@ PERFIL.md es la única fuente de verdad del candidato.
 import json
 import logging
 import time
+import unicodedata
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -146,7 +147,13 @@ def compute_location_score(
         return 0.7
     if not candidate_city or not offer_city:
         return 0.5
-    if candidate_city.lower() in offer_city.lower() or offer_city.lower() in candidate_city.lower():
+
+    def _norm(s: str) -> str:
+        return unicodedata.normalize("NFD", s.lower())
+
+    cand_norm = _norm(candidate_city)
+    offer_norm = _norm(offer_city)
+    if cand_norm in offer_norm or offer_norm in cand_norm:
         return 0.5
     return 0.2
 

@@ -4,6 +4,7 @@
 
 ```bash
 pip install -r requirements.txt
+pip install -e .
 python src/db/init_db.py
 ```
 

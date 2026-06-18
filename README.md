@@ -170,7 +170,7 @@ git clone https://github.com/Veidos/job-intelligence-agent.git
 cd job-intelligence-agent
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-pip install flask
+pip install -e .
 cp .env.example .env
 # Fill in: APIFY_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (Telegram optional)
 python src/db/init_db.py

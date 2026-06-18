@@ -48,13 +48,15 @@ def get_user_settings() -> UserSettings:
     Por ahora los defaults se devuelven en memoria sin tocar la DB.
     """
     conn = get_connection()
-    cur = conn.cursor()
-    row = cur.execute(
-        """SELECT send_time, max_offers_day, send_mode,
-                  min_score_send, weekly_summary, strategic_alerts
-           FROM user_settings ORDER BY id LIMIT 1"""
-    ).fetchone()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        row = cur.execute(
+            """SELECT send_time, max_offers_day, send_mode,
+                      min_score_send, weekly_summary, strategic_alerts
+               FROM user_settings ORDER BY id LIMIT 1"""
+        ).fetchone()
+    finally:
+        conn.close()
 
     if not row:
         return UserSettings()

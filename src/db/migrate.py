@@ -92,6 +92,29 @@ def drop_zombie_columns(conn) -> list[str]:
     return dropped
 
 
+OFFERS_ZOMBIE_COLUMNS = [
+    "role_level",
+    "role_level_label",
+]
+
+
+def drop_offers_zombie_columns(conn) -> list[str]:
+    """Elimina columnas zombies de offers (legacy del scoring con role_level_label)."""
+    existing = get_existing_columns(conn, "offers")
+    dropped = []
+
+    for col in OFFERS_ZOMBIE_COLUMNS:
+        if col.lower() in {c.lower() for c in existing}:
+            try:
+                conn.execute(f"ALTER TABLE offers DROP COLUMN {col}")
+                dropped.append(col)
+                log.info("  Eliminada columna offers.%s", col)
+            except Exception as e:
+                log.warning("  Error eliminando offers.%s: %s", col, e)
+
+    return dropped
+
+
 def _parse_schema_columns(schema_sql: str) -> dict[str, list[tuple[str, str]]]:
     """Extrae columnas por tabla desde los CREATE TABLE de schema.sql.
 
@@ -227,6 +250,14 @@ def run_migration() -> dict:
     if dropped_cols:
         conn.commit()
         log.info("Limpieza completada: %d columnas procesadas", len(dropped_cols))
+
+    offers_dropped = drop_offers_zombie_columns(conn)
+    if offers_dropped:
+        conn.commit()
+        log.info(
+            "Limpieza offers completada: %d columnas procesadas",
+            len(offers_dropped),
+        )
 
     for table_name, columns in schema_definitions.items():
         try:

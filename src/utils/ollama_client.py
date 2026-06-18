@@ -6,6 +6,7 @@ Modelos secuenciales — nunca en paralelo (VRAM limitada).
 import json
 import logging
 import os
+import threading
 import time
 from typing import Any
 
@@ -24,15 +25,23 @@ _metrics: dict[str, int] = {
     "json_parse_failures": 0,
     "empty_responses": 0,
 }
+_metrics_lock = threading.Lock()
+
+
+def _inc_metric(key: str) -> None:
+    with _metrics_lock:
+        _metrics[key] += 1
 
 
 def get_llm_metrics() -> dict[str, int]:
-    return dict(_metrics)
+    with _metrics_lock:
+        return dict(_metrics)
 
 
 def reset_llm_metrics() -> None:
-    for k in _metrics:
-        _metrics[k] = 0
+    with _metrics_lock:
+        for k in _metrics:
+            _metrics[k] = 0
 
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -80,7 +89,7 @@ def _call_ollama_raw(
         response.raise_for_status()
         data = response.json()
         if think and "think" in data:
-            log.info("Razonamiento de %s:\n%s", model, data["think"].strip())
+            log.debug("Razonamiento de %s:\n%s", model, data["think"].strip())
         return data.get("response", "").strip()
     except requests.exceptions.ConnectionError as e:
         raise OllamaError(f"Ollama no disponible en {OLLAMA_BASE_URL}: {e}") from e
@@ -111,7 +120,7 @@ def _extract_json(text: str) -> Any:
                 return json.loads(text[s : e + 1])
             except json.JSONDecodeError:
                 continue
-    _metrics["json_parse_failures"] += 1
+    _inc_metric("json_parse_failures")
     raise OllamaJSONError(f"No se pudo extraer JSON de: {text[:200]}...")
 
 
@@ -135,12 +144,12 @@ def ollama_call(
     Returns: str si expect_json=False, dict/list si expect_json=True.
     Raises: OllamaError, OllamaJSONError
     """
-    _metrics["calls"] += 1
+    _inc_metric("calls")
     log.debug("Llamando a %s (expect_json=%s)", model, expect_json)
     start = time.time()
     text = _call_ollama_raw(model, prompt, temperature, think, num_ctx)
     if not text:
-        _metrics["empty_responses"] += 1
+        _inc_metric("empty_responses")
 
     if not expect_json:
         log.debug("Respuesta de %s en %dms", model, int((time.time() - start) * 1000))
@@ -157,7 +166,7 @@ def ollama_call(
         model, prompt + json_retry_instruction, temperature, think, num_ctx
     )
     if not text_retry:
-        _metrics["empty_responses"] += 1
+        _inc_metric("empty_responses")
     try:
         result = _extract_json(text_retry)
         log.debug("JSON valido de %s en segundo intento", model)
