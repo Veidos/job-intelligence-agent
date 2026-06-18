@@ -66,7 +66,8 @@ def main():
         new_score_int = round(new_score * 100)
         old_score_int = row["match_score"]
 
-        if new_score_int == old_score_int:
+        has_flag = sd.get("weights", {}).get("secondary_redistributed") is not None
+        if new_score_int == old_score_int and has_flag:
             continue
 
         new_rec = get_rating(new_score)

@@ -70,7 +70,7 @@
         <input type="text" id="filterSearch" placeholder="T&iacute;tulo o empresa..." class="filter-input-wide">
       </div>
       <div class="filter-group">
-        <label class="check-label"><input type="checkbox" id="filterBlocked"> Mostrar bloqueadas</label>
+        <label class="check-label"><input type="checkbox" id="filterBlocked" checked> Ocultar bloqueadas</label>
       </div>
       <div class="filter-group">
         <label class="check-label"><input type="checkbox" id="filterHideApplied" checked> Ocultar aplicadas</label>
@@ -168,8 +168,25 @@
       <div class="chart-box"><canvas id="chartSignalRecom"></canvas></div>
     </div>
 
-    <h3 class="monitor-section-title">Resumen por ejecución</h3>
-    <div class="table-wrap" id="pipelineRunsTable"></div>
+    <details class="runs-section">
+      <summary>Resumen por ejecución</summary>
+      <div class="table-wrap" id="pipelineRunsTable"></div>
+    </details>
+
+    <details class="runs-section">
+      <summary>Detalle de ejecuciones</summary>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th><th class="num">Fetch</th><th class="num">Nuevas</th>
+              <th class="num">Eval.</th><th>Errores</th><th class="num">Duración</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="runsTbody"></tbody>
+        </table>
+      </div>
+    </details>
 
     <h3 class="monitor-section-title">Ofertas accionables (score ≥ 50, sin bloqueo)</h3>
     <div id="pipelineActionable" class="table-wrap"></div>
@@ -225,20 +242,6 @@
     <div id="appFollowUpKpis" class="kpi-mini-row"></div>
     <div class="table-wrap" id="appFollowUpTable"></div>
 
-    <details class="runs-section">
-      <summary>Ejecuciones del pipeline</summary>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th><th class="num">Fetch</th><th class="num">Nuevas</th>
-              <th class="num">Eval.</th><th>Errores</th><th class="num">Duraci&oacute;n</th><th>Estado</th>
-            </tr>
-          </thead>
-          <tbody id="runsTbody"></tbody>
-        </table>
-      </div>
-    </details>
   </section>
 
 </main>

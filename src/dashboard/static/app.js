@@ -25,9 +25,9 @@ document.querySelectorAll('.nav-link').forEach(el => {
     switchTab(el.dataset.section);
     if (el.dataset.section === 'aplicaciones') loadApplications();
     if (el.dataset.section === 'empresas') loadCompanies();
-    if (el.dataset.section === 'pipeline') loadPipelineRuns();
+    if (el.dataset.section === 'pipeline') { loadPipelineRuns(); loadRuns(); }
     if (el.dataset.section === 'monitor') {
-      loadStats(); renderCharts(); loadRuns();
+      loadStats(); renderCharts();
       fetch('/api/applications').then(r => r.json()).then(apps => {
         renderAppFunnel(apps);
         renderAppFollowUp(apps);
@@ -190,7 +190,7 @@ function getFilteredData() {
   const minScore = parseInt($('filterScore').value) || 0;
   const fRec = $('filterRec').value;
   const fRel = $('filterRel').value;
-  const showBlocked = $('filterBlocked').checked;
+  const showBlocked = !$('filterBlocked').checked;
   const hideApplied = $('filterHideApplied').checked;
   const hideExpired = $('filterHideExpired').checked;
   const appliedIds = new Set(APP_DATA.map(a => a.offer_id));
@@ -786,6 +786,15 @@ function renderCompanyCharts(data) {
       plugins: {
         legend: { position: 'right', labels: { color: '#e4e4e7', font: { size: 11 } } },
         title: { display: true, text: 'Empresas por sector', color: '#e4e4e7' },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const total = ctx.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+              const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : '0.0';
+              return ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+            },
+          },
+        },
       },
     },
   });
@@ -1650,9 +1659,9 @@ function renderActionableTable(run) {
     return;
   }
   const rows = items.map(o => `
-    <tr>
+    <tr onclick="openModal(${o.id})">
       <td class="num">${o.match_score}</td>
-      <td><a href="#" onclick="openOffer(${o.id});return false">${o.title}</a></td>
+      <td>${o.title}</td>
       <td>${o.company_name}</td>
       <td>${o.city || '\u2014'}</td>
       <td>${o.work_mode || '\u2014'}</td>

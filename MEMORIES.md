@@ -606,6 +606,32 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - `F_fit` del HR LLM ya captura ubicación cualitativamente
 - El usuario evalúa caso por caso en el dashboard
 
+## Dashboard UI fixes (junio 2026)
+
+### Runs table movida a Pipeline
+- La tabla detallada de ejecuciones del pipeline (`/api/runs`) estaba en Monitor
+  colapsada bajo `<details>`. No es intuitivo — Monitor muestra KPIs/gráficas, no
+  ejecuciones. Pipeline es el lugar natural.
+- Movida a Pipeline como segundo desplegable "Detalle de ejecuciones", junto al
+  ya existente "Resumen por ejecución" (que usa `/api/pipeline-runs`).
+- `loadRuns()` movida de la sección Monitor a la sección Pipeline en app.js.
+
+### Doughnut tooltip con porcentaje
+- El doughnut de "Empresas por sector" mostraba números crudos en tooltip.
+- Chart.js tooltip `callbacks.label` ahora calcula el total del dataset y muestra
+  "Tecnología: 12 (32.4%)". Sin dependencias externas, solo un callback.
+- Patrón: `const total = ctx.dataset.data.reduce((a, b) => a + b, 0); const pct = ((ctx.parsed / total) * 100).toFixed(1);`
+
+### Filtros consistentes con "Ocultar..."
+- Tres filtros checkbox en el dashboard: dos usaban "Ocultar..." (aplicadas,
+  >30 días) y uno usaba "Mostrar..." (bloqueadas). Inconsistencia UX.
+- Solución: renombrar a "Ocultar bloqueadas", invertir la lógica JS
+  (`const showBlocked = !$('filterBlocked').checked`), y marcar `checked` por
+  defecto. Los 3 filtros ahora usan la misma convención semántica.
+- Lección: los filtros checkbox deben seguir una misma convención semántica.
+  Mezclar "Mostrar X" y "Ocultar Y" confunde al usuario. Elegir una (Ocultar)
+  y mantenerla.
+
 ## Post-merge scraper core — ADR-021 (junio 2026)
 
 ### Decisión

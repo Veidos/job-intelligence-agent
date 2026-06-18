@@ -234,3 +234,38 @@ function renderFoo() {
 - `responsive: true, maintainAspectRatio: false` en todos los charts
 - `let _pipelineAllOffers = null` — caché de datos compartidos entre funciones del mismo módulo
 - Fetch API con `.then()`, no async/await, para consistencia con el código existente
+
+---
+
+## 8. Filtros checkbox
+
+### 8.1 Convención semántica
+
+Los filtros checkbox deben usar **todos la misma convención**. Actualmente se usa `"Ocultar..."`:
+
+```html
+<label class="check-label"><input type="checkbox" id="filterBlocked" checked> Ocultar bloqueadas</label>
+<label class="check-label"><input type="checkbox" id="filterHideApplied" checked> Ocultar aplicadas</label>
+<label class="check-label"><input type="checkbox" id="filterHideExpired" checked> Ocultar ofertas &gt;30 d&iacute;as</label>
+```
+
+No mezclar `"Mostrar X"` con `"Ocultar Y"` en el mismo panel. Elegir una convención y mantenerla.
+
+### 8.2 Lógica checked
+
+| Checkbox | Checked → | Lógica JS |
+|----------|-----------|-----------|
+| Ocultar bloqueadas | oculta bloqueadas | `const showBlocked = !$('filterBlocked').checked` |
+| Ocultar aplicadas | oculta aplicadas | `const hideApplied = $('filterHideApplied').checked` |
+| Ocultar >30 días | oculta expiradas | `const hideExpired = $('filterHideExpired').checked` |
+
+Nota: `filterBlocked` tiene la lógica invertida respecto a la variable `showBlocked`
+(checked oculta → `showBlocked = false`). Es intencional para mantener la semántica
+del label "Ocultar...".
+
+### 8.3 Default state
+
+Los filtros más restrictivos deben venir `checked` por defecto:
+- **Ocultar bloqueadas:** checked (las ofertas bloqueadas rara vez son relevantes)
+- **Ocultar aplicadas:** checked (evita mostrar ofertas ya seguidas)
+- **Ocultar ofertas >30 días:** checked (las ofertas antiguas distorsionan el análisis)

@@ -6,7 +6,7 @@
 > **Sesión 2026-06-15 (v1):** Borrón y cuenta nueva, fixes scraper (403/dry-run/run_id/limit=0/published_at), pipeline completo 65 ofertas, 65 evaluadas, 3 "Aplicar" ✅
 > **Sesión 2026-06-15 (v2):** Dashboard work_mode — mapa canónico WORK_MODE_CANONICAL, normalización de variantes scraper, chart limpio con 3 categorías ✅
 > **Sesión 2026-06-16:** Dashboard fixes (recalcOffers antes que sparkline + guard Chart.js), send priority (recommendation→llm_signal→score), safari17 eliminado, evaluación de resultados pipeline ✅
-> **223 tests passing, pipeline funcional con scraper propio**
+> **Sesión 2026-06-17:** Fix 3 (post-merge scraper core ADR-021) + pipeline run (23 ofertas, 3 checks ✅) + dashboard UI fixes (runs table a Pipeline, doughnut % tooltip, filter rename) + backfill 51 legacy completado. 231 tests ✅
 
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo
@@ -140,6 +140,17 @@ Ver checklist completo en docs/TESTING.md
 - [x] Normalización `re.sub(r"[\s\-_./]", "", name.strip().lower())` para match robusto
 - [x] 6 tests unitarios (Entity Framework, ausente, conservar, vacío, fallback, PowerBI)
 - [x] ADR-021 documenta decisión
+
+## DASHBOARD UI FIXES (2026-06-17)
+- [x] Runs table movida de Monitor a Pipeline (2 desplegables: resumen + detalle)
+- [x] Doughnut tooltip con %: "Tecnología: 12 (32.4%)" en vez de número crudo
+- [x] Filtro "Mostrar bloqueadas" → "Ocultar bloqueadas" (consistente con otros filtros)
+- [x] Lógica de filtro invertida + default checked
+
+## BACKFILL COMPLETADO (2026-06-17)
+- [x] 51 ofertas legacy con `secondary_redistributed: true` (antes null)
+- [x] Script fix: actualiza weights aunque score no cambie
+- [x] Dataset homogéneo: 117 legacy (true) + 23 nuevas (false)
 
 ## FASE 7 — Custom Scraper (ADR-016)
 - [x] T-A1 — Implementar scraper propio (infojobs_scraper.py) con curl_cffi + BeautifulSoup
