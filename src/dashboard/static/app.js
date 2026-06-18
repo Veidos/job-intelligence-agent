@@ -879,6 +879,85 @@ function loadRuns() {
   });
 }
 
+/* ── Pipeline execution ── */
+let _pipelinePolling = false;
+let _pipelineLogOffset = 0;
+let _pipelineRunId = null;
+
+function launchPipeline() {
+  const btn = $('btnRunPipeline');
+  btn.disabled = true;
+  btn.textContent = '\u23f3 Ejecutando...';
+  $('pipelineStatus').textContent = 'Iniciando...';
+  $('pipelineLogPanel').style.display = 'block';
+  $('pipelineLog').textContent = '';
+
+  fetch('/api/pipeline/run', { method: 'POST' })
+    .then(function (r) {
+      if (r.status === 409) {
+        return r.json().then(function (d) {
+          btn.disabled = false;
+          btn.textContent = '\u25b6 Lanzar Pipeline';
+          $('pipelineStatus').textContent = '\u26a0\ufe0f ' + (d.error || 'Ya en ejecuci\u00f3n');
+          return null;
+        });
+      }
+      return r.json();
+    })
+    .then(function (data) {
+      if (!data) return;
+      _pipelineRunId = data.run_id;
+      _pipelineLogOffset = 0;
+      _pipelinePolling = true;
+      pollPipelineLog();
+    })
+    .catch(function () {
+      btn.disabled = false;
+      btn.textContent = '\u25b6 Lanzar Pipeline';
+      $('pipelineStatus').textContent = '\u274c Error al lanzar';
+    });
+}
+
+function stopPipelinePolling() {
+  _pipelinePolling = false;
+  const btn = $('btnRunPipeline');
+  btn.disabled = false;
+  btn.textContent = '\u25b6 Lanzar Pipeline';
+  $('pipelineStatus').textContent = '\u2705 Completado';
+  loadRuns();
+  loadPipelineRuns();
+  loadOffers();
+}
+
+function pollPipelineLog() {
+  if (!_pipelinePolling) return;
+  var url = '/api/pipeline/log?offset=' + _pipelineLogOffset;
+  if (_pipelineRunId) url += '&run_id=' + _pipelineRunId;
+
+  fetch(url)
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.lines && data.lines.length) {
+        var el = $('pipelineLog');
+        el.textContent += data.lines.join('');
+        el.scrollTop = el.scrollHeight;
+      }
+      _pipelineLogOffset = data.offset;
+      if (data.finished) {
+        stopPipelinePolling();
+      } else {
+        $('pipelineStatus').textContent = '\u23f3 Ejecutando...';
+        setTimeout(pollPipelineLog, 2000);
+      }
+    })
+    .catch(function () {
+      $('pipelineStatus').textContent = '\u274c Error en polling';
+      _pipelinePolling = false;
+      $('btnRunPipeline').disabled = false;
+      $('btnRunPipeline').textContent = '\u25b6 Lanzar Pipeline';
+    });
+}
+
 /* ── Charts ── */
 function renderCharts() {
   if (!ALL_OFFERS.length) return;

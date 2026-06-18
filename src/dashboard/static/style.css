@@ -511,3 +511,13 @@ tr td:first-child { padding-left: 14px; }
   color: var(--text2); font-size: 16px; margin: 0 6px;
   flex-shrink: 0;
 }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 20px; font-size: 13px; font-weight: 600;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius); cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }

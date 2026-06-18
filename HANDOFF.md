@@ -1,36 +1,33 @@
 # HANDOFF.md — Estado de sesión
 
 **Última actualización:** 2026-06-18
-**Fase activa:** Sesión de calidad — 13 ítems del análisis intensivo
+**Fase activa:** Dashboard → Lanzar Pipeline desde la UI (mutex + log en vivo)
 
-## Logros de la sesión
+## Logros de la sesión — Lanzar Pipeline desde el Dashboard
 
-### 13 ítems del análisis intensivo implementados
+### Pipeline execution desde la UI (4 archivos)
 
-| # | Ítem | Archivo | Cambio |
-|---|------|---------|--------|
-| 1 | Console handler duplicado | `run.py` | `StreamHandler` movido dentro de `setup_logging()` con guardia |
-| 2 | think log → DEBUG | `ollama_client.py` | `log.info` → `log.debug` |
-| 3 | Autenticación Telegram | `bot.py`, `.env.example` | Decorador `@require_auth` usando `TELEGRAM_USER_ID` |
-| 4 | sys.path en bot.py | `bot.py` | Eliminado (paquete instalado vía `pip install -e .`) |
-| 5 | offers_fetched incorrecto | `fetch.py`, `run.py` | `run_fetch_scraper()` retorna `{"new": ..., "total": ...}` |
-| 6 | Conexiones sin try/finally | `models.py`, `handlers.py`, `send.py` | 4 funciones envueltas en `try/finally` |
-| 7 | Commit por fila | `fetch.py` | `conn.commit()` por iteración en scraper raw |
-| 8 | Truncado JSON seguro | `fetch.py` | Truncar `description` antes de serializar |
-| 9 | Acentos en ciudades | `evaluate.py` | `unicodedata.normalize('NFD', ...)` |
-| 10 | role_level/role_level_label zombies | `migrate.py`, `schema.sql` | `drop_offers_zombie_columns()` nueva |
-| 11 | apify_raw_responses legacy | `schema.sql` | Comentario legacy |
-| 12 | active_role_level reserved | `schema.sql` | Comentario reserved for future |
-| 13 | Métricas con Lock | `ollama_client.py` | `threading.Lock` + `_inc_metric()` |
+| # | Archivo | Cambio |
+|---|---------|--------|
+| 1 | `src/dashboard/server.py` | `POST /api/pipeline/run` (mutex vía `status='running'` en DB + subprocess + `_watch_process` daemon thread que cierra file descriptor y actualiza status a error si returncode != 0), `GET /api/pipeline/log` (doble condición de fin: texto "Pipeline completado/abortado" en log + status en DB), `PYTHONUNBUFFERED=1` para evitar buffering en pipe |
+| 2 | `src/pipeline/run.py` | `--run-id` CLI opcional; `_persist_run()` hace UPDATE si hay run_id, INSERT si no; `try/except` envuelve pipeline para capturar crashes |
+| 3 | `src/dashboard/templates/dashboard.html` | Botón "▶ Lanzar Pipeline" + `<pre id="pipelineLog">` en sección Pipeline |
+| 4 | `src/dashboard/static/app.js` | `launchPipeline()` (POST + polling), `pollPipelineLog()` (cada 2s con offset + run_id), `stopPipelinePolling()` (reactiva botón y recarga data) |
+| 5 | `src/dashboard/static/style.css` | Clase `.btn-primary` |
 
-### Documentación
-- `docs/SETUP.md`: añadido `pip install -e .`
-- `README.md`: añadido `pip install -e .`, eliminado `pip install flask` redundante
-- `.env.example`: añadido `TELEGRAM_USER_ID`
+### Fix post-implementación (detectado en test)
+| # | Problema | Solución |
+|---|----------|----------|
+| 1 | E741 `l` como variable en `api_pipeline_log()` → Ruff pasó de 8 a 9 errores | Renombrado `l` → `line`. Ruff vuelve a 8 errores. |
 
 ## Tests
 - **231 tests passing** (0 regresiones)
 - **Ruff:** 0 errores nuevos (8 pre-existentes: E402 en server/migrate/backfill, W291 en cv_extractor/role_classifier)
+- **Verificación manual:**
+  - ✅ Doble click POST → 1º started, 2º 409
+  - ✅ Log polling con offset + run_id
+  - ✅ finished=True detectado (texto en log + status en DB)
+  - ✅ `_persist_run` con run_id hace UPDATE correctamente
 
 ## Comandos
 ```bash

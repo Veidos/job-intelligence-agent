@@ -71,6 +71,7 @@ def run_pipeline(
     limit_enrich: int = 50,
     skip_cv_check: bool = False,
     since_date: str = "_24_HOURS",
+    run_id: int | None = None,
 ) -> None:
     setup_logging()
 
@@ -139,72 +140,90 @@ def run_pipeline(
     offers_fetched = 0
     evaluated = 0
 
-    # PASO 1: Fetch
-    if skip_fetch:
-        log.info("[1/4] Fetch — saltado (--skip-fetch)")
-    else:
-        log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
-        from src.pipeline.fetch import run_fetch_scraper
-
-        fetch_result = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
-        new_offers = fetch_result["new"]
-        offers_fetched = fetch_result["total"]
-        log.info("[1/4] Fetch — %d nuevas de %d scrapeadas", new_offers, offers_fetched)
-
-    # PASO 2: Classify
-    log.info("[2/4] Classify — clasificando roles...")
-    from src.pipeline.role_classifier import run_classifier
-
-    classified = run_classifier()
-    log.info("[2/4] Classify — %d ofertas clasificadas", classified)
-
-    # PAS0 2.5: Enrich companies (optional - degrada gracefully)
-    log.info("[2.5/4] Enrich — poblando datos de empresas...")
-    from src.pipeline.fetch_company import run as run_fetch_company
-
     try:
-        enrich_result = run_fetch_company(limit=limit_enrich)
-        log.info(
-            "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d errores, %d pendientes",
-            enrich_result["enriched"],
-            enrich_result["linked"],
-            enrich_result["errors"],
-            enrich_result["pending"],
-        )
-    except Exception as e:
-        log.warning("[2.5/4] Enrich — falló (DB necesita migración): %s", e)
-        errors.append(f"enrich: {e}")
+        # PASO 1: Fetch
+        if skip_fetch:
+            log.info("[1/4] Fetch — saltado (--skip-fetch)")
+        else:
+            log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
+            from src.pipeline.fetch import run_fetch_scraper
 
-    # PASO 3: Evaluate
-    log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
-    from src.pipeline.evaluate import run_evaluate
+            fetch_result = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
+            new_offers = fetch_result["new"]
+            offers_fetched = fetch_result["total"]
+            log.info("[1/4] Fetch — %d nuevas de %d scrapeadas", new_offers, offers_fetched)
 
-    stats = run_evaluate(limit=limit_eval)
-    evaluated = stats.get("evaluated", 0)
-    log.info("[3/4] Evaluate — %s", stats)
+        # PASO 2: Classify
+        log.info("[2/4] Classify — clasificando roles...")
+        from src.pipeline.role_classifier import run_classifier
 
-    # PASO 4: Send
-    if dry_run:
-        log.info("[4/4] Send — saltado (--dry-run)")
-    else:
+        classified = run_classifier()
+        log.info("[2/4] Classify — %d ofertas clasificadas", classified)
+
+        # PAS0 2.5: Enrich companies (optional - degrada gracefully)
+        log.info("[2.5/4] Enrich — poblando datos de empresas...")
+        from src.pipeline.fetch_company import run as run_fetch_company
+
         try:
-            log.info("[4/4] Send — enviando a Telegram...")
-            from src.telegram.send import send_daily
-
-            send_daily()
-            log.info("[4/4] Send — OK")
+            enrich_result = run_fetch_company(limit=limit_enrich)
+            log.info(
+                "[2.5/4] Enrich — %d nuevas, %d actualizadas, %d errores, %d pendientes",
+                enrich_result["enriched"],
+                enrich_result["linked"],
+                enrich_result["errors"],
+                enrich_result["pending"],
+            )
         except Exception as e:
-            log.error("[4/4] Send — error: %s", e)
-            errors.append(f"send: {e}")
+            log.warning("[2.5/4] Enrich — falló (DB necesita migración): %s", e)
+            errors.append(f"enrich: {e}")
 
-    elapsed = int((time.monotonic() - t0) * 1000)
-    log.info("Pipeline completado (%d ms)", elapsed)
+        # PASO 3: Evaluate
+        log.info("[3/4] Evaluate — puntuando con gemma4:e4b...")
+        from src.pipeline.evaluate import run_evaluate
 
-    from src.utils.ollama_client import get_llm_metrics
+        stats = run_evaluate(limit=limit_eval)
+        evaluated = stats.get("evaluated", 0)
+        log.info("[3/4] Evaluate — %s", stats)
 
-    llm_metrics = get_llm_metrics()
-    if llm_metrics["calls"] > 0:
-        log.info("[LLM Metrics] %s", llm_metrics)
+        # PASO 4: Send
+        if dry_run:
+            log.info("[4/4] Send — saltado (--dry-run)")
+        else:
+            try:
+                log.info("[4/4] Send — enviando a Telegram...")
+                from src.telegram.send import send_daily
+
+                send_daily()
+                log.info("[4/4] Send — OK")
+            except Exception as e:
+                log.error("[4/4] Send — error: %s", e)
+                errors.append(f"send: {e}")
+
+        elapsed = int((time.monotonic() - t0) * 1000)
+        log.info("Pipeline completado (%d ms)", elapsed)
+
+        from src.utils.ollama_client import get_llm_metrics
+
+        llm_metrics = get_llm_metrics()
+        if llm_metrics["calls"] > 0:
+            log.info("[LLM Metrics] %s", llm_metrics)
+    except Exception as e:
+        log.error("Pipeline falló con excepción: %s", e, exc_info=True)
+        elapsed = int((time.monotonic() - t0) * 1000)
+        _persist_run(
+            errors=[str(e)],
+            new_offers=new_offers,
+            offers_fetched=offers_fetched,
+            evaluated=evaluated,
+            skip_fetch=skip_fetch,
+            dry_run=dry_run,
+            limit_eval=limit_eval,
+            limit_enrich=limit_enrich,
+            since_date=since_date,
+            elapsed=elapsed,
+            run_id=run_id,
+        )
+        return
 
     _persist_run(
         errors,
@@ -217,6 +236,7 @@ def run_pipeline(
         limit_enrich,
         since_date,
         elapsed,
+        run_id=run_id,
     )
 
 
@@ -231,33 +251,41 @@ def _persist_run(
     limit_enrich: int,
     since_date: str,
     elapsed: int,
+    run_id: int | None = None,
 ) -> None:
     from src.db.init_db import get_connection
 
-    conn = get_connection()
-    conn.execute(
-        """
-        INSERT INTO search_runs (query_params, offers_fetched, new_offers, evaluated, errors, duration_ms, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            json.dumps(
-                {
-                    "skip_fetch": skip_fetch,
-                    "dry_run": dry_run,
-                    "since_date": since_date,
-                    "limit_eval": limit_eval,
-                    "limit_enrich": limit_enrich,
-                }
-            ),
-            0 if skip_fetch else offers_fetched,
-            new_offers,
-            evaluated,
-            "; ".join(errors) if errors else None,
-            elapsed,
-            "error" if errors else "ok",
-        ),
+    params = json.dumps(
+        {
+            "skip_fetch": skip_fetch,
+            "dry_run": dry_run,
+            "since_date": since_date,
+            "limit_eval": limit_eval,
+            "limit_enrich": limit_enrich,
+        }
     )
+    offers_fetched_val = 0 if skip_fetch else offers_fetched
+    errors_val = "; ".join(errors) if errors else None
+    status_val = "error" if errors else "ok"
+
+    conn = get_connection()
+    if run_id:
+        conn.execute(
+            """UPDATE search_runs
+               SET query_params=?, offers_fetched=?, new_offers=?, evaluated=?,
+                   errors=?, duration_ms=?, status=?
+               WHERE id=?""",
+            (params, offers_fetched_val, new_offers, evaluated,
+             errors_val, elapsed, status_val, run_id),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO search_runs
+               (query_params, offers_fetched, new_offers, evaluated, errors, duration_ms, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (params, offers_fetched_val, new_offers, evaluated,
+             errors_val, elapsed, status_val),
+        )
     conn.commit()
     conn.close()
 
@@ -303,6 +331,12 @@ if __name__ == "__main__":
         choices=["_24_HOURS", "_7_DAYS", "_15_DAYS", "ANY"],
         help="Filtro temporal (default: _24_HOURS)",
     )
+    parser.add_argument(
+        "--run-id",
+        type=int,
+        default=None,
+        help="ID de search_runs para UPDATE (dashboard interno)",
+    )
     args = parser.parse_args()
     run_pipeline(
         skip_fetch=args.skip_fetch,
@@ -311,4 +345,5 @@ if __name__ == "__main__":
         limit_enrich=args.limit_enrich,
         skip_cv_check=args.skip_cv_check,
         since_date=args.since_date,
+        run_id=args.run_id,
     )

@@ -12,7 +12,11 @@ import argparse
 import contextlib
 import json
 import logging
+import os
 import sqlite3
+import subprocess
+import sys
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -24,6 +28,9 @@ from flask import Flask, jsonify, request, send_from_directory
 from src.db.init_db import get_connection
 
 log = logging.getLogger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+LIVE_LOG = PROJECT_ROOT / "logs" / "pipeline_live.log"
 
 app = Flask(__name__, static_folder=None)
 
@@ -505,6 +512,118 @@ def api_pipeline_runs():
             "actionable": actionable_by_run.get(rd, []),
         })
     return jsonify(result)
+
+
+# ── Pipeline execution ────────────────────────────────────────────────
+
+def _watch_process(proc: subprocess.Popen, log_file, run_id: int) -> None:
+    proc.wait()
+    log_file.close()
+    if proc.returncode != 0:
+        try:
+            conn = get_connection()
+            conn.execute(
+                "UPDATE search_runs SET status='error' WHERE id=? AND status='running'",
+                (run_id,),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            log.error("Error actualizando status del run %d: %s", run_id, e)
+
+
+@app.route("/api/pipeline/run", methods=["POST"])
+def api_pipeline_run():
+    data = request.get_json() or {}
+    with contextlib.closing(get_connection()) as conn:
+        cur = conn.cursor()
+        running = cur.execute(
+            "SELECT id FROM search_runs WHERE status='running'"
+        ).fetchone()
+        if running:
+            return jsonify(error="Pipeline ya en ejecución", run_id=running[0]), 409
+
+        params = json.dumps({
+            "skip_fetch": data.get("skip_fetch", False),
+            "dry_run": data.get("dry_run", False),
+            "since_date": data.get("since_date", "_24_HOURS"),
+            "limit_eval": data.get("limit_eval", 30),
+            "limit_enrich": data.get("limit_enrich", 50),
+        })
+        cur.execute(
+            "INSERT INTO search_runs (status, query_params) VALUES ('running', ?)",
+            (params,),
+        )
+        run_id = cur.lastrowid
+        conn.commit()
+
+    LIVE_LOG.parent.mkdir(parents=True, exist_ok=True)
+    log_file = open(LIVE_LOG, "w")
+    cmd = [
+        sys.executable, "-m", "src.pipeline.run",
+        "--run-id", str(run_id),
+    ]
+    if data.get("skip_fetch"):
+        cmd.append("--skip-fetch")
+    if data.get("dry_run"):
+        cmd.append("--dry-run")
+    if data.get("since_date"):
+        cmd.extend(["--since-date", data["since_date"]])
+    if data.get("limit_eval") is not None:
+        cmd.extend(["--limit-eval", str(data["limit_eval"])])
+
+    proc_env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    proc = subprocess.Popen(
+        cmd, stdout=log_file, stderr=subprocess.STDOUT, env=proc_env,
+    )
+    t = threading.Thread(
+        target=_watch_process, args=(proc, log_file, run_id), daemon=True
+    )
+    t.start()
+
+    log.info("Pipeline lanzado: run_id=%d, cmd=%s", run_id, cmd)
+    return jsonify(status="started", run_id=run_id)
+
+
+@app.route("/api/pipeline/log")
+def api_pipeline_log():
+    offset = request.args.get("offset", 0, type=int)
+    run_id = request.args.get("run_id", type=int)
+
+    lines = []
+    finished = False
+    try:
+        if LIVE_LOG.exists():
+            size = LIVE_LOG.stat().st_size
+            with open(LIVE_LOG) as f:
+                f.seek(offset)
+                new_data = f.read()
+            if new_data:
+                lines = new_data.splitlines(keepends=True)
+            new_offset = size
+        else:
+            new_offset = offset
+    except OSError:
+        new_offset = offset
+
+    if any(
+        "Pipeline completado" in line or "Pipeline abortado" in line
+        for line in lines
+    ):
+        finished = True
+    elif run_id:
+        try:
+            conn = get_connection()
+            row = conn.execute(
+                "SELECT status FROM search_runs WHERE id=?", (run_id,)
+            ).fetchone()
+            conn.close()
+            if row and row[0] != "running":
+                finished = True
+        except Exception:
+            pass
+
+    return jsonify(lines=lines, offset=new_offset, finished=finished)
 
 
 # ── Serve static files & SPA ──────────────────────────────────────────

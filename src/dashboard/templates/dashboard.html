@@ -149,6 +149,18 @@
       <select id="pipelineRunDate"></select>
     </div>
 
+    <div class="pipeline-controls" style="margin:16px 0">
+      <button id="btnRunPipeline" class="btn-primary" onclick="launchPipeline()">▶ Lanzar Pipeline</button>
+      <span id="pipelineStatus" style="color:var(--text2);margin-left:12px;font-size:13px"></span>
+    </div>
+
+    <details class="runs-section" id="pipelineLogPanel" style="display:none">
+      <summary>Log en vivo</summary>
+      <pre id="pipelineLog"
+        style="max-height:400px;overflow:auto;font-size:12px;background:var(--surface);padding:12px;border-radius:6px;margin:8px 0;font-family:monospace;line-height:1.5;color:var(--text)"
+      ></pre>
+    </details>
+
     <h3 class="monitor-section-title">Embudo</h3>
     <div class="funnel-row" id="pipelineFunnel"></div>
 
