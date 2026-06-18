@@ -590,6 +590,27 @@ def api_pipeline_run():
     return jsonify(status="started", run_id=run_id)
 
 
+@app.route("/api/pipeline/status")
+def api_pipeline_status():
+    """Consulta si hay un pipeline en ejecución (reconexión post‑restart).
+
+    El offset se calcula con LIVE_LOG.stat().st_size para que al reconectar
+    solo se vean líneas nuevas desde la reconexión, no todo el historial.
+    Si en el futuro se quiere el log completo, cambiar a offset=0.
+    """
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT id, pid FROM search_runs WHERE status='running' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if not row:
+            return jsonify(running=False)
+        offset = LIVE_LOG.stat().st_size if LIVE_LOG.exists() else 0
+        return jsonify(running=True, run_id=row[0], pid=row[1], offset=offset)
+    finally:
+        conn.close()
+
+
 @app.route("/api/pipeline/stop", methods=["POST"])
 def api_pipeline_stop():
     conn = get_connection()

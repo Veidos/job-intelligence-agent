@@ -948,6 +948,24 @@ function stopPipeline() {
     });
 }
 
+function checkPipelineStatus() {
+  fetch('/api/pipeline/status')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.running) return;
+      _pipelineRunId = data.run_id;
+      _pipelineLogOffset = data.offset;
+      _pipelinePolling = true;
+      $('btnRunPipeline').style.display = 'none';
+      $('btnStopPipeline').style.display = 'inline-block';
+      $('btnStopPipeline').disabled = false;
+      $('pipelineLogPanel').style.display = 'block';
+      $('pipelineLogPanel').open = true;
+      $('pipelineStatus').textContent = '\ud83d\udd04 Reconectado...';
+      pollPipelineLog();
+    });
+}
+
 function pollPipelineLog() {
   if (!_pipelinePolling) return;
   var url = '/api/pipeline/log?offset=' + _pipelineLogOffset;
@@ -1915,4 +1933,5 @@ function renderPipelineRunsTable(allRuns) {
 /* ── Init ── */
 Promise.all([loadStats(), loadOffers()]).then(() => {
   renderCharts();
+  checkPipelineStatus();
 });
