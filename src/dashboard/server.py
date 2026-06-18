@@ -681,7 +681,7 @@ def index():
 def main():
     parser = argparse.ArgumentParser(description="Job Intelligence Dashboard")
     parser.add_argument("--port", type=int, default=8080, help="Puerto (default: 8080)")
-    parser.add_argument("--host", default="127.0.0.1", help="Host (default: 127.0.0.1)")
+    parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
     parser.add_argument("--debug", action="store_true", help="Modo debug Flask")
     args = parser.parse_args()
 
