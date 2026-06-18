@@ -167,7 +167,8 @@ CREATE TABLE IF NOT EXISTS search_runs (
     evaluated INTEGER DEFAULT 0,
     errors TEXT,
     duration_ms INTEGER,
-    status TEXT DEFAULT 'ok'
+    status TEXT DEFAULT 'ok',
+    pid INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS market_signals (

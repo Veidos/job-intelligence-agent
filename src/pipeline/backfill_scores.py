@@ -11,11 +11,6 @@ match_score, recommendation y scoring_detail.weights en DB.
 import contextlib
 import json
 import sqlite3
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.db.init_db import get_connection
 

@@ -13,6 +13,7 @@ import contextlib
 import json
 import logging
 import os
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -23,9 +24,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory  # noqa: E402
 
-from src.db.init_db import get_connection
+from src.db.init_db import get_connection  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -576,6 +577,10 @@ def api_pipeline_run():
     proc = subprocess.Popen(
         cmd, stdout=log_file, stderr=subprocess.STDOUT, env=proc_env,
     )
+    conn = get_connection()
+    conn.execute("UPDATE search_runs SET pid=? WHERE id=?", (proc.pid, run_id))
+    conn.commit()
+    conn.close()
     t = threading.Thread(
         target=_watch_process, args=(proc, log_file, run_id), daemon=True
     )
@@ -583,6 +588,31 @@ def api_pipeline_run():
 
     log.info("Pipeline lanzado: run_id=%d, cmd=%s", run_id, cmd)
     return jsonify(status="started", run_id=run_id)
+
+
+@app.route("/api/pipeline/stop", methods=["POST"])
+def api_pipeline_stop():
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT id, pid FROM search_runs WHERE status='running' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if not row:
+            return jsonify(error="No hay pipeline en ejecución"), 404
+        if not row["pid"]:
+            return jsonify(error="PID desconocido (pipeline lanzado antes de esta versión)"), 404
+        run_id, pid = row["id"], row["pid"]
+        try:
+            os.kill(pid, signal.SIGTERM)
+            log.info("Pipeline detenido: run_id=%d, pid=%d", run_id, pid)
+            return jsonify(status="stopped", run_id=run_id)
+        except ProcessLookupError:
+            return jsonify(status="already_finished", run_id=run_id)
+    except Exception as e:
+        log.error("Error deteniendo pipeline: %s", e)
+        return jsonify(error=str(e)), 500
+    finally:
+        conn.close()
 
 
 @app.route("/api/pipeline/log")
@@ -607,7 +637,7 @@ def api_pipeline_log():
         new_offset = offset
 
     if any(
-        "Pipeline completado" in line or "Pipeline abortado" in line
+        "Pipeline completado" in line or "Pipeline abortado" in line or "Pipeline interrumpido" in line
         for line in lines
     ):
         finished = True

@@ -521,3 +521,13 @@ tr td:first-child { padding-left: 14px; }
 }
 .btn-primary:hover { opacity: 0.85; }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-danger {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 20px; font-size: 13px; font-weight: 600;
+  background: var(--red); color: #fff; border: none;
+  border-radius: var(--radius); cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-danger:hover { opacity: 0.85; }
+.btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }

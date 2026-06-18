@@ -42,7 +42,7 @@ CAMPOS A EXTRAER:
    - **básico**: La skill viene de BOOTCAMP, CURSOS, PROYECTOS ACADÉMICOS, PROYECTOS DE APRENDIZAJE
      Si la evidencia menciona "Bootcamp", "proyecto", "Capstone", "curso", "formación" → básico
    - **intermedio**: La skill se usó en PROYECTOS REALES PARA CLIENTES PAGADOS (freelance, consultoría)
-     Si la evidencia menciona "cliente", "freelance", "consultoría pagada" → intermedio  
+     Si la evidencia menciona "cliente", "freelance", "consultoría pagada" → intermedio
    - **avanzado**: La skill se usó en TRABAJO LABORAL FORMAL (contrato, payroll, empresa)
      Si la evidencia menciona "empresa", "trabajo", "contrato", "empleo" → avanzado
    - Si tienes dudas entre básico e intermedio → PON básico

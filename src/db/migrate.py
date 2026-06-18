@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.db.init_db import get_connection
+from src.db.init_db import get_connection  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

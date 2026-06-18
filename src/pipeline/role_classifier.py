@@ -247,11 +247,11 @@ Perfil:
 Para cada gap, pregúntate:
 - ¿La oferta pide una herramienta concreta (Power BI, Looker, DAX, SAP...)
   que NO aparece en el perfil? → herramienta
-- ¿La oferta requiere experiencia en un sector (automoción, finanzas, 
-  defensa, legal...) que el candidato no tiene? → dominio  
+- ¿La oferta requiere experiencia en un sector (automoción, finanzas,
+  defensa, legal...) que el candidato no tiene? → dominio
 - ¿La oferta exige experiencia práctica acreditable, años de experiencia
   o nivel de responsabilidad que el candidato no demuestra? → seniority
-- ¿La oferta exige algo imposible para el candidato (titulación 
+- ¿La oferta exige algo imposible para el candidato (titulación
   obligatoria, certificación específica, discapacidad)? → estructural
 - ¿El candidato cubre todo lo requerido? → none
 

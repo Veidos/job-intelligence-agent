@@ -887,7 +887,9 @@ let _pipelineRunId = null;
 function launchPipeline() {
   const btn = $('btnRunPipeline');
   btn.disabled = true;
-  btn.textContent = '\u23f3 Ejecutando...';
+  btn.style.display = 'none';
+  $('btnStopPipeline').style.display = 'inline-block';
+  $('btnStopPipeline').disabled = false;
   $('pipelineStatus').textContent = 'Iniciando...';
   $('pipelineLogPanel').style.display = 'block';
   $('pipelineLog').textContent = '';
@@ -920,13 +922,30 @@ function launchPipeline() {
 
 function stopPipelinePolling() {
   _pipelinePolling = false;
-  const btn = $('btnRunPipeline');
-  btn.disabled = false;
-  btn.textContent = '\u25b6 Lanzar Pipeline';
+  $('btnRunPipeline').style.display = 'inline-block';
+  $('btnRunPipeline').disabled = false;
+  $('btnStopPipeline').style.display = 'none';
   $('pipelineStatus').textContent = '\u2705 Completado';
   loadRuns();
   loadPipelineRuns();
   loadOffers();
+}
+
+function stopPipeline() {
+  $('btnStopPipeline').disabled = true;
+  $('pipelineStatus').textContent = '\u23f3 Deteniendo...';
+  fetch('/api/pipeline/stop', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.status === 'stopped' || data.status === 'already_finished') {
+        _pipelinePolling = true;
+        pollPipelineLog();
+      }
+    })
+    .catch(function () {
+      $('pipelineStatus').textContent = '\u274c Error al detener';
+      $('btnStopPipeline').disabled = false;
+    });
 }
 
 function pollPipelineLog() {

@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import logging.handlers
+import signal
 import sys
 import time
 from pathlib import Path
@@ -74,6 +75,7 @@ def run_pipeline(
     run_id: int | None = None,
 ) -> None:
     setup_logging()
+    signal.signal(signal.SIGTERM, lambda sig, frame: sys.exit(0))
 
     log.info("[Migrate] Verificando schema...")
     from src.db.migrate import run_migration
@@ -207,6 +209,25 @@ def run_pipeline(
         llm_metrics = get_llm_metrics()
         if llm_metrics["calls"] > 0:
             log.info("[LLM Metrics] %s", llm_metrics)
+    except (SystemExit, KeyboardInterrupt):
+        log.warning("Pipeline interrumpido por señal externa")
+        elapsed = int((time.monotonic() - t0) * 1000)
+        _persist_run(
+            errors=[],
+            new_offers=new_offers,
+            offers_fetched=offers_fetched,
+            evaluated=evaluated,
+            skip_fetch=skip_fetch,
+            dry_run=dry_run,
+            limit_eval=limit_eval,
+            limit_enrich=limit_enrich,
+            since_date=since_date,
+            elapsed=elapsed,
+            run_id=run_id,
+            status_override="stopped",
+        )
+        return
+
     except Exception as e:
         log.error("Pipeline falló con excepción: %s", e, exc_info=True)
         elapsed = int((time.monotonic() - t0) * 1000)
@@ -252,6 +273,7 @@ def _persist_run(
     since_date: str,
     elapsed: int,
     run_id: int | None = None,
+    status_override: str | None = None,
 ) -> None:
     from src.db.init_db import get_connection
 
@@ -266,7 +288,7 @@ def _persist_run(
     )
     offers_fetched_val = 0 if skip_fetch else offers_fetched
     errors_val = "; ".join(errors) if errors else None
-    status_val = "error" if errors else "ok"
+    status_val = status_override or ("error" if errors else "ok")
 
     conn = get_connection()
     if run_id:
