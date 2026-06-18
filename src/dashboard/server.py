@@ -535,7 +535,7 @@ def _watch_process(proc: subprocess.Popen, log_file, run_id: int) -> None:
 
 @app.route("/api/pipeline/run", methods=["POST"])
 def api_pipeline_run():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     with contextlib.closing(get_connection()) as conn:
         cur = conn.cursor()
         running = cur.execute(
@@ -599,9 +599,9 @@ def api_pipeline_stop():
         ).fetchone()
         if not row:
             return jsonify(error="No hay pipeline en ejecución"), 404
-        if not row["pid"]:
+        if not row[1]:
             return jsonify(error="PID desconocido (pipeline lanzado antes de esta versión)"), 404
-        run_id, pid = row["id"], row["pid"]
+        run_id, pid = row[0], row[1]
         try:
             os.kill(pid, signal.SIGTERM)
             log.info("Pipeline detenido: run_id=%d, pid=%d", run_id, pid)
