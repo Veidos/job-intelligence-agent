@@ -14,11 +14,11 @@ Sistema offline de inteligencia de carrera que extrae ofertas de InfoJobs, las p
 
 | Paso | Módulo | Qué hace |
 |------|--------|----------|
-| **1. Fetch** | `fetch.py` | Scraper propio (`curl_cffi` + BS4). Persist raw → upsert → LLM enrich. Sin Apify. |
-| **2. Classify** | `role_classifier.py` | Clasifica en roles del catálogo con gemma4:e4b. Asigna `relevance_flag`. |
-| **2.5. Enrich** | `fetch_company.py` | Enriquece empresas con qwen2.5:7b. Degrada gracefully si falla. |
-| **3. Evaluate** | `evaluate.py` | Score técnico + HR + bloqueadores duros. Determinista 0–100. |
-| **4. Send** | `send.py` | Envía top ofertas a Telegram. Opcional. |
+| Fetch | `fetch.py` | Scraper propio (`curl_cffi` + BS4). Persist raw → upsert → LLM enrich. Sin Apify. |
+| Classify | `role_classifier.py` | Clasifica en roles del catálogo con gemma4:e4b. Asigna `relevance_flag`. |
+| Enrich | `fetch_company.py` | Enriquece empresas con qwen2.5:7b. Degrada gracefully si falla. |
+| Evaluate | `evaluate.py` | Score técnico + HR + bloqueadores duros. Determinista 0–100. |
+| Send | `send.py` | Envía top ofertas a Telegram. Opcional. |
 
 ## Diagrama
 
