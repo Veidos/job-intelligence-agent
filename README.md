@@ -14,16 +14,16 @@ Sistema offline de inteligencia de carrera que extrae ofertas de InfoJobs, las p
 
 | Paso | Módulo | Qué hace |
 |------|--------|----------|
-| 1. Fetch | `fetch.py` | Scraper propio con `curl_cffi` + BeautifulSoup. Extrae ofertas de InfoJobs con campos estructurados (requisitos, salario, modalidad, experiencia) directamente del HTML. No depende de Apify. Fases: persist raw → upsert en offers → LLM enrich. |
-| 2. Classify | `role_classifier.py` | Clasifica ofertas en roles del catálogo (`data_analyst`, `ml_engineer`, etc.) con gemma4:e4b. Asigna `relevance_flag`: core, adjacent, stretch, temporal. |
-| 2.5. Enrich | `fetch_company.py` | Enriquece datos de empresa (sector, tamaño, descripción, flags) con qwen2.5:7b. Degrada gracefulmente — si falla, el pipeline continúa. |
-| 3. Evaluate | `evaluate.py` | Puntuación técnica (Python) + evaluación HR (gemma4:e4b) + validación final con bloqueadores duros. Score determinista 0–100. |
-| 4. Send | `send.py` | Envía top ofertas a Telegram. Opcional — el dashboard es la interfaz principal. |
+| 1. Fetch | `fetch.py` | Scraper propio (`curl_cffi` + BS4). Persist raw → upsert → LLM enrich. Sin Apify. |
+| 2. Classify | `role_classifier.py` | Clasifica en roles del catálogo con gemma4:e4b. Asigna `relevance_flag`. |
+| 2.5. Enrich | `fetch_company.py` | Enriquece empresas con qwen2.5:7b. Degrada gracefully si falla. |
+| 3. Evaluate | `evaluate.py` | Score técnico + HR + bloqueadores duros. Determinista 0–100. |
+| 4. Send | `send.py` | Envía top ofertas a Telegram. Opcional. |
 
 ## Diagrama
 
 ```mermaid
-flowchart LR
+flowchart TD
   A[PERFIL.md] --> B[fetch.py]
   B --> C[scraper_raw_responses]
   C --> D[offers]
