@@ -30,7 +30,6 @@ document.querySelectorAll('.nav-link').forEach(el => {
       loadStats(); renderCharts();
       fetch('/api/applications').then(r => r.json()).then(apps => {
         renderAppFunnel(apps);
-        renderAppFollowUp(apps);
       });
     }
   });
@@ -593,9 +592,10 @@ function loadApplications() {
     const container = $('appList');
     if (!data.length) {
       container.innerHTML = '<div class="empty">A\u00fan no has guardado ninguna aplicaci\u00f3n. Explora ofertas y usa "A\u00f1adir a aplicaciones" desde el detalle.</div>';
-      return;
+    } else {
+      container.innerHTML = data.map(a => renderAppCard(a)).join('');
     }
-    container.innerHTML = data.map(a => renderAppCard(a)).join('');
+    renderAppFollowUp(data);
   });
 }
 
@@ -1645,6 +1645,7 @@ function renderCompBandsChart(run) {
 
   const labels = bands.map(b => ({ lt_30: '<30', grey: '30–49', gt_50: '50+' })[b.band] || b.band);
   const mCore    = bands.map(b => b.m_core);
+  const mSec     = bands.map(b => b.m_sec);
   const fExp     = bands.map(b => b.f_exp);
   const loc      = bands.map(b => b.loc);
   const market   = bands.map(b => b.market);
@@ -1656,10 +1657,11 @@ function renderCompBandsChart(run) {
     data: {
       labels,
       datasets: [
-        { label: 'Skills core', data: mCore, backgroundColor: '#6366f1' },
-        { label: 'Experiencia', data: fExp,  backgroundColor: '#22c55e' },
-        { label: 'Ubicación',   data: loc,   backgroundColor: '#eab308' },
-        { label: 'Fit cultural',data: market,backgroundColor: '#f97316' },
+        { label: 'Skills core',     data: mCore,  backgroundColor: '#6366f1' },
+        { label: 'Skills secondary', data: mSec,   backgroundColor: '#06b6d4' },
+        { label: 'Experiencia',     data: fExp,   backgroundColor: '#22c55e' },
+        { label: 'Ubicación',       data: loc,    backgroundColor: '#eab308' },
+        { label: 'Fit cultural',    data: market, backgroundColor: '#f97316' },
       ],
     },
     options: {

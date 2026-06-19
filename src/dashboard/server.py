@@ -447,6 +447,7 @@ def api_pipeline_runs():
                 END as band,
                 COUNT(*)                                     AS n,
                 ROUND(AVG(e.skills_hard_match), 1)           AS m_core,
+                ROUND(AVG(json_extract(e.scoring_detail, '$.M_sec')) * 100, 1) AS m_sec,
                 ROUND(AVG(e.experience_match), 1)            AS f_exp,
                 ROUND(AVG(e.location_match), 1)              AS loc,
                 ROUND(AVG(e.market_competitiveness), 1)      AS market
@@ -462,6 +463,7 @@ def api_pipeline_runs():
                 "band": r["band"],
                 "n": r["n"],
                 "m_core": r["m_core"],
+                "m_sec": r["m_sec"],
                 "f_exp": r["f_exp"],
                 "loc": r["loc"],
                 "market": r["market"],
@@ -594,9 +596,8 @@ def api_pipeline_run():
 def api_pipeline_status():
     """Consulta si hay un pipeline en ejecución (reconexión post‑restart).
 
-    El offset se calcula con LIVE_LOG.stat().st_size para que al reconectar
-    solo se vean líneas nuevas desde la reconexión, no todo el historial.
-    Si en el futuro se quiere el log completo, cambiar a offset=0.
+    El offset se envía a 0 para que al reconectar se vea el log completo
+    desde el inicio, no solo líneas nuevas.
     """
     conn = get_connection()
     try:
@@ -605,8 +606,7 @@ def api_pipeline_status():
         ).fetchone()
         if not row:
             return jsonify(running=False)
-        offset = LIVE_LOG.stat().st_size if LIVE_LOG.exists() else 0
-        return jsonify(running=True, run_id=row[0], pid=row[1], offset=offset)
+        return jsonify(running=True, run_id=row[0], pid=row[1], offset=0)
     finally:
         conn.close()
 
@@ -684,7 +684,10 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 @app.route("/static/<path:filename>")
 def static_files(filename):
-    return send_from_directory(str(STATIC_DIR), filename)
+    response = send_from_directory(str(STATIC_DIR), filename)
+    if filename.endswith((".js", ".css")):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 @app.route("/favicon.ico")
