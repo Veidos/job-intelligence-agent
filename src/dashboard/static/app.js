@@ -1704,8 +1704,9 @@ function renderCompBandsChart(run) {
 function renderEnvCompatChart(run) {
   if (typeof Chart === 'undefined') return;
   const env = run.env_compat || {};
-  const labels = Object.keys(env);
-  const vals = Object.values(env);
+  const envOrder = { alta: 0, media: 1, baja: 2 };
+  const labels = Object.keys(env).sort((a, b) => (envOrder[a] ?? 99) - (envOrder[b] ?? 99));
+  const vals = labels.map(l => env[l]);
   const total = vals.reduce((a, b) => a + b, 0);
   if (!total) return;
   const colors = { alta: '#22c55e', media: '#eab308', baja: '#ef4444' };
@@ -1798,9 +1799,25 @@ function renderActionableTable(run) {
   `;
 }
 
+function pearsonCorr(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return null;
+  const sx = xs.reduce((a, b) => a + b, 0);
+  const sy = ys.reduce((a, b) => a + b, 0);
+  const sxy = xs.reduce((s, x, i) => s + x * ys[i], 0);
+  const sx2 = xs.reduce((s, x) => s + x * x, 0);
+  const sy2 = ys.reduce((s, y) => s + y * y, 0);
+  const num = n * sxy - sx * sy;
+  const den = Math.sqrt((n * sx2 - sx * sx) * (n * sy2 - sy * sy));
+  return den ? num / den : null;
+}
+
 function renderScatterChart(offers) {
   if (typeof Chart === 'undefined') return;
   if (!offers.length) return;
+  const xs = offers.map(o => (o.M_core ?? 0) * 100);
+  const ys = offers.map(o => (o.F_fit ?? 0) * 100);
+  const r = pearsonCorr(xs, ys);
   const colors = { yes: '#22c55e', maybe: '#eab308', no: '#ef4444' };
   const labels = { yes: 'Sí', maybe: 'Quizás', no: 'No' };
   const datasets = ['yes', 'maybe', 'no'].map(signal => ({
@@ -1851,23 +1868,51 @@ function renderScatterChart(offers) {
         },
       },
     },
-    plugins: [{
-      id: 'diagonalLine',
-      beforeDraw(chart) {
-        const ctx = chart.ctx;
-        const xS = chart.scales.x;
-        const yS = chart.scales.y;
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.moveTo(xS.getPixelForValue(0), yS.getPixelForValue(0));
-        ctx.lineTo(xS.getPixelForValue(100), yS.getPixelForValue(100));
-        ctx.stroke();
-        ctx.restore();
+    plugins: [
+      {
+        id: 'diagonalLine',
+        beforeDraw(chart) {
+          const ctx = chart.ctx;
+          const xS = chart.scales.x;
+          const yS = chart.scales.y;
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(xS.getPixelForValue(0), yS.getPixelForValue(0));
+          ctx.lineTo(xS.getPixelForValue(100), yS.getPixelForValue(100));
+          ctx.stroke();
+          ctx.restore();
+        },
       },
-    }],
+      {
+        id: 'correlationBadge',
+        afterDraw(chart) {
+          if (r == null) return;
+          const ctx = chart.ctx;
+          const area = chart.chartArea;
+          const absR = Math.abs(r);
+          let color, label;
+          if (absR >= 0.5) { color = '#ef4444'; label = 'Alta correlaci\u00f3n'; }
+          else if (absR >= 0.3) { color = '#eab308'; label = 'Correlaci\u00f3n moderada'; }
+          else { color = '#22c55e'; label = 'Independencia'; }
+          ctx.save();
+          ctx.fillStyle = 'rgba(0,0,0,0.75)';
+          ctx.roundRect(area.right - 190, area.top + 8, 180, 44, 6);
+          ctx.fill();
+          ctx.fillStyle = color;
+          ctx.font = 'bold 20px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText('r = ' + r.toFixed(3), area.right - 180, area.top + 14);
+          ctx.fillStyle = '#e4e4e7';
+          ctx.font = '11px sans-serif';
+          ctx.fillText(label, area.right - 180, area.top + 38);
+          ctx.restore();
+        },
+      },
+    ],
   });
 }
 
