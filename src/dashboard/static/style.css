@@ -531,3 +531,25 @@ tr td:first-child { padding-left: 14px; }
 }
 .btn-danger:hover { opacity: 0.85; }
 .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── LLM independence indicators ── */
+.llm-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-top: 14px;
+}
+.llm-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.llm-card-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.llm-card-r { font-size: 18px; font-weight: 700; }
+.llm-card-verdict { font-size: 13px; margin-top: 2px; }
+.llm-card-desc { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.llm-green .llm-card-r { color: var(--green); }
+.llm-green .llm-card-verdict { color: var(--green); }
+.llm-yellow .llm-card-r { color: var(--yellow); }
+.llm-yellow .llm-card-verdict { color: var(--yellow); }
+.llm-red .llm-card-r { color: var(--red); }
+.llm-red .llm-card-verdict { color: var(--red); }
+.llm-gray .llm-card-r { color: var(--text2); }
+.llm-gray .llm-card-verdict { color: var(--text2); }

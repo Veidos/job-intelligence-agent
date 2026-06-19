@@ -1576,6 +1576,7 @@ function loadPipelineRuns() {
           o.evaluated_at && o.evaluated_at.startsWith(run.run_date)
         );
         renderScatterChart(runOffers);
+        renderLlmIndicators(runOffers);
         renderSignalRecomChart(runOffers);
       }
     }
@@ -1812,12 +1813,64 @@ function pearsonCorr(xs, ys) {
   return den ? num / den : null;
 }
 
+function renderLlmIndicators(offers) {
+  if (!offers.length) return;
+  const container = $('llmIndicators');
+  if (!container) return;
+
+  const mCore = offers.map(o => (o.M_core ?? 0) * 100);
+  const mSec = offers.map(o => (o.M_sec ?? 0) * 100);
+  const fExp = offers.map(o => (o.F_exp ?? 0) * 100);
+  const fFit = offers.map(o => (o.F_fit ?? 0) * 100);
+
+  const r1 = pearsonCorr(mCore, fFit);
+  const r2 = pearsonCorr(fExp, fFit);
+  const r3 = pearsonCorr(mCore, mSec);
+
+  function rCard(label, r, desc) {
+    if (r == null) return '';
+    const absR = Math.abs(r);
+    let cls, verdict;
+    if (absR >= 0.5) { cls = 'llm-red'; verdict = 'Alta correlaci\u00f3n'; }
+    else if (absR >= 0.3) { cls = 'llm-yellow'; verdict = 'Correlaci\u00f3n moderada'; }
+    else { cls = 'llm-green'; verdict = 'Independencia'; }
+    return `<div class="llm-card ${cls}">
+      <div class="llm-card-label">${label}</div>
+      <div class="llm-card-r">r = ${r.toFixed(3)}</div>
+      <div class="llm-card-verdict">${verdict}</div>
+      <div class="llm-card-desc">${desc}</div>
+    </div>`;
+  }
+
+  const sigYes = offers.filter(o => o.llm_apply_signal === 'yes').map(o => o.match_score).filter(v => v != null);
+  const sigNo = offers.filter(o => o.llm_apply_signal === 'no').map(o => o.match_score).filter(v => v != null);
+  const sigMaybe = offers.filter(o => o.llm_apply_signal === 'maybe').map(o => o.match_score).filter(v => v != null);
+  const avgYes = sigYes.length ? (sigYes.reduce((a, b) => a + b, 0) / sigYes.length).toFixed(0) : '—';
+  const avgNo = sigNo.length ? (sigNo.reduce((a, b) => a + b, 0) / sigNo.length).toFixed(0) : '—';
+  const avgMaybe = sigMaybe.length ? (sigMaybe.reduce((a, b) => a + b, 0) / sigMaybe.length).toFixed(0) : '—';
+  const diff = avgYes !== '—' && avgNo !== '—' ? avgYes - avgNo : null;
+  let signalCls, signalVerdict;
+  if (diff == null) { signalCls = 'llm-gray'; signalVerdict = 'Sin datos'; }
+  else if (diff >= 30) { signalCls = 'llm-green'; signalVerdict = 'Discriminaci\u00f3n alta'; }
+  else if (diff >= 15) { signalCls = 'llm-yellow'; signalVerdict = 'Discriminaci\u00f3n moderada'; }
+  else { signalCls = 'llm-red'; signalVerdict = 'Baja discriminaci\u00f3n'; }
+
+  container.innerHTML = [
+    rCard('M_core vs F_fit', r1, 'Skills \u2260 cultura — deben ser independientes'),
+    rCard('F_exp vs F_fit', r2, 'Experiencia \u2260 encaje cultural'),
+    rCard('M_core vs M_sec', r3, 'Skills relacionadas — algo de correlaci\u00f3n es natural'),
+    `<div class="llm-card ${signalCls}">
+      <div class="llm-card-label">match_score \u00d7 apply_signal</div>
+      <div class="llm-card-r">Yes ${avgYes} \u00b7 No ${avgNo} \u00b7 Quiz\u00e1s ${avgMaybe}</div>
+      <div class="llm-card-verdict">${signalVerdict}</div>
+      <div class="llm-card-desc">El score debe predecir el veredicto (diferencia deseada: \u226530 pts)</div>
+    </div>`,
+  ].join('');
+}
+
 function renderScatterChart(offers) {
   if (typeof Chart === 'undefined') return;
   if (!offers.length) return;
-  const xs = offers.map(o => (o.M_core ?? 0) * 100);
-  const ys = offers.map(o => (o.F_fit ?? 0) * 100);
-  const r = pearsonCorr(xs, ys);
   const colors = { yes: '#22c55e', maybe: '#eab308', no: '#ef4444' };
   const labels = { yes: 'Sí', maybe: 'Quizás', no: 'No' };
   const datasets = ['yes', 'maybe', 'no'].map(signal => ({
@@ -1868,51 +1921,23 @@ function renderScatterChart(offers) {
         },
       },
     },
-    plugins: [
-      {
-        id: 'diagonalLine',
-        beforeDraw(chart) {
-          const ctx = chart.ctx;
-          const xS = chart.scales.x;
-          const yS = chart.scales.y;
-          ctx.save();
-          ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-          ctx.lineWidth = 1;
-          ctx.setLineDash([5, 5]);
-          ctx.beginPath();
-          ctx.moveTo(xS.getPixelForValue(0), yS.getPixelForValue(0));
-          ctx.lineTo(xS.getPixelForValue(100), yS.getPixelForValue(100));
-          ctx.stroke();
-          ctx.restore();
-        },
+    plugins: [{
+      id: 'diagonalLine',
+      beforeDraw(chart) {
+        const ctx = chart.ctx;
+        const xS = chart.scales.x;
+        const yS = chart.scales.y;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(xS.getPixelForValue(0), yS.getPixelForValue(0));
+        ctx.lineTo(xS.getPixelForValue(100), yS.getPixelForValue(100));
+        ctx.stroke();
+        ctx.restore();
       },
-      {
-        id: 'correlationBadge',
-        afterDraw(chart) {
-          if (r == null) return;
-          const ctx = chart.ctx;
-          const area = chart.chartArea;
-          const absR = Math.abs(r);
-          let color, label;
-          if (absR >= 0.5) { color = '#ef4444'; label = 'Alta correlaci\u00f3n'; }
-          else if (absR >= 0.3) { color = '#eab308'; label = 'Correlaci\u00f3n moderada'; }
-          else { color = '#22c55e'; label = 'Independencia'; }
-          ctx.save();
-          ctx.fillStyle = 'rgba(0,0,0,0.75)';
-          ctx.roundRect(area.right - 190, area.top + 8, 180, 44, 6);
-          ctx.fill();
-          ctx.fillStyle = color;
-          ctx.font = 'bold 20px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'top';
-          ctx.fillText('r = ' + r.toFixed(3), area.right - 180, area.top + 14);
-          ctx.fillStyle = '#e4e4e7';
-          ctx.font = '11px sans-serif';
-          ctx.fillText(label, area.right - 180, area.top + 38);
-          ctx.restore();
-        },
-      },
-    ],
+    }],
   });
 }
 
