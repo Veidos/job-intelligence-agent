@@ -1029,27 +1029,6 @@ function renderCharts() {
     },
   });
 
-  // Histogram: score distribution
-  const bins = [0, 10, 20, 30, 35, 40, 45, 50, 55, 60, 70, 80];
-  const hist = bins.map(() => 0);
-  data.forEach(d => {
-    const s = d.match_score || 0;
-    for (let i = bins.length - 1; i >= 0; i--) {
-      if (s >= bins[i]) { hist[i]++; break; }
-    }
-  });
-  const histLabels = bins.map((b, i) => i < bins.length - 1 ? `${b}\u2013${bins[i + 1]}` : `${b}+`);
-  destroyChart('chartScoreDist');
-  charts.chartScoreDist = new Chart($('chartScoreDist'), {
-    type: 'bar',
-    data: { labels: histLabels, datasets: [{ label: 'Ofertas', data: hist, backgroundColor: '#6366f1' }] },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false }, title: { display: true, text: 'Distribuci\u00f3n de Scores', color: '#e4e4e7' } },
-      scales: { x: { ticks: { color: '#8a8a95' } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
-    },
-  });
-
   // Recommendation by relevance
   const recByRel = {};
   data.forEach(d => {
@@ -1123,6 +1102,54 @@ function renderCharts() {
         title: { display: true, text: 'Score promedio por fecha de publicaci\u00f3n', color: '#e4e4e7' },
       },
       scales: { x: { ticks: { color: '#8a8a95', maxRotation: 45 } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
+    },
+  });
+
+  renderScoreHistogram(data);
+  renderScoreBySignal(data);
+}
+
+function renderScoreHistogram(offers) {
+  if (!offers.length) return;
+  if (typeof Chart === 'undefined') return;
+  const labels = ['0\u201310', '10\u201320', '20\u201330', '30\u201340', '40\u201350', '50\u201360', '60\u201370', '70\u201380', '80\u201390', '90\u2013100'];
+  const hist = Array(10).fill(0);
+  offers.forEach(o => {
+    const s = o.match_score || 0;
+    const idx = Math.min(Math.floor(s / 10), 9);
+    hist[idx]++;
+  });
+  const colors = ['#ef4444','#ef4444','#ef4444','#ef4444','#eab308','#eab308','#22c55e','#22c55e','#22c55e','#22c55e'];
+  destroyChart('chartScoreHistogram');
+  charts.chartScoreHistogram = new Chart($('chartScoreHistogram'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Ofertas', data: hist, backgroundColor: colors }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, title: { display: true, text: 'Distribuci\u00f3n de scores', color: '#e4e4e7' } },
+      scales: { x: { ticks: { color: '#8a8a95' } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
+    },
+  });
+}
+
+function renderScoreBySignal(offers) {
+  if (!offers.length) return;
+  if (typeof Chart === 'undefined') return;
+  const groups = ['yes', 'maybe', 'no'];
+  const colors = { yes: '#22c55e', maybe: '#eab308', no: '#ef4444' };
+  const labels = { yes: 'S\u00ed', maybe: 'Quiz\u00e1s', no: 'No' };
+  const means = groups.map(s => {
+    const vals = offers.filter(o => o.llm_apply_signal === s).map(o => o.match_score).filter(v => v != null);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  });
+  destroyChart('chartScoreBySignal');
+  charts.chartScoreBySignal = new Chart($('chartScoreBySignal'), {
+    type: 'bar',
+    data: { labels: groups.map(g => labels[g]), datasets: [{ label: 'Score medio', data: means, backgroundColor: groups.map(g => colors[g]) }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, title: { display: true, text: 'Score medio por se\u00f1al de aplicaci\u00f3n', color: '#e4e4e7' } },
+      scales: { x: { ticks: { color: '#8a8a95' } }, y: { ticks: { color: '#8a8a95' }, beginAtZero: true } },
     },
   });
 }
