@@ -1819,13 +1819,25 @@ function renderLlmIndicators(offers) {
   if (!container) return;
 
   const mCore = offers.map(o => (o.M_core ?? 0) * 100);
-  const mSec = offers.map(o => (o.M_sec ?? 0) * 100);
   const fExp = offers.map(o => (o.F_exp ?? 0) * 100);
   const fFit = offers.map(o => (o.F_fit ?? 0) * 100);
 
+  const scores = offers.map(o => o.match_score).filter(v => v != null);
+  const n = scores.length;
+  const mean = scores.reduce((a, b) => a + b, 0) / n;
+  const sigma = Math.sqrt(scores.reduce((s, v) => s + (v - mean) ** 2, 0) / n);
+
   const r1 = pearsonCorr(mCore, fFit);
   const r2 = pearsonCorr(fExp, fFit);
-  const r3 = pearsonCorr(mCore, mSec);
+
+  function indicatorCard(label, prefix, value, cls, verdict, desc) {
+    return `<div class="llm-card ${cls}">
+      <div class="llm-card-label">${label}</div>
+      <div class="llm-card-r">${prefix}${value}</div>
+      <div class="llm-card-verdict">${verdict}</div>
+      <div class="llm-card-desc">${desc}</div>
+    </div>`;
+  }
 
   function rCard(label, r, desc) {
     if (r == null) return '';
@@ -1834,21 +1846,21 @@ function renderLlmIndicators(offers) {
     if (absR >= 0.5) { cls = 'llm-red'; verdict = 'Alta correlaci\u00f3n'; }
     else if (absR >= 0.3) { cls = 'llm-yellow'; verdict = 'Correlaci\u00f3n moderada'; }
     else { cls = 'llm-green'; verdict = 'Independencia'; }
-    return `<div class="llm-card ${cls}">
-      <div class="llm-card-label">${label}</div>
-      <div class="llm-card-r">r = ${r.toFixed(3)}</div>
-      <div class="llm-card-verdict">${verdict}</div>
-      <div class="llm-card-desc">${desc}</div>
-    </div>`;
+    return indicatorCard(label, 'r = ', r.toFixed(3), cls, verdict, desc);
   }
+
+  let sigmaCls, sigmaVerdict;
+  if (sigma >= 20) { sigmaCls = 'llm-green'; sigmaVerdict = 'Alta discriminaci\u00f3n'; }
+  else if (sigma >= 10) { sigmaCls = 'llm-yellow'; sigmaVerdict = 'Discriminaci\u00f3n media'; }
+  else { sigmaCls = 'llm-red'; sigmaVerdict = 'Scores agrupados'; }
 
   const sigYes = offers.filter(o => o.llm_apply_signal === 'yes').map(o => o.match_score).filter(v => v != null);
   const sigNo = offers.filter(o => o.llm_apply_signal === 'no').map(o => o.match_score).filter(v => v != null);
   const sigMaybe = offers.filter(o => o.llm_apply_signal === 'maybe').map(o => o.match_score).filter(v => v != null);
-  const avgYes = sigYes.length ? (sigYes.reduce((a, b) => a + b, 0) / sigYes.length).toFixed(0) : '—';
-  const avgNo = sigNo.length ? (sigNo.reduce((a, b) => a + b, 0) / sigNo.length).toFixed(0) : '—';
-  const avgMaybe = sigMaybe.length ? (sigMaybe.reduce((a, b) => a + b, 0) / sigMaybe.length).toFixed(0) : '—';
-  const diff = avgYes !== '—' && avgNo !== '—' ? avgYes - avgNo : null;
+  const avgYes = sigYes.length ? (sigYes.reduce((a, b) => a + b, 0) / sigYes.length).toFixed(0) : '\u2014';
+  const avgNo = sigNo.length ? (sigNo.reduce((a, b) => a + b, 0) / sigNo.length).toFixed(0) : '\u2014';
+  const avgMaybe = sigMaybe.length ? (sigMaybe.reduce((a, b) => a + b, 0) / sigMaybe.length).toFixed(0) : '\u2014';
+  const diff = avgYes !== '\u2014' && avgNo !== '\u2014' ? avgYes - avgNo : null;
   let signalCls, signalVerdict;
   if (diff == null) { signalCls = 'llm-gray'; signalVerdict = 'Sin datos'; }
   else if (diff >= 30) { signalCls = 'llm-green'; signalVerdict = 'Discriminaci\u00f3n alta'; }
@@ -1856,15 +1868,10 @@ function renderLlmIndicators(offers) {
   else { signalCls = 'llm-red'; signalVerdict = 'Baja discriminaci\u00f3n'; }
 
   container.innerHTML = [
-    rCard('M_core vs F_fit', r1, 'Skills \u2260 cultura — deben ser independientes'),
+    rCard('M_core vs F_fit', r1, 'Skills \u2260 cultura \u2014 deben ser independientes'),
     rCard('F_exp vs F_fit', r2, 'Experiencia \u2260 encaje cultural'),
-    rCard('M_core vs M_sec', r3, 'Skills relacionadas — algo de correlaci\u00f3n es natural'),
-    `<div class="llm-card ${signalCls}">
-      <div class="llm-card-label">match_score \u00d7 apply_signal</div>
-      <div class="llm-card-r">Yes ${avgYes} \u00b7 No ${avgNo} \u00b7 Quiz\u00e1s ${avgMaybe}</div>
-      <div class="llm-card-verdict">${signalVerdict}</div>
-      <div class="llm-card-desc">El score debe predecir el veredicto (diferencia deseada: \u226530 pts)</div>
-    </div>`,
+    indicatorCard('Discriminaci\u00f3n del score', '\u03c3 = ', sigma.toFixed(1) + ' pts', sigmaCls, sigmaVerdict, 'Spread del modelo sobre ' + n + ' ofertas'),
+    indicatorCard('match_score \u00d7 apply_signal', 'Yes ' + avgYes + ' \u00b7 No ' + avgNo + ' \u00b7 Quiz\u00e1s ' + avgMaybe, '', signalCls, signalVerdict, 'Diferencia deseada: \u226530 pts entre Yes y No'),
   ].join('');
 }
 
