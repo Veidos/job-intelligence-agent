@@ -14,7 +14,7 @@ Sistema offline de inteligencia de carrera que extrae ofertas de InfoJobs, las p
 
 | Paso | Módulo | Qué hace |
 |------|--------|----------|
-| Fetch | `fetch.py` | Scraper propio (`curl_cffi` + BS4). Persist raw → upsert → LLM enrich. Sin Apify. |
+| Fetch | `fetch.py` | Scraper propio (`curl_cffi` + BS4). Persist raw → upsert → LLM enrich. |
 | Classify | `role_classifier.py` | Clasifica en roles del catálogo con gemma4:e4b. Asigna `relevance_flag`. |
 | Enrich | `fetch_company.py` | Enriquece empresas con qwen2.5:7b. Degrada gracefully si falla. |
 | Evaluate | `evaluate.py` | Score técnico + HR + bloqueadores duros. Determinista 0–100. |
