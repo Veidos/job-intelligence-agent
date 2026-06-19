@@ -1,9 +1,28 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-06-18
-**Fase activa:** Botón Detener Pipeline (SIGTERM + status_override + polling)
+**Última actualización:** 2026-06-19
+**Fase activa:** Dashboard — indicadores LLM (cards sigma + charts histogram/score-by-signal)
 
-## Logros de la sesión — Pipeline Stop + Ruff 0
+## Logros de la sesión — Refactor indicadores LLM
+
+### Cards LLM reescritas (1 archivo)
+| # | Cambio | Archivo |
+|---|--------|---------|
+| 1 | Card 3: M_core vs M_sec → σ del match_score (discriminación del modelo) | `app.js` |
+| 2 | Card 4: HTML inline → refactorizada con helper `indicatorCard()` común | `app.js` |
+| 3 | Helper unificado: `rCard()` → `indicatorCard(prefix, value, ...)` | `app.js` |
+
+### Charts reemplazados (2 archivos)
+| # | Cambio | Archivo |
+|---|--------|---------|
+| 1 | Eliminado `chartScoreDist` (bins no-uniformes, color púrpura) | `dashboard.html` + `app.js` |
+| 2 | Nueva `renderScoreHistogram()`: 10 bins uniformes 0–100, colores gradiente | `app.js` |
+| 3 | Nueva `renderScoreBySignal()`: score medio por yes/maybe/no | `app.js` |
+| 4 | Ambas en sección LLM, bajo subtitle "Distribución global de scores" | `dashboard.html` |
+
+### Tests
+- **231 tests passing** (0 regresiones)
+- **Ruff:** ✅ **0 errores**
 
 ### Botón "Detener Pipeline" (6 archivos)
 
