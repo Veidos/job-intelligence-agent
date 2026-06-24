@@ -74,6 +74,13 @@
 1. **Lazy browser init** (`_get_browser()`) — el browser se abre una vez y se reusa en todos los requests
 2. **Eliminado `main_world_eval=True`** — no es parámetro de `Camoufox()`
 3. **camoufox_first_run.py usa `search()` pública** en vez de `_fetch()` privada
+4. **`close()` delega en `_reset_browser()`** — DRY, evita duplicar lógica
+5. **Fix crash Playwright Firefox driver:** `wait_until="domcontentloaded"` + `page.on("pageerror")` + `_reset_browser()` en `Connection closed`
+
+### Dry-run result
+- `SCRAPER_BACKEND=camoufox python src/pipeline/run.py --dry-run` → **33 ofertas scrapeadas, 0 crashes** ✅
+- Search pages bypassan Distil en headless sin intervención manual
+- Bug de Playwright Firefox driver (`TypeError: location.url undefined`) resuelto con supresión de pageerrors y browser reset
 
 ### Tests
 - **237 tests passing** ✅ (0 regresiones)

@@ -41,24 +41,40 @@ class CamoufoxScraper:
         self.user_data_dir = Path(user_data_dir or DEFAULT_USER_DATA)
         self.headless = headless
         self.timeout = timeout
+        self._camoufox = None
         self._browser = None
 
     def warmup(self) -> None:
         """Camoufox no necesita warmup — la sesión se establece en el primer search()."""
 
     def _get_browser(self):
-        """Lazy init — abre el browser solo una vez."""
+        """Lazy init — abre el browser solo una vez.
+
+        Camoufox es un context manager (PlaywrightContextManager).
+        Lo entramos manualmente para mantenerlo vivo hasta close().
+        """
         if self._browser is None:
             from camoufox.sync_api import Camoufox
 
-            self._browser = Camoufox(
+            self._camoufox = Camoufox(
                 headless=self.headless,
                 persistent_context=True,
                 user_data_dir=str(self.user_data_dir),
                 geoip=True,
                 humanize=True,
             )
+            self._browser = self._camoufox.__enter__()
         return self._browser
+
+    def _reset_browser(self):
+        """Resetea el browser tras un crash para que se recree en el próximo fetch."""
+        try:
+            if self._camoufox is not None:
+                self._camoufox.__exit__(None, None, None)
+        except Exception:
+            pass
+        self._camoufox = None
+        self._browser = None
 
     def _fetch(self, url: str) -> str | None:
         """Usa Camoufox para obtener el HTML de una URL."""
@@ -66,10 +82,14 @@ class CamoufoxScraper:
         try:
             browser = self._get_browser()
             page = browser.new_page()
-            page.goto(url, timeout=self.timeout, wait_until="networkidle")
+            page.on("pageerror", lambda err: log.debug("Page error ignorado: %s", err))
+            page.goto(url, timeout=self.timeout, wait_until="domcontentloaded")
             return page.content()
         except Exception as e:
             log.warning("Camoufox fetch falló para %s: %s", url[:80], e)
+            if "Connection closed" in str(e):
+                log.warning("Browser crash detectado — reseteando")
+                self._reset_browser()
             return None
         finally:
             if page is not None:
@@ -144,12 +164,7 @@ class CamoufoxScraper:
 
     def close(self) -> None:
         """Cierra el navegador si está abierto."""
-        if self._browser is not None:
-            try:
-                self._browser.close()
-            except Exception:
-                pass
-            self._browser = None
+        self._reset_browser()
 
     def __del__(self):
         self.close()
