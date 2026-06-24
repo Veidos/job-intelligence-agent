@@ -1,5 +1,4 @@
 """Valida qué motor supera el anti-bot de InfoJobs. Ejecutar en venv actual."""
-
 import sys
 from pathlib import Path
 
@@ -39,19 +38,19 @@ def try_bypass(impersonate: str) -> bool:
 
         # Signals de bloqueo
         if any(s.lower() in body.lower() for s in BLOCK_SIGNALS):
-            print(f"  ⚠️  BLOQUEADO | Server: {r.headers.get('server', '?')}")
+            print(f"  ⚠️  BLOQUEADO | Server: {r.headers.get('server','?')}")
             return False
 
         # Signals de éxito
         if any(s.lower() in body.lower() for s in SUCCESS_SIGNALS):
-            print(f"  ✅ OFERTAS REALES — Server: {r.headers.get('server', '?')}")
+            print(f"  ✅ OFERTAS REALES — Server: {r.headers.get('server','?')}")
             # Guardar snapshot
             SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
             (SNAPSHOT_DIR / "search_result.html").write_text(body, encoding="utf-8")
-            print("  💾 Snapshot guardado: snapshots/search_result.html")
+            print(f"  💾 Snapshot guardado: snapshots/search_result.html")
             return True
 
-        print(f"  🔍 Indeterminado | Server: {r.headers.get('server', '?')}")
+        print(f"  🔍 Indeterminado | Server: {r.headers.get('server','?')}")
         print(f"  Muestra: {body[:300]}")
         return False
     except Exception as e:

@@ -62,45 +62,11 @@ class RawOfferDetail:
     employer_id: str | None = None
 
 
-class BotBlockedError(Exception):
-    """InfoJobs devolvió una página de bloqueo de bot en lugar de una oferta."""
-
-
 # ── Parser ─────────────────────────────────────────────────────────────
 
 
 class InfoJobsParser:
     """Parser de HTML de InfoJobs. Sin HTTP, testeable con snapshots."""
-
-    _BOT_BLOCK_SIGNATURES: tuple[str, ...] = (
-        "no podemos identificar tu navegador",
-        "we cannot identify your browser",
-        "acceso denegado",
-        "access denied",
-        "por favor, activa javascript",
-        "captcha.xhtml",
-    )
-
-    @staticmethod
-    def is_bot_blocked(html: str) -> bool:
-        haystack = (html[:4096] + html[-2048:]).lower()
-        return any(sig in haystack for sig in InfoJobsParser._BOT_BLOCK_SIGNATURES)
-
-    _MIN_TITLE_LENGTH = 5
-    _MIN_DESC_LENGTH = 50
-
-    @staticmethod
-    def is_valid_detail(detail: RawOfferDetail) -> bool:
-        if not detail.title or len(detail.title) < InfoJobsParser._MIN_TITLE_LENGTH:
-            return False
-        if not detail.offer_id:
-            return False
-        if (
-            not detail.description_text
-            or len(detail.description_text) < InfoJobsParser._MIN_DESC_LENGTH
-        ):
-            return False
-        return True
 
     # Mapeo de labels del <dl> de Requisitos a nombres de campo
     _REQUISITO_LABELS: dict[str, str] = {
@@ -689,12 +655,11 @@ class InfoJobsScraper:
     BASE_URL = "https://www.infojobs.net"
     SEARCH_PATH = "/jobsearch/search-results/list.xhtml"
 
-    _FINGERPRINTS = ["chrome136", "chrome133", "chrome131", "chrome124"]
+    _FINGERPRINTS = ["chrome131", "chrome124"]
 
     def __init__(
         self,
-        delay: float = 6.0,
-        jitter: float = 4.0,
+        delay: float = 4.0,
         max_retries: int = 3,
         timeout: int = 30,
     ):
@@ -706,19 +671,10 @@ class InfoJobsScraper:
         fp = random.choice(self._FINGERPRINTS)
         self.session = cffi_requests.Session(impersonate=fp)
         self.delay = delay
-        self.jitter = jitter
+        self.jitter = 2.0
         self.max_retries = max_retries
         self.timeout = timeout
         self._last_request = 0.0
-
-    def warmup(self) -> None:
-        """Request inicial a home para establecer cookies de sesión."""
-        try:
-            self._rate_limit()
-            self.session.get(f"{self.BASE_URL}/", timeout=self.timeout)
-            log.info("Warmup completado")
-        except Exception as e:
-            log.warning("Warmup falló (el pipeline continúa): %s", e)
 
     def _rate_limit(self) -> None:
         """Espera self.delay + jitter aleatorio desde la última petición."""
@@ -816,23 +772,7 @@ class InfoJobsScraper:
         html = self._fetch(url)
         if not html:
             return None
-        if InfoJobsParser.is_bot_blocked(html):
-            log.warning("Bot-blocking detectado en %s", url)
-            raise BotBlockedError(url)
-
-        parsed = InfoJobsParser.parse_detail_html(html, url=url)
-        if not InfoJobsParser.is_valid_detail(parsed):
-            log.warning(
-                "Oferta descartada por datos insuficientes: "
-                "title=%r, offer_id=%r, desc_len=%d, company=%r, url=%s",
-                parsed.title,
-                parsed.offer_id,
-                len(parsed.description_text or ""),
-                parsed.company,
-                url,
-            )
-            return None
-        return parsed
+        return InfoJobsParser.parse_detail_html(html, url=url)
 
     def close(self) -> None:
         """Cierra la sesión HTTP."""

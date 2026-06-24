@@ -7,24 +7,18 @@ Extrae campos estructurados (requisitos, salario, modalidad) del HTML directo.
 import dataclasses
 import json
 import logging
-import os
-import random
 import re
-import time
 from datetime import datetime
 from typing import Any
 
 from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
-from src.pipeline.infojobs_scraper import BotBlockedError
-from src.scraper import create_scraper
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
-_BOT_BLOCK_ABORT_THRESHOLD = 3
 
 
 def ensure_search_config(conn=None) -> dict:
@@ -468,6 +462,8 @@ def run_fetch_scraper(
     """
     from datetime import timezone
 
+    from src.pipeline.infojobs_scraper import InfoJobsScraper
+
     # Leer search_config desde DB si no se pasa explícitamente
     if not search_config:
         search_config = ensure_search_config()
@@ -483,58 +479,28 @@ def run_fetch_scraper(
     # Generar run_id una sola vez al inicio
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     conn = get_connection() if not dry_run else None
-    backend = os.getenv("SCRAPER_BACKEND", "curl")
-    scraper = create_scraper(backend=backend)
-    scraper.warmup()
+    scraper = InfoJobsScraper()
 
     total_raw = 0
     new_count = 0
-    visited_urls: set[str] = set()
     try:
-        for kw_idx, keyword in enumerate(keywords):
-            page_limit = 2 if backend == "camoufox" else 5
+        for keyword in keywords:
             stubs = scraper.search(
-                query=keyword, page_limit=page_limit, max_items=max_items, since_date=since_date
+                query=keyword, page_limit=5, max_items=max_items, since_date=since_date
             )
             if not stubs:
                 log.info("  Sin ofertas para '%s'", keyword)
-                if backend == "camoufox" and kw_idx < len(keywords) - 1:
-                    time.sleep(2)
                 continue
 
             log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
-            bot_consecutive = 0
             for stub in stubs:
-                clean_url = stub.url.split("?")[0]
-                if clean_url in visited_urls:
-                    log.info("Saltando URL duplicada: %s", clean_url)
-                    continue
-                visited_urls.add(clean_url)
-                try:
-                    detail = scraper.detail(stub.url)
-                except BotBlockedError:
-                    bot_consecutive += 1
-                    log.error(
-                        "Bot bloqueado para %s (%d consecutivos)", stub.offer_id, bot_consecutive
-                    )
-                    if bot_consecutive >= _BOT_BLOCK_ABORT_THRESHOLD:
-                        raise BotBlockedError(
-                            f"InfoJobs bloqueó {bot_consecutive} detail pages consecutivas "
-                            f"(última: {stub.url}). Abortando fetch."
-                        )
-                    continue
+                detail = scraper.detail(stub.url)
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue
-                bot_consecutive = 0
-                if backend == "camoufox":
-                    time.sleep(random.uniform(2, 5))
                 if not dry_run:
                     _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
-
-            if backend == "camoufox" and kw_idx < len(keywords) - 1:
-                time.sleep(2)
 
         if not dry_run:
             new_count = _upsert_from_scraper_raw(run_id, conn)
