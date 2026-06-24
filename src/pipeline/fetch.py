@@ -510,10 +510,10 @@ def run_fetch_scraper(
                             f"(última: {stub.url}). Abortando fetch."
                         )
                     continue
-                bot_consecutive = 0
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue
+                bot_consecutive = 0
                 if not dry_run:
                     _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
