@@ -481,7 +481,8 @@ def run_fetch_scraper(
     # Generar run_id una sola vez al inicio
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     conn = get_connection() if not dry_run else None
-    scraper = InfoJobsScraper()
+    scraper = InfoJobsScraper(delay=6.0, jitter=4.0)
+    scraper.warmup()
 
     total_raw = 0
     new_count = 0
