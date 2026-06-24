@@ -11,6 +11,7 @@ Uso: python scraper_lab/poc_secondary_skills.py
 
 import json
 import logging
+
 from src.db.init_db import get_connection
 from src.pipeline.fetch import extract_fields_with_llm
 
@@ -53,7 +54,7 @@ for row in rows:
     print(f"  LLM secondary: {[s['name'] for s in secondary]}")
     print(f"  {'✓ secondary poblado' if has_secondary else '✗ secondary vacío'}")
 
-print(f"\n{'='*50}")
+print(f"\n{'=' * 50}")
 print(f"RESULTADO: {success}/5 ofertas con secondary no vacío")
 if success >= 3:
     print("-> Fix 2 VIABLE: integrar extract_fields_with_llm en _upsert_offer_from_scraper")

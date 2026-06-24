@@ -7,6 +7,7 @@ Extrae campos estructurados (requisitos, salario, modalidad) del HTML directo.
 import dataclasses
 import json
 import logging
+import os
 import re
 from datetime import datetime
 from typing import Any
@@ -15,6 +16,7 @@ from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
 from src.pipeline.infojobs_scraper import BotBlockedError
+from src.scraper import create_scraper
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 log = logging.getLogger(__name__)
@@ -464,8 +466,6 @@ def run_fetch_scraper(
     """
     from datetime import timezone
 
-    from src.pipeline.infojobs_scraper import InfoJobsScraper
-
     # Leer search_config desde DB si no se pasa explícitamente
     if not search_config:
         search_config = ensure_search_config()
@@ -481,7 +481,8 @@ def run_fetch_scraper(
     # Generar run_id una sola vez al inicio
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     conn = get_connection() if not dry_run else None
-    scraper = InfoJobsScraper(delay=6.0, jitter=4.0)
+    backend = os.getenv("SCRAPER_BACKEND", "curl")
+    scraper = create_scraper(backend=backend)
     scraper.warmup()
 
     total_raw = 0

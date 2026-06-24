@@ -15,3 +15,4 @@ data/jobs.db
 *.log
 reports/
 *.egg-info/
+scraper_lab/user_data/
