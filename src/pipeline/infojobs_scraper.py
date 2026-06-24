@@ -85,6 +85,22 @@ class InfoJobsParser:
         haystack = html[:4096].lower()
         return any(sig in haystack for sig in InfoJobsParser._BOT_BLOCK_SIGNATURES)
 
+    _MIN_TITLE_LENGTH = 5
+    _MIN_DESC_LENGTH = 50
+
+    @staticmethod
+    def is_valid_detail(detail: RawOfferDetail) -> bool:
+        if not detail.title or len(detail.title) < InfoJobsParser._MIN_TITLE_LENGTH:
+            return False
+        if not detail.offer_id:
+            return False
+        if (
+            not detail.description_text
+            or len(detail.description_text) < InfoJobsParser._MIN_DESC_LENGTH
+        ):
+            return False
+        return True
+
     # Mapeo de labels del <dl> de Requisitos a nombres de campo
     _REQUISITO_LABELS: dict[str, str] = {
         "estudios": "education_min",
@@ -792,7 +808,20 @@ class InfoJobsScraper:
         if InfoJobsParser.is_bot_blocked(html):
             log.warning("Bot-blocking detectado en %s", url)
             raise BotBlockedError(url)
-        return InfoJobsParser.parse_detail_html(html, url=url)
+
+        parsed = InfoJobsParser.parse_detail_html(html, url=url)
+        if not InfoJobsParser.is_valid_detail(parsed):
+            log.warning(
+                "Oferta descartada por datos insuficientes: "
+                "title=%r, offer_id=%r, desc_len=%d, company=%r, url=%s",
+                parsed.title,
+                parsed.offer_id,
+                len(parsed.description_text or ""),
+                parsed.company,
+                url,
+            )
+            return None
+        return parsed
 
     def close(self) -> None:
         """Cierra la sesión HTTP."""
