@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime
 from typing import Any
 
@@ -488,12 +489,15 @@ def run_fetch_scraper(
     total_raw = 0
     new_count = 0
     try:
-        for keyword in keywords:
+        for kw_idx, keyword in enumerate(keywords):
+            page_limit = 2 if backend == "camoufox" else 5
             stubs = scraper.search(
-                query=keyword, page_limit=5, max_items=max_items, since_date=since_date
+                query=keyword, page_limit=page_limit, max_items=max_items, since_date=since_date
             )
             if not stubs:
                 log.info("  Sin ofertas para '%s'", keyword)
+                if backend == "camoufox" and kw_idx < len(keywords) - 1:
+                    time.sleep(2)
                 continue
 
             log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
@@ -519,6 +523,9 @@ def run_fetch_scraper(
                 if not dry_run:
                     _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
+
+            if backend == "camoufox" and kw_idx < len(keywords) - 1:
+                time.sleep(2)
 
         if not dry_run:
             new_count = _upsert_from_scraper_raw(run_id, conn)
