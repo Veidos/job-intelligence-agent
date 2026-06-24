@@ -503,7 +503,13 @@ def run_fetch_scraper(
 
             log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
             bot_consecutive = 0
+            visited_urls: set[str] = set()
             for stub in stubs:
+                clean_url = stub.url.split("?")[0]
+                if clean_url in visited_urls:
+                    log.info("Saltando URL duplicada: %s", clean_url)
+                    continue
+                visited_urls.add(clean_url)
                 try:
                     detail = scraper.detail(stub.url)
                 except BotBlockedError:
