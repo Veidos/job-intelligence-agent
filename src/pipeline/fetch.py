@@ -489,6 +489,7 @@ def run_fetch_scraper(
 
     total_raw = 0
     new_count = 0
+    visited_urls: set[str] = set()
     try:
         for kw_idx, keyword in enumerate(keywords):
             page_limit = 2 if backend == "camoufox" else 5
@@ -503,7 +504,6 @@ def run_fetch_scraper(
 
             log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
             bot_consecutive = 0
-            visited_urls: set[str] = set()
             for stub in stubs:
                 clean_url = stub.url.split("?")[0]
                 if clean_url in visited_urls:
