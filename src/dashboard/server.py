@@ -103,10 +103,17 @@ def api_stats():
 
 # Columnas filtrables en api_offers — allowlist explícito.
 # Siempre usar placeholders ? con params, nunca interpolación directa.
-_OFFER_FILTER_COLUMNS = frozenset({
-    "match_score", "recommendation", "llm_apply_signal",
-    "relevance_flag", "title", "company_name", "company_id",
-})
+_OFFER_FILTER_COLUMNS = frozenset(
+    {
+        "match_score",
+        "recommendation",
+        "llm_apply_signal",
+        "relevance_flag",
+        "title",
+        "company_name",
+        "company_id",
+    }
+)
 
 
 @app.route("/api/offers")
@@ -395,7 +402,8 @@ def api_pipeline_runs():
         cur = conn.cursor()
 
         # --- aggregated stats per run date ---
-        rows = _rows(cur.execute("""
+        rows = _rows(
+            cur.execute("""
             SELECT
                 date(o.fetched_at) as run_date,
                 COUNT(*)                                          AS fetched,
@@ -417,10 +425,12 @@ def api_pipeline_runs():
             WHERE e.match_score IS NOT NULL
             GROUP BY run_date
             ORDER BY run_date DESC
-        """))
+        """)
+        )
 
         # --- environment_compatibility breakdown per run ---
-        env_rows = _rows(cur.execute("""
+        env_rows = _rows(
+            cur.execute("""
             SELECT
                 date(o.fetched_at) as run_date,
                 e.environment_compatibility as env,
@@ -431,13 +441,15 @@ def api_pipeline_runs():
               AND e.environment_compatibility IS NOT NULL
             GROUP BY run_date, env
             ORDER BY run_date DESC, env
-        """))
+        """)
+        )
         env_by_run: dict[str, dict[str, int]] = {}
         for r in env_rows:
             env_by_run.setdefault(r["run_date"], {})[r["env"]] = r["cnt"]
 
         # --- component bands per run ---
-        band_rows = _rows(cur.execute("""
+        band_rows = _rows(
+            cur.execute("""
             SELECT
                 date(o.fetched_at) as run_date,
                 CASE
@@ -456,21 +468,25 @@ def api_pipeline_runs():
             WHERE e.match_score IS NOT NULL
             GROUP BY run_date, band
             ORDER BY run_date DESC, band
-        """))
+        """)
+        )
         bands_by_run: dict[str, list] = {}
         for r in band_rows:
-            bands_by_run.setdefault(r["run_date"], []).append({
-                "band": r["band"],
-                "n": r["n"],
-                "m_core": r["m_core"],
-                "m_sec": r["m_sec"],
-                "f_exp": r["f_exp"],
-                "loc": r["loc"],
-                "market": r["market"],
-            })
+            bands_by_run.setdefault(r["run_date"], []).append(
+                {
+                    "band": r["band"],
+                    "n": r["n"],
+                    "m_core": r["m_core"],
+                    "m_sec": r["m_sec"],
+                    "f_exp": r["f_exp"],
+                    "loc": r["loc"],
+                    "market": r["market"],
+                }
+            )
 
         # --- actionable offers (score >= 50, no block) per run ---
-        act_rows = _rows(cur.execute("""
+        act_rows = _rows(
+            cur.execute("""
             SELECT
                 o.id, o.title, o.company_name, o.city, o.work_mode,
                 e.match_score, e.recommendation, e.llm_apply_signal,
@@ -480,44 +496,50 @@ def api_pipeline_runs():
             WHERE e.match_score >= 50
               AND (e.apply_block IS NULL OR e.apply_block = '')
             ORDER BY o.fetched_at DESC, e.match_score DESC
-        """))
+        """)
+        )
         actionable_by_run: dict[str, list] = {}
         for r in act_rows:
-            actionable_by_run.setdefault(r["run_date"], []).append({
-                "id": r["id"],
-                "title": r["title"],
-                "company_name": r["company_name"],
-                "city": r["city"],
-                "work_mode": r["work_mode"],
-                "match_score": r["match_score"],
-                "recommendation": r["recommendation"],
-                "llm_apply_signal": r["llm_apply_signal"],
-            })
+            actionable_by_run.setdefault(r["run_date"], []).append(
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "company_name": r["company_name"],
+                    "city": r["city"],
+                    "work_mode": r["work_mode"],
+                    "match_score": r["match_score"],
+                    "recommendation": r["recommendation"],
+                    "llm_apply_signal": r["llm_apply_signal"],
+                }
+            )
 
     result = []
     for r in rows:
         rd = r["run_date"]
-        result.append({
-            "run_date": rd,
-            "fetched": r["fetched"],
-            "classified": r["classified"],
-            "evaluated": r["evaluated"],
-            "score_ge_35": r["score_ge_35"],
-            "score_ge_50": r["score_ge_50"],
-            "sent": r["sent"],
-            "avg_score": r["avg_score"],
-            "avg_m_core": r["avg_m_core"],
-            "avg_f_exp": r["avg_f_exp"],
-            "avg_location": r["avg_location"],
-            "avg_market": r["avg_market"],
-            "env_compat": env_by_run.get(rd, {}),
-            "bands": bands_by_run.get(rd, []),
-            "actionable": actionable_by_run.get(rd, []),
-        })
+        result.append(
+            {
+                "run_date": rd,
+                "fetched": r["fetched"],
+                "classified": r["classified"],
+                "evaluated": r["evaluated"],
+                "score_ge_35": r["score_ge_35"],
+                "score_ge_50": r["score_ge_50"],
+                "sent": r["sent"],
+                "avg_score": r["avg_score"],
+                "avg_m_core": r["avg_m_core"],
+                "avg_f_exp": r["avg_f_exp"],
+                "avg_location": r["avg_location"],
+                "avg_market": r["avg_market"],
+                "env_compat": env_by_run.get(rd, {}),
+                "bands": bands_by_run.get(rd, []),
+                "actionable": actionable_by_run.get(rd, []),
+            }
+        )
     return jsonify(result)
 
 
 # ── Pipeline execution ────────────────────────────────────────────────
+
 
 def _watch_process(proc: subprocess.Popen, log_file, run_id: int) -> None:
     proc.wait()
@@ -540,19 +562,19 @@ def api_pipeline_run():
     data = request.get_json(silent=True) or {}
     with contextlib.closing(get_connection()) as conn:
         cur = conn.cursor()
-        running = cur.execute(
-            "SELECT id FROM search_runs WHERE status='running'"
-        ).fetchone()
+        running = cur.execute("SELECT id FROM search_runs WHERE status='running'").fetchone()
         if running:
             return jsonify(error="Pipeline ya en ejecución", run_id=running[0]), 409
 
-        params = json.dumps({
-            "skip_fetch": data.get("skip_fetch", False),
-            "dry_run": data.get("dry_run", False),
-            "since_date": data.get("since_date", "_24_HOURS"),
-            "limit_eval": data.get("limit_eval", 30),
-            "limit_enrich": data.get("limit_enrich", 50),
-        })
+        params = json.dumps(
+            {
+                "skip_fetch": data.get("skip_fetch", False),
+                "dry_run": data.get("dry_run", False),
+                "since_date": data.get("since_date", "_24_HOURS"),
+                "limit_eval": data.get("limit_eval", 30),
+                "limit_enrich": data.get("limit_enrich", 50),
+            }
+        )
         cur.execute(
             "INSERT INTO search_runs (status, query_params) VALUES ('running', ?)",
             (params,),
@@ -563,8 +585,11 @@ def api_pipeline_run():
     LIVE_LOG.parent.mkdir(parents=True, exist_ok=True)
     log_file = open(LIVE_LOG, "w")
     cmd = [
-        sys.executable, "-m", "src.pipeline.run",
-        "--run-id", str(run_id),
+        sys.executable,
+        "-m",
+        "src.pipeline.run",
+        "--run-id",
+        str(run_id),
     ]
     if data.get("skip_fetch"):
         cmd.append("--skip-fetch")
@@ -577,15 +602,16 @@ def api_pipeline_run():
 
     proc_env = {**os.environ, "PYTHONUNBUFFERED": "1"}
     proc = subprocess.Popen(
-        cmd, stdout=log_file, stderr=subprocess.STDOUT, env=proc_env,
+        cmd,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        env=proc_env,
     )
     conn = get_connection()
     conn.execute("UPDATE search_runs SET pid=? WHERE id=?", (proc.pid, run_id))
     conn.commit()
     conn.close()
-    t = threading.Thread(
-        target=_watch_process, args=(proc, log_file, run_id), daemon=True
-    )
+    t = threading.Thread(target=_watch_process, args=(proc, log_file, run_id), daemon=True)
     t.start()
 
     log.info("Pipeline lanzado: run_id=%d, cmd=%s", run_id, cmd)
@@ -658,16 +684,16 @@ def api_pipeline_log():
         new_offset = offset
 
     if any(
-        "Pipeline completado" in line or "Pipeline abortado" in line or "Pipeline interrumpido" in line
+        "Pipeline completado" in line
+        or "Pipeline abortado" in line
+        or "Pipeline interrumpido" in line
         for line in lines
     ):
         finished = True
     elif run_id:
         try:
             conn = get_connection()
-            row = conn.execute(
-                "SELECT status FROM search_runs WHERE id=?", (run_id,)
-            ).fetchone()
+            row = conn.execute("SELECT status FROM search_runs WHERE id=?", (run_id,)).fetchone()
             conn.close()
             if row and row[0] != "running":
                 finished = True

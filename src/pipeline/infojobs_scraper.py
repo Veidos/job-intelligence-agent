@@ -62,11 +62,28 @@ class RawOfferDetail:
     employer_id: str | None = None
 
 
+class BotBlockedError(Exception):
+    """InfoJobs devolvió una página de bloqueo de bot en lugar de una oferta."""
+
+
 # ── Parser ─────────────────────────────────────────────────────────────
 
 
 class InfoJobsParser:
     """Parser de HTML de InfoJobs. Sin HTTP, testeable con snapshots."""
+
+    _BOT_BLOCK_SIGNATURES: tuple[str, ...] = (
+        "no podemos identificar tu navegador",
+        "we cannot identify your browser",
+        "acceso denegado",
+        "access denied",
+        "por favor, activa javascript",
+    )
+
+    @staticmethod
+    def is_bot_blocked(html: str) -> bool:
+        haystack = html[:4096].lower()
+        return any(sig in haystack for sig in InfoJobsParser._BOT_BLOCK_SIGNATURES)
 
     # Mapeo de labels del <dl> de Requisitos a nombres de campo
     _REQUISITO_LABELS: dict[str, str] = {
@@ -772,6 +789,9 @@ class InfoJobsScraper:
         html = self._fetch(url)
         if not html:
             return None
+        if InfoJobsParser.is_bot_blocked(html):
+            log.warning("Bot-blocking detectado en %s", url)
+            raise BotBlockedError(url)
         return InfoJobsParser.parse_detail_html(html, url=url)
 
     def close(self) -> None:

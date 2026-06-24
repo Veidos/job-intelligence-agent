@@ -14,11 +14,13 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
+from src.pipeline.infojobs_scraper import BotBlockedError
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
+_BOT_BLOCK_ABORT_THRESHOLD = 3
 
 
 def ensure_search_config(conn=None) -> dict:
@@ -217,6 +219,7 @@ def _merge_scraper_skills_into_llm(
     2. Skill del scraper ausente en LLM → añadir a core
     3. Secondary del LLM sin coincidencia en scraper → conservar
     """
+
     def _norm(name: str) -> str:
         return re.sub(r"[\s\-_./]", "", name.strip().lower())
 
@@ -492,8 +495,22 @@ def run_fetch_scraper(
                 continue
 
             log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
+            bot_consecutive = 0
             for stub in stubs:
-                detail = scraper.detail(stub.url)
+                try:
+                    detail = scraper.detail(stub.url)
+                except BotBlockedError:
+                    bot_consecutive += 1
+                    log.error(
+                        "Bot bloqueado para %s (%d consecutivos)", stub.offer_id, bot_consecutive
+                    )
+                    if bot_consecutive >= _BOT_BLOCK_ABORT_THRESHOLD:
+                        raise BotBlockedError(
+                            f"InfoJobs bloqueó {bot_consecutive} detail pages consecutivas "
+                            f"(última: {stub.url}). Abortando fetch."
+                        )
+                    continue
+                bot_consecutive = 0
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue

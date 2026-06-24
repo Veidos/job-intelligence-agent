@@ -24,6 +24,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+
 def get_existing_columns(conn, table_name: str) -> set[str]:
     """Obtiene las columnas existentes de una tabla."""
     cur = conn.cursor()

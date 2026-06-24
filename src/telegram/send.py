@@ -51,7 +51,7 @@ def send_message(text: str, parse_mode: str = "HTML") -> bool:
         return False
 
 
-def get_top_offers(max_offers: int = 3, date_scope: str = 'latest') -> list[dict]:
+def get_top_offers(max_offers: int = 3, date_scope: str = "latest") -> list[dict]:
     """Selecciona top ofertas evaluadas no enviadas.
 
     Args:
@@ -62,7 +62,7 @@ def get_top_offers(max_offers: int = 3, date_scope: str = 'latest') -> list[dict
     Prioriza por fecha (si 'latest'), luego recommendation → llm_apply_signal → match_score.
     """
     date_filter = ""
-    if date_scope == 'latest':
+    if date_scope == "latest":
         date_filter = "AND date(o.fetched_at) = (SELECT MAX(date(fetched_at)) FROM offers)"
 
     conn = get_connection()
@@ -204,24 +204,23 @@ def send_daily() -> None:
     max_offers = settings.max_offers_day if settings else 3
     today = date.today().strftime("%d %b %Y")
 
-    offers = get_top_offers(max_offers, date_scope='latest')
+    offers = get_top_offers(max_offers, date_scope="latest")
     is_historical = False
 
     if not offers:
-        offers = get_top_offers(max_offers, date_scope='all')
+        offers = get_top_offers(max_offers, date_scope="all")
         if offers:
             is_historical = True
         else:
             send_message(
-                f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
-                "Sin ofertas relevantes disponibles."
+                f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\nSin ofertas relevantes disponibles."
             )
             return
 
     header = (
         f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
-        if not is_historical else
-        f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
+        if not is_historical
+        else f"📋 <b>OFERTAS DEL DÍA — {today}</b>\n\n"
         "Hoy no hay ofertas nuevas que encajen, "
         "pero estas de días anteriores merecen un vistazo:\n\n"
     )

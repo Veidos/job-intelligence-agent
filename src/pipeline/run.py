@@ -148,7 +148,28 @@ def run_pipeline(
             log.info("[1/4] Fetch — descargando ofertas de InfoJobs...")
             from src.pipeline.fetch import run_fetch_scraper
 
-            fetch_result = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
+            try:
+                from src.pipeline.infojobs_scraper import BotBlockedError
+
+                fetch_result = run_fetch_scraper(since_date=since_date, dry_run=dry_run)
+            except BotBlockedError as e:
+                log.error("[1/4] Fetch abortado — %s", e)
+                errors.append(str(e))
+                _persist_run(
+                    errors=[str(e)],
+                    new_offers=0,
+                    offers_fetched=0,
+                    evaluated=0,
+                    skip_fetch=skip_fetch,
+                    dry_run=dry_run,
+                    limit_eval=limit_eval,
+                    limit_enrich=limit_enrich,
+                    since_date=since_date,
+                    elapsed=int((time.monotonic() - t0) * 1000),
+                    run_id=run_id,
+                    status_override="bot_blocked",
+                )
+                return
             new_offers = fetch_result["new"]
             offers_fetched = fetch_result["total"]
             log.info("[1/4] Fetch — %d nuevas de %d scrapeadas", new_offers, offers_fetched)
@@ -295,16 +316,23 @@ def _persist_run(
                SET query_params=?, offers_fetched=?, new_offers=?, evaluated=?,
                    errors=?, duration_ms=?, status=?
                WHERE id=?""",
-            (params, offers_fetched_val, new_offers, evaluated,
-             errors_val, elapsed, status_val, run_id),
+            (
+                params,
+                offers_fetched_val,
+                new_offers,
+                evaluated,
+                errors_val,
+                elapsed,
+                status_val,
+                run_id,
+            ),
         )
     else:
         conn.execute(
             """INSERT INTO search_runs
                (query_params, offers_fetched, new_offers, evaluated, errors, duration_ms, status)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (params, offers_fetched_val, new_offers, evaluated,
-             errors_val, elapsed, status_val),
+            (params, offers_fetched_val, new_offers, evaluated, errors_val, elapsed, status_val),
         )
     conn.commit()
     conn.close()

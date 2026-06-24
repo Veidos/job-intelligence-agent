@@ -83,7 +83,9 @@ def main():
             conn.commit()
 
         updated += 1
-        print(f"  ✓ offer_id={row['offer_id']:>5}  {old_score_int:>3} → {new_score_int:>3}  {new_rec}")
+        print(
+            f"  ✓ offer_id={row['offer_id']:>5}  {old_score_int:>3} → {new_score_int:>3}  {new_rec}"
+        )
 
     print(f"\nActualizadas: {updated} ofertas")
 

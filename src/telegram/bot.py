@@ -60,12 +60,14 @@ ALLOWED_USER_ID = int(os.getenv("TELEGRAM_USER_ID", "0"))
 
 def require_auth(handler):
     """Decorador: solo permite paso si el user_id coincide con TELEGRAM_USER_ID."""
+
     @wraps(handler)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if ALLOWED_USER_ID and update.effective_user.id != ALLOWED_USER_ID:
             await update.message.reply_text("No autorizado.")
             return
         return await handler(update, context)
+
     return wrapper
 
 
