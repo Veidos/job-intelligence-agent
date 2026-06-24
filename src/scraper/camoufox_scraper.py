@@ -141,14 +141,19 @@ class CamoufoxScraper:
         return all_stubs
 
     def detail(self, url: str) -> RawOfferDetail | None:
-        """Obtiene y parsea una oferta individual vía Camoufox."""
-        html = self._fetch(url)
+        """Obtiene y parsea una oferta individual vía Camoufox.
+
+        Limpia parámetros de tracking (?applicationOrigin=...) que Distil
+        usa como señal de bot antes de fetchear.
+        """
+        clean_url = url.split("?")[0]
+        html = self._fetch(clean_url)
         if not html:
             return None
         if InfoJobsParser.is_bot_blocked(html):
-            log.warning("Bot-blocking detectado en %s", url)
-            raise BotBlockedError(url)
-        parsed = InfoJobsParser.parse_detail_html(html, url=url)
+            log.warning("Bot-blocking detectado en %s", clean_url)
+            raise BotBlockedError(clean_url)
+        parsed = InfoJobsParser.parse_detail_html(html, url=clean_url)
         if not InfoJobsParser.is_valid_detail(parsed):
             log.warning(
                 "Oferta descartada por datos insuficientes: "
@@ -157,7 +162,7 @@ class CamoufoxScraper:
                 parsed.offer_id,
                 len(parsed.description_text or ""),
                 parsed.company,
-                url,
+                clean_url,
             )
             return None
         return parsed
