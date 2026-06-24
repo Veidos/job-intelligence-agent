@@ -43,6 +43,8 @@ class CamoufoxScraper:
         self.timeout = timeout
         self._camoufox = None
         self._browser = None
+        self._page = None
+        self._last_search_url = None
 
     def warmup(self) -> None:
         """Camoufox no necesita warmup — la sesión se establece en el primer search()."""
@@ -75,20 +77,33 @@ class CamoufoxScraper:
             pass
         self._camoufox = None
         self._browser = None
+        self._page = None
 
-    def _fetch(self, url: str) -> str | None:
-        """Usa Camoufox para obtener el HTML de una URL."""
-        page = None
-        try:
+    def _get_page(self):
+        """Lazy init — una sola página persistente por sesión (mismo tab).
+
+        Reutilizar la misma página entre requests (search → detail → detail)
+        mantiene el historial de navegación, referer real, y cookies acumuladas
+        que Distil espera de un browser real.
+        """
+        if self._page is None:
             browser = self._get_browser()
-            page = browser.new_page()
-            page.on("pageerror", lambda err: log.debug("Page error ignorado: %s", err))
-            page.goto(
-                url,
-                timeout=self.timeout,
-                wait_until="domcontentloaded",
-                referer="https://www.infojobs.net/jobsearch/search-results/list.xhtml",
-            )
+            self._page = browser.new_page()
+            self._page.on("pageerror", lambda err: log.debug("Page error ignorado: %s", err))
+        return self._page
+
+    def _fetch(self, url: str, referer: str | None = None) -> str | None:
+        """Usa Camoufox para obtener el HTML de una URL.
+
+        Navega dentro de la misma página persistente (_get_page), preservando
+        el historial del browser para que Distil vea navegación real.
+        """
+        try:
+            page = self._get_page()
+            kwargs = dict(timeout=self.timeout, wait_until="domcontentloaded")
+            if referer:
+                kwargs["referer"] = referer
+            page.goto(url, **kwargs)
             return page.content()
         except Exception as e:
             log.warning("Camoufox fetch falló para %s: %s", url[:80], e)
@@ -96,12 +111,6 @@ class CamoufoxScraper:
                 log.warning("Browser crash detectado — reseteando")
                 self._reset_browser()
             return None
-        finally:
-            if page is not None:
-                try:
-                    page.close()
-                except Exception:
-                    pass
 
     def search(
         self,
@@ -127,6 +136,7 @@ class CamoufoxScraper:
 
             qs = urlencode(params)
             url = f"{self.BASE_URL}{self.SEARCH_PATH}?{qs}"
+            self._last_search_url = url
             html = self._fetch(url)
             if not html:
                 break
@@ -152,7 +162,7 @@ class CamoufoxScraper:
         usa como señal de bot antes de fetchear.
         """
         clean_url = url.split("?")[0]
-        html = self._fetch(clean_url)
+        html = self._fetch(clean_url, referer=self._last_search_url)
         if not html:
             return None
         if InfoJobsParser.is_bot_blocked(html):
