@@ -8,6 +8,19 @@ pip install -e .
 python src/db/init_db.py
 ```
 
+## Post-instalación — Parchear Playwright
+
+Playwright 1.60.0 tiene un bug con el driver de Firefox que crashea cuando
+una página lanza un error JS sin location. El parche es necesario para que
+el backend Camoufox funcione estable.
+
+```bash
+python scripts/patch_playwright.py
+```
+
+Se pierde con cada `pip install`/`pip upgrade` de playwright. Re-ejecutar si
+se reinstala playwright.
+
 ## Acceso Remoto (Tailscale)
 
 Para ver el dashboard desde el móvil fuera de casa:
