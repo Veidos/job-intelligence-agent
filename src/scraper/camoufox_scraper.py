@@ -83,7 +83,12 @@ class CamoufoxScraper:
             browser = self._get_browser()
             page = browser.new_page()
             page.on("pageerror", lambda err: log.debug("Page error ignorado: %s", err))
-            page.goto(url, timeout=self.timeout, wait_until="domcontentloaded")
+            page.goto(
+                url,
+                timeout=self.timeout,
+                wait_until="domcontentloaded",
+                referer="https://www.infojobs.net/jobsearch/search-results/list.xhtml",
+            )
             return page.content()
         except Exception as e:
             log.warning("Camoufox fetch falló para %s: %s", url[:80], e)

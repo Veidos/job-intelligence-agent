@@ -8,6 +8,7 @@ import dataclasses
 import json
 import logging
 import os
+import random
 import re
 import time
 from datetime import datetime
@@ -520,6 +521,8 @@ def run_fetch_scraper(
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue
                 bot_consecutive = 0
+                if backend == "camoufox":
+                    time.sleep(random.uniform(2, 5))
                 if not dry_run:
                     _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
