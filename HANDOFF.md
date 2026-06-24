@@ -1,7 +1,7 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-06-19
-**Fase activa:** Dashboard — indicadores LLM (cards sigma + charts histogram/score-by-signal)
+**Última actualización:** 2026-06-24
+**Fase activa:** CamoufoxScraper backend + factoría create_scraper
 
 ## Logros de la sesión — Refactor indicadores LLM
 
@@ -55,9 +55,35 @@
   - ✅ `status_override="stopped"` evita race condition con `_watch_process`
 
 ## Comandos
+## Sesión 2026-06-24 — Backend Camoufox
+
+### Archivos creados
+| Archivo | Descripción |
+|---------|-------------|
+| `src/scraper/__init__.py` | Factoría `create_scraper(backend)` — retorna `CamoufoxScraper` o `InfoJobsScraper` |
+| `src/scraper/camoufox_scraper.py` | `CamoufoxScraper` con lazy browser init, interfaz `warmup()/search()/detail()/close()` |
+| `scraper_lab/camoufox_first_run.py` | Setup GUI inicial para resolver challenge de Distil |
+
+### Archivos modificados
+| Archivo | Cambio |
+|---------|--------|
+| `src/pipeline/fetch.py` | Importa `create_scraper` en vez de `InfoJobsScraper`; lee `SCRAPER_BACKEND` env var |
+| `.gitignore` | Añadido `scraper_lab/user_data/` |
+
+### Correcciones aplicadas
+1. **Lazy browser init** (`_get_browser()`) — el browser se abre una vez y se reusa en todos los requests
+2. **Eliminado `main_world_eval=True`** — no es parámetro de `Camoufox()`
+3. **camoufox_first_run.py usa `search()` pública** en vez de `_fetch()` privada
+
+### Tests
+- **237 tests passing** ✅ (0 regresiones)
+- **Ruff:** ✅ 0 errores (excepto `scraper_lab/verify_scraper.py` pre-existente E402)
+
+## Comandos
 ```bash
 python src/dashboard/server.py                # Dashboard en :8080
-python src/pipeline/run.py                    # Pipeline completo
+python src/pipeline/run.py                    # Pipeline completo (SCRAPER_BACKEND=camoufox para Camoufox)
+SCRAPER_BACKEND=camoufox python src/pipeline/run.py  # Pipeline con Camoufox
 ruff check src/ && ruff format src/ --check   # Lint
 pytest tests/ -q                              # Tests
 ```
