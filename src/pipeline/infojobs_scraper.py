@@ -127,13 +127,15 @@ class InfoJobsParser:
         company_el = card.select_one(".ij-OfferCardContent-description-subtitle-link")
         company = company_el.get_text(strip=True) if company_el else ""
 
-        # Ciudad
+        # Ciudad — fallback a URL si el selector CSS falla (InfoJobs cambia markup)
         city_el = card.select_one(
             ".ij-OfferCardContent-description-city-text, "
             ".ij-OfferCardContent-description-city, "
             "[data-id='city']"
         )
         city = city_el.get_text(strip=True) if city_el else ""
+        if not city:
+            city = InfoJobsParser._city_from_url(full_url)
 
         # Texto de salario visible en la card (crudo)
         salary_el = card.select_one(
@@ -269,6 +271,14 @@ class InfoJobsParser:
                 if m:
                     return m.group(1)
         return None
+
+    @staticmethod
+    def _city_from_url(url: str) -> str:
+        """Extrae ciudad del slug en la URL de InfoJobs."""
+        m = re.search(r"infojobs\.net/([^/]+)/", url)
+        if not m:
+            return ""
+        return m.group(1).replace("-", " ").title()
 
     @staticmethod
     def _extract_offer_id_from_url(url: str | None) -> str | None:
