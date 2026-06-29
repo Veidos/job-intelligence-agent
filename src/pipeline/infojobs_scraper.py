@@ -655,7 +655,13 @@ class InfoJobsScraper:
     BASE_URL = "https://www.infojobs.net"
     SEARCH_PATH = "/jobsearch/search-results/list.xhtml"
 
-    _FINGERPRINTS = ["chrome131", "chrome124"]
+    _FINGERPRINTS = [
+        "chrome131",
+        "chrome124",
+        "chrome120",
+        "chrome119",
+        "edge101",
+    ]
 
     def __init__(
         self,
@@ -671,25 +677,25 @@ class InfoJobsScraper:
         fp = random.choice(self._FINGERPRINTS)
         self.session = cffi_requests.Session(impersonate=fp)
         self.delay = delay
-        self.jitter = 2.0
         self.max_retries = max_retries
         self.timeout = timeout
         self._last_request = 0.0
 
     def _rate_limit(self) -> None:
-        """Espera self.delay + jitter aleatorio desde la última petición."""
+        """Espera con distribución log-normal (simula lectura humana real)."""
         elapsed = time.monotonic() - self._last_request
-        wait = self.delay + random.uniform(0, self.jitter)
+        base = random.lognormvariate(mu=2.5, sigma=0.6)
+        wait = max(8.0, min(base, 45.0))
         if elapsed < wait:
             time.sleep(wait - elapsed)
         self._last_request = time.monotonic()
 
-    def _fetch(self, url: str) -> str | None:
+    def _fetch(self, url: str, headers: dict | None = None) -> str | None:
         """GET con reintentos y rate limiting."""
         for attempt in range(self.max_retries):
             try:
                 self._rate_limit()
-                resp = self.session.get(url, timeout=self.timeout)
+                resp = self.session.get(url, headers=headers, timeout=self.timeout)
                 resp.raise_for_status()
                 return resp.text
             except Exception as e:
@@ -767,9 +773,16 @@ class InfoJobsScraper:
 
         return all_stubs
 
-    def detail(self, url: str) -> RawOfferDetail | None:
+    def detail(self, url: str, search_url: str | None = None) -> RawOfferDetail | None:
         """Obtiene y parsea una oferta individual."""
-        html = self._fetch(url)
+        headers = None
+        if search_url:
+            headers = {
+                "Referer": search_url,
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-Mode": "navigate",
+            }
+        html = self._fetch(url, headers=headers)
         if not html:
             return None
         return InfoJobsParser.parse_detail_html(html, url=url)

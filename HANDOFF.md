@@ -1,58 +1,32 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-06-19
-**Fase activa:** Dashboard — indicadores LLM (cards sigma + charts histogram/score-by-signal)
+**Última actualización:** 2026-06-29
+**Fase activa:** Anti-bot hardening del scraper (sleep log-normal, fingerprints rotatorios, lockfile 20h, referer real, límite 8 details/sesión)
 
-## Logros de la sesión — Refactor indicadores LLM
+## Logros de la sesión — Anti-bot hardening
 
-### Cards LLM reescritas (1 archivo)
+### Cambios en el scraper (2 archivos)
+
 | # | Cambio | Archivo |
 |---|--------|---------|
-| 1 | Card 3: M_core vs M_sec → σ del match_score (discriminación del modelo) | `app.js` |
-| 2 | Card 4: HTML inline → refactorizada con helper `indicatorCard()` común | `app.js` |
-| 3 | Helper unificado: `rCard()` → `indicatorCard(prefix, value, ...)` | `app.js` |
-
-### Charts reemplazados (2 archivos)
-| # | Cambio | Archivo |
-|---|--------|---------|
-| 1 | Eliminado `chartScoreDist` (bins no-uniformes, color púrpura) | `dashboard.html` + `app.js` |
-| 2 | Nueva `renderScoreHistogram()`: 10 bins uniformes 0–100, colores gradiente | `app.js` |
-| 3 | Nueva `renderScoreBySignal()`: score medio por yes/maybe/no | `app.js` |
-| 4 | Ambas en sección LLM, bajo subtitle "Distribución global de scores" | `dashboard.html` |
+| 1 | `_FINGERPRINTS` reducido a solo Chromium: chrome131/124/120/119, edge101 | `infojobs_scraper.py` |
+| 2 | `_rate_limit()` reemplazado por `lognormvariate(mu=2.5, sigma=0.6)` clamp [8, 45]s | `infojobs_scraper.py` |
+| 3 | `_fetch()` acepta `headers: dict \| None = None` | `infojobs_scraper.py` |
+| 4 | `detail()` acepta `search_url`, pasa Referer + Sec-Fetch-{Site,Mode} | `infojobs_scraper.py` |
+| 5 | `self.jitter` eliminado (código muerto) | `infojobs_scraper.py` |
+| 6 | Lockfile 20h entre runs (protegido vs corrupto) | `fetch.py` |
+| 7 | `MAX_DETAILS_PER_SESSION = 8` + slicing en detail loop | `fetch.py` |
+| 8 | `search_url` real construido desde keyword para Referer | `fetch.py` |
 
 ### Tests
 - **231 tests passing** (0 regresiones)
 - **Ruff:** ✅ **0 errores**
+- Sin cambios en tests (usan `InfoJobsParser`, no `InfoJobsScraper`)
 
-### Botón "Detener Pipeline" (6 archivos)
-
-| # | Archivo | Cambio |
-|---|---------|--------|
-| 1 | `src/db/schema.sql` | Columna `pid INTEGER` en `search_runs` |
-| 2 | `src/dashboard/server.py` | `import signal`; guarda `proc.pid` vía UPDATE post-Popen; nuevo `POST /api/pipeline/stop` (solo `os.kill(pid, SIGTERM)`, sin tocar DB); texto "Pipeline interrumpido" en condición de fin de log |
-| 3 | `src/pipeline/run.py` | `import signal`; `signal.signal(SIGTERM, ...)` convierte señal en `sys.exit(0)`; `except (SystemExit, KeyboardInterrupt)` → `_persist_run(status_override="stopped")`; nuevo parámetro `status_override` evita race condition con `_watch_process` |
-| 4 | `src/dashboard/templates/dashboard.html` | Botón `⏹ Detener` con `id="btnStopPipeline"` |
-| 5 | `src/dashboard/static/app.js` | `stopPipeline()`, toggle visibility `btnRunPipeline`/`btnStopPipeline` según `_pipelinePolling` |
-| 6 | `src/dashboard/static/style.css` | Clase `.btn-danger` con `var(--red)` |
-
-### Fix Ruff 0 errores
-| # | Problema | Solución |
-|---|----------|----------|
-| 1 | 8 errores pre-existentes (E402 + W291) | E402 → `# noqa` en server/migrate; E402 en backfill_scores → eliminado `sys.path.insert` legacy; W291 → trailing spaces borrados |
-| 2 | `import signal` añadido desordenado en server.py | Ruff `--fix` reordenó imports automáticamente |
-
-## Tests
-- **231 tests passing** (0 regresiones)
-- **Ruff:** ✅ **0 errores**
-- **Verificación manual:**
-  - ✅ Doble click POST → 1º started, 2º 409
-  - ✅ Log polling con offset + run_id
-  - ✅ finished=True detectado (texto "Pipeline completado/abortado/interrumpido" + status ≠ running en DB)
-  - ✅ `_persist_run` con run_id hace UPDATE correctamente
-  - ✅ Botón Detener oculto por defecto, visible durante polling
-  - ✅ `POST /api/pipeline/stop` → `os.kill(pid, SIGTERM)` sin UPDATE directo a DB
-  - ✅ `signal.signal(SIGTERM, ...)` en run.py convierte señal en `SystemExit`
-  - ✅ `status_override="stopped"` evita race condition con `_watch_process`
+## Próximo paso
+Probar paso 2 del plan: `python -c "from src.pipeline.infojobs_scraper import InfoJobsScraper; s = InfoJobsScraper(); print(s.search('data analyst', pages=1))"`
+Si devuelve stubs → esperar 24h y ejecutar run completo.
+Si da 403 → la IP está quemada para InfoJobs.
 
 ## Comandos
 ```bash

@@ -8,7 +8,9 @@ import dataclasses
 import json
 import logging
 import re
+import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -19,6 +21,7 @@ from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
+MAX_DETAILS_PER_SESSION = 8
 
 
 def ensure_search_config(conn=None) -> dict:
@@ -464,6 +467,18 @@ def run_fetch_scraper(
 
     from src.pipeline.infojobs_scraper import InfoJobsScraper
 
+    # Lockfile: mínimo 20h entre runs
+    lockfile = Path("data/.last_infojobs_run")
+    if lockfile.exists():
+        try:
+            elapsed = time.time() - float(lockfile.read_text().strip())
+        except (ValueError, OSError):
+            elapsed = float("inf")
+        if elapsed < 20 * 3600:
+            remaining = (20 * 3600 - elapsed) / 3600
+            log.warning("Lockfile activo — quedan %.1fh. Abortando.", remaining)
+            return {"new": 0, "total": 0, "skipped": True}
+
     # Leer search_config desde DB si no se pasa explícitamente
     if not search_config:
         search_config = ensure_search_config()
@@ -493,8 +508,12 @@ def run_fetch_scraper(
                 continue
 
             log.info("Procesando %d ofertas para '%s'...", len(stubs), keyword)
-            for stub in stubs:
-                detail = scraper.detail(stub.url)
+            search_url = (
+                f"https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword={keyword}"
+            )
+            batch = stubs[:MAX_DETAILS_PER_SESSION]
+            for stub in batch:
+                detail = scraper.detail(stub.url, search_url=search_url)
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
                     continue
@@ -517,6 +536,8 @@ def run_fetch_scraper(
         new_count,
         " (DRY RUN)" if dry_run else "",
     )
+    if not dry_run and total_raw > 0:
+        lockfile.write_text(str(time.time()))
     return {"new": new_count, "total": total_raw}
 
 
