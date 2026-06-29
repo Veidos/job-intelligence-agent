@@ -511,8 +511,13 @@ def run_fetch_scraper(
             search_url = (
                 f"https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword={keyword}"
             )
+            seen_ids: set[str] = set()
             batch = stubs[:MAX_DETAILS_PER_SESSION]
             for stub in batch:
+                if stub.offer_id in seen_ids:
+                    log.debug("Dedup intra-run: %s ya procesado", stub.offer_id)
+                    continue
+                seen_ids.add(stub.offer_id)
                 detail = scraper.detail(stub.url, search_url=search_url)
                 if not detail:
                     log.warning("  Falló detalle para %s, saltando", stub.offer_id)
