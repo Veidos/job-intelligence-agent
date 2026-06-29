@@ -18,6 +18,7 @@ import sqlite3
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -555,6 +556,21 @@ def _watch_process(proc: subprocess.Popen, log_file, run_id: int) -> None:
             conn.close()
         except Exception as e:
             log.error("Error actualizando status del run %d: %s", run_id, e)
+
+
+@app.route("/api/scraper/cooldown")
+def api_scraper_cooldown():
+    """Lee el lockfile del scraper (20h mínimo entre runs)."""
+    lockfile = Path("data/.last_infojobs_run")
+    if not lockfile.exists():
+        return jsonify(ready=True, seconds_remaining=0)
+    try:
+        last_run = float(lockfile.read_text().strip())
+    except (ValueError, OSError):
+        return jsonify(ready=True, seconds_remaining=0)
+    elapsed = time.time() - last_run
+    remaining = max(0, int(20 * 3600 - elapsed))
+    return jsonify(ready=remaining <= 0, seconds_remaining=remaining)
 
 
 @app.route("/api/pipeline/run", methods=["POST"])

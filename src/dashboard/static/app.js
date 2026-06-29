@@ -879,6 +879,26 @@ function loadRuns() {
   });
 }
 
+/* ── Scraper cooldown ── */
+function loadScraperCooldown() {
+  fetch('/api/scraper/cooldown')
+    .then(r => r.json())
+    .then(data => {
+      const el = $('scraperCooldownDisplay');
+      const btn = $('btnRunPipeline');
+      if (!el) return;
+      if (data.ready) {
+        btn.disabled = false;
+        el.textContent = '';
+      } else {
+        btn.disabled = true;
+        const h = Math.floor(data.seconds_remaining / 3600);
+        const m = Math.floor((data.seconds_remaining % 3600) / 60);
+        el.textContent = `⏳ Scraper en cooldown — disponible en ${h}h ${m}m`;
+      }
+    });
+}
+
 /* ── Pipeline execution ── */
 let _pipelinePolling = false;
 let _pipelineLogOffset = 0;
@@ -2040,4 +2060,6 @@ function renderPipelineRunsTable(allRuns) {
 Promise.all([loadStats(), loadOffers()]).then(() => {
   renderCharts();
   checkPipelineStatus();
+  loadScraperCooldown();
+  setInterval(loadScraperCooldown, 60000);
 });
