@@ -1,37 +1,51 @@
 # HANDOFF.md — Estado de sesión
 
 **Última actualización:** 2026-06-29
-**Fase activa:** Anti-bot hardening del scraper (sleep log-normal, fingerprints rotatorios, lockfile 20h, referer real, límite 8 details/sesión)
+**Fase activa:** Anti-bot hardening + countdown dashboard
 
-## Logros de la sesión — Anti-bot hardening
+## Logros de la sesión
 
-### Cambios en el scraper (2 archivos)
+### Commits (4)
 
-| # | Cambio | Archivo |
-|---|--------|---------|
-| 1 | `_FINGERPRINTS` reducido a solo Chromium: chrome131/124/120/119, edge101 | `infojobs_scraper.py` |
-| 2 | `_rate_limit()` reemplazado por `lognormvariate(mu=2.5, sigma=0.6)` clamp [8, 45]s | `infojobs_scraper.py` |
-| 3 | `_fetch()` acepta `headers: dict \| None = None` | `infojobs_scraper.py` |
-| 4 | `detail()` acepta `search_url`, pasa Referer + Sec-Fetch-{Site,Mode} | `infojobs_scraper.py` |
-| 5 | `self.jitter` eliminado (código muerto) | `infojobs_scraper.py` |
-| 6 | Lockfile 20h entre runs (protegido vs corrupto) | `fetch.py` |
-| 7 | `MAX_DETAILS_PER_SESSION = 8` + slicing en detail loop | `fetch.py` |
-| 8 | `search_url` real construido desde keyword para Referer | `fetch.py` |
+| # | Commit | Cambio |
+|---|--------|--------|
+| 1 | `ceb2d7f` | Anti-bot hardening base: sleep log-normal, fingerprints rotatorios, lockfile 20h, referer real, MAX_DETAILS_PER_SESSION=8 |
+| 2 | `d6addb1` | Dedup intra-run en fetch.py (seen_ids set) |
+| 3 | `97f6ea9` | Fix city vacío: fallback a URL slug |
+| 4 | `e508c40` | Endpoint /api/scraper/cooldown + countdown en dashboard |
+
+### Archivos modificados (6)
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/pipeline/infojobs_scraper.py` | Fingerprints, _rate_limit log-normal, headers en _fetch/detail, jitter eliminado |
+| `src/pipeline/fetch.py` | Lockfile 20h, MAX_DETAILS_PER_SESSION=8, seen_ids dedup, search_url para Referer |
+| `src/dashboard/server.py` | import time + endpoint /api/scraper/cooldown |
+| `src/dashboard/static/app.js` | loadScraperCooldown() + setInterval en init |
+| `src/dashboard/templates/dashboard.html` | span #scraperCooldownDisplay |
+| `docs/adr/ADR-022-anti-bot-hardening.md` | Nuevo ADR documentando la sesión |
 
 ### Tests
+
 - **231 tests passing** (0 regresiones)
 - **Ruff:** ✅ **0 errores**
-- Sin cambios en tests (usan `InfoJobsParser`, no `InfoJobsScraper`)
+- Sin cambios en tests
 
-## Próximo paso
-Probar paso 2 del plan: `python -c "from src.pipeline.infojobs_scraper import InfoJobsScraper; s = InfoJobsScraper(); print(s.search('data analyst', pages=1))"`
-Si devuelve stubs → esperar 24h y ejecutar run completo.
-Si da 403 → la IP está quemada para InfoJobs.
+### Verificación IP
 
-## Comandos
+✅ Search test: `s.search(query='data analyst', page_limit=1, max_items=5)` → 5 stubs con datos reales, 0 errores. IP limpia.
+
+### Próximo paso
+
+Ejecutar run completo cuando venza lockfile (~20h tras último fetch real):
+```bash
+python src/pipeline/fetch.py --max-items 30 --since-date _7_DAYS
+```
+
+### Comandos
+
 ```bash
 python src/dashboard/server.py                # Dashboard en :8080
-python src/pipeline/run.py                    # Pipeline completo
 ruff check src/ && ruff format src/ --check   # Lint
 pytest tests/ -q                              # Tests
 ```

@@ -7,6 +7,7 @@
 > **Sesión 2026-06-15 (v2):** Dashboard work_mode — mapa canónico WORK_MODE_CANONICAL, normalización de variantes scraper, chart limpio con 3 categorías ✅
 > **Sesión 2026-06-16:** Dashboard fixes (recalcOffers antes que sparkline + guard Chart.js), send priority (recommendation→llm_signal→score), safari17 eliminado, evaluación de resultados pipeline ✅
 > **Sesión 2026-06-17:** Fix 3 (post-merge scraper core ADR-021) + pipeline run (23 ofertas, 3 checks ✅) + dashboard UI fixes (runs table a Pipeline, doughnut % tooltip, filter rename) + backfill 51 legacy completado. 231 tests ✅
+> **Sesión 2026-06-29:** Anti-bot hardening (ADR-022: sleep log-normal, fingerprints solo Chromium, lockfile 20h, headers reales, MAX_DETAILS=8) + dedup intra-run + city fallback URL + cooldown dashboard endpoint. IP limpia verificada ✅. 231 tests ✅
 
 ## FASE 1 — Cimientos
   [x] init_db.py + schema.sql completo

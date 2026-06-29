@@ -771,3 +771,49 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - `_metrics` dict en ollama_client.py es mutable y compartido.
 - Fix: `threading.Lock` + helper `_inc_metric()` en lugar de `_metrics[key] += 1` directo.
 - No crítico en el scope actual (single-thread), pero previene race conditions futuras.
+
+## Anti-bot hardening del scraper (2026-06-29, ADR-022)
+
+### Sleep log-normal
+- `random.lognormvariate(mu=2.5, sigma=0.6)` con clamp [8, 45]s.
+- Mediana ~12s, media ~15s. Simula pausa de lectura humana real.
+- No usar delay fijo ni uniform distribution — son detectables como patrón de bot.
+- El sleep anterior (delay=4.0 + random.uniform(0, 2.0)) fue bloqueado por Distil Networks.
+
+### Lockfile 20h entre runs
+- `data/.last_infojobs_run` guarda timestamp del último fetch exitoso.
+- `try/except (ValueError, OSError)` protege contra archivo corrupto o vacío.
+- Solo se escribe si `total_raw > 0` (fetch con resultados, no dry-run).
+- Compatible con cron diario (9:00).
+
+### MAX_DETAILS_PER_SESSION = 8
+- Límite en `fetch.py`, no en `search()`. Los stubs de búsqueda se recolectan completos
+  (son baratos, ~1 request por keyword). Solo los primeros 8 details se fetchean.
+- Los stubs restantes se descartan — se recuperarán en el siguiente run (lockfile respeta 20h).
+
+### Dedup intra-run
+- `seen_ids: set[str]` antes del loop de details en `fetch.py`.
+- InfoJobs muestra la misma oferta como resultado orgánico + promoted en la misma página.
+- El `INSERT OR IGNORE` en DB maneja el duplicado, pero el dedup evita gastar un slot de los 8.
+
+### City fallback desde URL
+- `_city_from_url()` extrae ciudad del slug de la URL (`/barcelona/` → `"Barcelona"`).
+- Sin request extra, sin tocar el selector CSS fallido.
+- Regex: `infojobs\.net/([^/]+)/`, `.replace("-", " ").title()`.
+
+### Perfiles curl_cffi 0.15.0
+- Solo Chromium en Linux: chrome131, chrome124, chrome120, chrome119.
+- Edge 101 es válido (Edge Linux existe en entornos dev/corporativos).
+- Safari eliminado: fingerprint TLS Safari desde IP con historial Chrome es señal de
+  inconsistencia para Distil Networks.
+- Verificar perfiles con: `python -c "from curl_cffi.requests import BrowserType; print([e.value for e in BrowserType])"`.
+
+### Headers reales en detail requests
+- `Referer: search_url` (URL de búsqueda que generó el stub).
+- `Sec-Fetch-Site: same-origin` + `Sec-Fetch-Mode: navigate`.
+- `_fetch()` acepta `headers: dict | None`.
+
+### Camoufox descartado por IP estática
+- Camoufox mitiga fingerprinting TLS/HTTP2 pero no la correlación por IP.
+- Con IP estática, Distil correlaciona todas las sesiones independientemente del fingerprint.
+- Si la IP queda bloqueada: proxy residencial rotatorio, no Camoufox.
