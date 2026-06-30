@@ -1,11 +1,11 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-06-29
-**Fase activa:** Anti-bot hardening + countdown dashboard
+**Última actualización:** 2026-06-30
+**Fase activa:** Decoy detection + limpieza DB
 
 ## Logros de la sesión
 
-### Commits (4)
+### Commits (6)
 
 | # | Commit | Cambio |
 |---|--------|--------|
@@ -13,8 +13,10 @@
 | 2 | `d6addb1` | Dedup intra-run en fetch.py (seen_ids set) |
 | 3 | `97f6ea9` | Fix city vacío: fallback a URL slug |
 | 4 | `e508c40` | Endpoint /api/scraper/cooldown + countdown en dashboard |
+| 5 | `9fbbcbb` | Docs: HANDOFF, PLANS, MEMORIES, ADR-022 |
+| 6 | `COMMIT` | Fix MAX_DETAILS global (no per-keyword) + decoy detection `_is_decoy_page()` + limpieza DB |
 
-### Archivos modificados (6)
+### Archivos modificados (7)
 
 | Archivo | Cambios |
 |---------|---------|
@@ -33,14 +35,21 @@
 
 ### Verificación IP
 
-✅ Search test: `s.search(query='data analyst', page_limit=1, max_items=5)` → 5 stubs con datos reales, 0 errores. IP limpia.
+⚠️ **Search funciona, Details devuelven decoy.** El anti-bot hardening (ADR-022) evitó 403 pero Distil Network sirve "No podemos identificar tu navegador" como 200 OK en detail pages. Se añadió `_is_decoy_page()` para detectar y saltar estas ofertas automáticamente.
+
+### Tenencias
+
+- **IP marcada para detail pages.** Search funciona, pero cualquier detail request devuelve decoy content.
+- **10 ofertas basura eliminadas** de la DB.
+- **`_is_decoy_page()`** protege contra futuras contaminaciones.
+- **ADR-022 documenta:** si IP queda bloqueada en details, proxy residencial es la única salida.
 
 ### Próximo paso
 
-Ejecutar run completo cuando venza lockfile (~20h tras último fetch real):
-```bash
-python src/pipeline/fetch.py --max-items 30 --since-date _7_DAYS
-```
+Decidir entre:
+1. **Proxy residencial rotatorio** — implementar transporte HTTP con proxies (nuevo ADR)
+2. **Esperar días/semanas** a que la IP se enfríe sola (riesgo: Distil no olvida)
+3. **Volver a Apify** como fallback mientras tanto
 
 ### Comandos
 

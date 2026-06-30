@@ -498,8 +498,16 @@ def run_fetch_scraper(
 
     total_raw = 0
     new_count = 0
+    seen_ids: set[str] = set()
+    details_fetched = 0
     try:
         for keyword in keywords:
+            if details_fetched >= MAX_DETAILS_PER_SESSION:
+                log.info(
+                    "Límite global de %d details alcanzado — saltando resto de keywords",
+                    MAX_DETAILS_PER_SESSION,
+                )
+                break
             stubs = scraper.search(
                 query=keyword, page_limit=5, max_items=max_items, since_date=since_date
             )
@@ -511,9 +519,9 @@ def run_fetch_scraper(
             search_url = (
                 f"https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword={keyword}"
             )
-            seen_ids: set[str] = set()
-            batch = stubs[:MAX_DETAILS_PER_SESSION]
-            for stub in batch:
+            for stub in stubs:
+                if details_fetched >= MAX_DETAILS_PER_SESSION:
+                    break
                 if stub.offer_id in seen_ids:
                     log.debug("Dedup intra-run: %s ya procesado", stub.offer_id)
                     continue
@@ -525,6 +533,7 @@ def run_fetch_scraper(
                 if not dry_run:
                     _persist_scraper_raw(run_id, detail, conn)
                 total_raw += 1
+                details_fetched += 1
 
         if not dry_run:
             new_count = _upsert_from_scraper_raw(run_id, conn)

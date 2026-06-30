@@ -170,6 +170,9 @@ class InfoJobsParser:
 
         # Datos básicos del header
         title = InfoJobsParser._extract_title(soup)
+        if InfoJobsParser._is_decoy_page(title, html):
+            log.warning("Decoy detectada — saltando: %s", title)
+            return None
         company = InfoJobsParser._extract_company(soup)
         offer_id = InfoJobsParser._extract_offer_id_from_url(
             url
@@ -237,6 +240,29 @@ class InfoJobsParser:
             scraped_at=now,
             employer_id=employer_id,
         )
+
+    @staticmethod
+    def _is_decoy_page(title: str, html: str) -> bool:
+        """Detecta si el HTML es bot detection de InfoJobs (200 OK con contenido fake).
+
+        InfoJobs sirve "No podemos identificar tu navegador" en lugar de la oferta
+        real cuando Distil Networks detecta comportamiento automatizado, pero sin
+        llegar a devolver 403.
+        """
+        decoy_patterns = [
+            "no podemos identificar tu navegador",
+            "no podemos identificar su navegador",
+            "acceso denegado",
+        ]
+        title_lower = title.lower()
+        for pattern in decoy_patterns:
+            if pattern in title_lower:
+                return True
+        html_lower = html[:2000].lower()
+        for pattern in decoy_patterns:
+            if pattern in html_lower:
+                return True
+        return False
 
     @staticmethod
     def _extract_title(soup: BeautifulSoup) -> str:
