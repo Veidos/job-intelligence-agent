@@ -1,0 +1,25 @@
+{
+  "test": "T1 search",
+  "status": 200,
+  "bytes": 1178984,
+  "decoy": false,
+  "organic_cards_extracted": 3,
+  "passed": true,
+  "stubs": [
+    {
+      "title": "",
+      "url": "https://www.infojobs.net/alcobendas/analista-datos/of-i7636f407c7468da6721c6f4c6ec090?applicationOrigin=search-new&page=1&sortBy=RELEVANCE",
+      "referer": "https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword=data%20analyst"
+    },
+    {
+      "title": "",
+      "url": "https://www.infojobs.net/madrid/data-analyst-jr-data-scientist-madrid-hibrido/of-iebe07ca1b34049931cb3a2776043c6?applicationOrigin=search-new&page=1&sortBy=RELEVANCE",
+      "referer": "https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword=data%20analyst"
+    },
+    {
+      "title": "",
+      "url": "https://www.infojobs.net/madrid/data-analyst-technical-data-specialist-riesgos-mercado-100-teletrabajo/of-i7179f1b43b4580b81969ce6a1a2941?applicationOrigin=search-new&page=1&sortBy=RELEVANCE",
+      "referer": "https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword=data%20analyst"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "test": "T2 details http warmed",
+  "passed": true,
+  "results": [
+    {
+      "url": "https://www.infojobs.net/alcobendas/analista-datos/of-i7636f407c7468da6721c6f4c6ec090?applicationOrigin=search-new&page=1&sortBy=RELEVANCE",
+      "status": 200,
+      "bytes": 1031695,
+      "real": true,
+      "reason": "ok",
+      "description_chars": 2397
+    },
+    {
+      "url": "https://www.infojobs.net/madrid/data-analyst-jr-data-scientist-madrid-hibrido/of-iebe07ca1b34049931cb3a2776043c6?applicationOrigin=search-new&page=1&sortBy=RELEVANCE",
+      "status": 200,
+      "bytes": 1035052,
+      "real": true,
+      "reason": "ok",
+      "description_chars": 3833
+    }
+  ]
+}
