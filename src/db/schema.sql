@@ -74,6 +74,26 @@ CREATE INDEX IF NOT EXISTS idx_scraper_raw_run_id ON scraper_raw_responses(run_i
 CREATE INDEX IF NOT EXISTS idx_scraper_raw_offer_id ON scraper_raw_responses(offer_id);
 CREATE INDEX IF NOT EXISTS idx_scraper_raw_processed ON scraper_raw_responses(processed);
 
+-- Capa bronze pura (ADR-023): HTML ORIGINAL de cada respuesta HTTP,
+-- comprimido gzip. Append-only e inmutable: nunca se actualiza.
+-- Permite re-parsear el histórico si cambia el parser o el DOM de
+-- InfoJobs, sin gastar un solo request nuevo.
+-- kind='search' guarda snapshots de páginas de búsqueda (offer_id NULL).
+CREATE TABLE IF NOT EXISTS scraper_raw_html (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id       TEXT NOT NULL,
+    kind         TEXT NOT NULL CHECK(kind IN ('search', 'detail')),
+    offer_id     TEXT,
+    url          TEXT NOT NULL,
+    http_status  INTEGER,
+    html_gz      BLOB NOT NULL,
+    content_hash TEXT NOT NULL,
+    created_at   DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_raw_html_run_id  ON scraper_raw_html(run_id);
+CREATE INDEX IF NOT EXISTS idx_raw_html_offer   ON scraper_raw_html(offer_id);
+CREATE INDEX IF NOT EXISTS idx_raw_html_hash    ON scraper_raw_html(content_hash);
+
 CREATE TABLE IF NOT EXISTS offers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_id TEXT NOT NULL UNIQUE,

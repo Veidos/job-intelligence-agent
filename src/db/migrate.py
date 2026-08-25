@@ -225,6 +225,26 @@ def run_migration() -> dict:
     conn.commit()
     log.info("Tabla scraper_raw_responses verificada")
 
+    # Crear tabla scraper_raw_html si no existe (capa bronze, ADR-023)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS scraper_raw_html (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id       TEXT NOT NULL,
+            kind         TEXT NOT NULL CHECK(kind IN ('search', 'detail')),
+            offer_id     TEXT,
+            url          TEXT NOT NULL,
+            http_status  INTEGER,
+            html_gz      BLOB NOT NULL,
+            content_hash TEXT NOT NULL,
+            created_at   DATETIME NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_html_run_id ON scraper_raw_html(run_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_html_offer ON scraper_raw_html(offer_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_html_hash ON scraper_raw_html(content_hash)")
+    conn.commit()
+    log.info("Tabla scraper_raw_html verificada")
+
     # Crear tabla applications si no existe
     conn.execute("""
         CREATE TABLE IF NOT EXISTS applications (
