@@ -1,6 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Fase 2 (branding + microcopy dashboard) / Fase 4 (role_discovery, market_signals, strategic_advisor)
+> **Próximo paso:** Run real E2E (`run.py --skip-cv-check`) + cron diario / Fase 4 (market_signals sobre bronze)
+> **Sesión 2026-08-25:** PoC Scrapling (T1-T3 PASS, IP fría) + migración por capas: ADR-023 ScraplingTransport con warming + escalada stealth automática + capa bronze `scraper_raw_html` (HTML gzip antes de parsear) + tests frescura DOM. 265 tests ✅
 > T-8 ✅ — Feedback bot funcional y natural
 > T-10 ✅ — Dashboard test checklist completado (ADR-015)
 > **Sesión 2026-06-15 (v1):** Borrón y cuenta nueva, fixes scraper (403/dry-run/run_id/limit=0/published_at), pipeline completo 65 ofertas, 65 evaluadas, 3 "Aplicar" ✅

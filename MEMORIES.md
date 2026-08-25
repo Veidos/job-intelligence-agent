@@ -1,5 +1,45 @@
 # MEMORIES.md — Aprendizajes del Sistema
 
+## Scrapling + capa bronze (ADR-023, ago-2026)
+
+### Bloqueo Distil: expira solo
+- El decoy de detail pages (200 OK "No podemos identificar tu navegador") duró ~8 semanas
+- La constraint era reputación de IP, NO fingerprinting — Camoufox/stealth no la arreglan
+- Tras enfriamiento, HTTP puro con warming sirve contenido real sin browser
+
+### Patrón warming Distil (validado empíricamente)
+- Secuencia: search primero (gana cookies) → dwell log-normal 8-45s → details con
+  Referer de la búsqueda que los generó + Sec-Fetch-Site/Mode
+- Las guías Imperva/Distil lo confirman: saltar frío a deep links = señal bot
+- Coste: +0 requests extra (la búsqueda ya forma parte del pipeline)
+
+### Scrapling como transporte
+- FetcherSession(impersonate=chrome131): cookie jar persistente entre requests
+- API: `sel.css()` devuelve `Selectors` indexable; `.attrib` dict; texto recursivo con
+  `.get_all_text()` (`.text` solo captura nodos directos — trampa que costó un debug)
+- Logging interno ruidoso → silenciar con `logging.getLogger("scrapling").setLevel(WARNING)`
+- StealthySession requiere `scrapling install` (Chromium ~300MB); `install-deps` falla
+  sin sudo pero no hace falta en este sistema
+- Instalar scrapling[fetchers] ACTUALIZA curl_cffi compartido (0.15→0.16.2) — verificar
+  suite completa tras instalar dependencias nuevas en el venv
+
+### Capa bronze (scraper_raw_html)
+- HTML original gzip nivel 9 (~88% ratio) + SHA-256 SIN comprimir, ANTES de parsear
+- kind CHECK('search','detail'); search pages también se archivan (materia prima market_signals)
+- Tabla aditiva IF NOT EXISTS; scraper_raw_responses.payload queda vivo en transición dual
+- Lección re-aplicada: guardar SIEMPRE fuente primaria — jun-2026 pagó 21 re-scrapes por no tenerla
+- Fixtures de tests = snapshots .gz de PoC; regenerables desde bronze sin requests
+
+### Circuito anti-bloqueo (umbrales definidos)
+- 2 decoys consecutivos → escalada stealth SOLO para details (~30s/unidad)
+- Búsquedas siempre por HTTP barato incluso en modo stealth
+- 8 fallos totales → ScraperBlockedError, run aborta limpio (sin hammering)
+
+### Tests con engine compartido
+- El row_factory del test_engine session-scoped puede cambiar a sqlite3.Row según qué
+  tests corrieron antes → aserciones siempre por índice (`row[0]`), nunca tupla directa
+- Inyectar fakes en ScraplingTransport exige setear AMBOS `_session` (ctx) Y `_client`
+
 ## Configuración del proyecto
 - Python 3.14+ requerido
 - pytest instalado para tests
