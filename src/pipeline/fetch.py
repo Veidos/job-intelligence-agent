@@ -16,6 +16,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
+from src.pipeline.raw_archive import persist_raw_html
 from src.utils.ollama_client import MODEL_TECHNICAL, ollama_call
 
 log = logging.getLogger(__name__)
@@ -453,19 +454,21 @@ def run_fetch_scraper(
     max_items: int = 30,
     dry_run: bool = False,
 ) -> int:
-    """Fetch usando scraper propio (curl_cffi + BeautifulSoup).
+    """Fetch usando el transporte configurado en SCRAPER_BACKEND (ADR-023).
 
     Fases:
+      0. bronze — cada respuesta HTTP se archiva comprimida en scraper_raw_html
+         (antes de parsear) vía hook on_raw_html; desactivado en dry_run
       1. persist_scraper_raw — guarda RawOfferDetail en tabla append-only
       2. upsert_from_scraper_raw — escribe en offers desde raw (skills a core)
 
     Si dry_run=True, no persiste nada en DB. Útil para pruebas sin efectos laterales.
 
-    El scraper construye sus propias URLs de búsqueda internamente.
+    El transporte construye sus propias URLs de búsqueda internamente.
     """
     from datetime import timezone
 
-    from src.pipeline.infojobs_scraper import InfoJobsScraper
+    from src.pipeline.scrapling_transport import create_scraper
 
     # Lockfile: mínimo 20h entre runs
     lockfile = Path("data/.last_infojobs_run")
@@ -494,7 +497,22 @@ def run_fetch_scraper(
     # Generar run_id una sola vez al inicio
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     conn = get_connection() if not dry_run else None
-    scraper = InfoJobsScraper()
+
+    # Hook bronze (ADR-023): archiva el HTML original ANTES de parsearlo.
+    # En dry_run no hay callback → cero escrituras (lección filas huérfanas jun-2026).
+    def _archive_hook(kind, url, status, html, offer_id=None):
+        persist_raw_html(
+            run_id=run_id,
+            kind=kind,
+            url=url,
+            http_status=status,
+            html=html,
+            conn=conn,
+            offer_id=offer_id,
+        )
+        conn.commit()
+
+    scraper = create_scraper(on_raw_html=None if dry_run else _archive_hook)
 
     total_raw = 0
     new_count = 0

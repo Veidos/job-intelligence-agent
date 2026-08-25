@@ -10,4 +10,5 @@ colorama==0.4.6
 tqdm==4.68.1
 beautifulsoup4==4.15.0
 lxml==6.1.1
-curl_cffi==0.15.0
+curl_cffi==0.16.2
+scrapling[fetchers]>=0.4.15,<0.5
