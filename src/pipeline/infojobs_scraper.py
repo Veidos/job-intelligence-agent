@@ -517,9 +517,13 @@ class InfoJobsParser:
 
     @staticmethod
     def _parse_description(soup: BeautifulSoup) -> tuple[str, str]:
-        """Extrae el HTML y texto plano de la descripción."""
+        """Extrae el HTML y texto plano de la descripción.
+
+        Nota ADR-023 (ago-2026): .ij-OfferDetailDescription desapareció del
+        DOM actual de InfoJobs (verificado contra snapshots del PoC) y se
+        eliminó de la cadena. El selector primario es el semántico mainContent.
+        """
         for selector in [
-            ".ij-OfferDetailDescription",
             ".ij-EnrichedTextArea",
             "section.ij-OfferDetailPage-mainContent",
             "section.ij-OfferDetail-description",
