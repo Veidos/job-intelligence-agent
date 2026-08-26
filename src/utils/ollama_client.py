@@ -72,8 +72,13 @@ def _call_ollama_raw(
     temperature: float | None = None,
     think: bool = False,
     num_ctx: int = 4096,
+    json_schema: dict | None = None,
 ) -> str:
-    """Llamada directa a la API de Ollama. Sin reintentos."""
+    """Llamada directa a la API de Ollama. Sin reintentos.
+
+    json_schema: si se pasa, activa grammar constraints vía `format`
+    (ADR-024) — la respuesta es JSON crudo garantizado por gramática.
+    """
     temp = temperature if temperature is not None else MODEL_TEMPERATURES.get(model, 0.1)
     payload = {
         "model": model,
@@ -82,6 +87,8 @@ def _call_ollama_raw(
         "think": think,
         "options": {"temperature": temp, "num_ctx": num_ctx},
     }
+    if json_schema is not None:
+        payload["format"] = json_schema
     try:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=OLLAMA_TIMEOUT
@@ -137,17 +144,22 @@ def ollama_call(
     temperature: float | None = None,
     think: bool = False,
     num_ctx: int = 4096,
+    json_schema: dict | None = None,
     json_retry_instruction: str = "\n\nResponde UNICAMENTE con JSON valido, sin texto adicional.",
 ) -> str | Any:
     """
     Llama a Ollama con reintentos y validacion JSON opcional.
     Returns: str si expect_json=False, dict/list si expect_json=True.
     Raises: OllamaError, OllamaJSONError
+
+    json_schema (ADR-024): schema JSON Schema para grammar constraints.
+    Con schema activo, el reintento por JSON inválido es cinturón de
+    seguridad — la gramática ya garantiza validez estructural.
     """
     _inc_metric("calls")
     log.debug("Llamando a %s (expect_json=%s)", model, expect_json)
     start = time.time()
-    text = _call_ollama_raw(model, prompt, temperature, think, num_ctx)
+    text = _call_ollama_raw(model, prompt, temperature, think, num_ctx, json_schema=json_schema)
     if not text:
         _inc_metric("empty_responses")
 
@@ -163,7 +175,12 @@ def ollama_call(
         log.warning("Respuesta no-JSON de %s, reintentando...", model)
 
     text_retry = _call_ollama_raw(
-        model, prompt + json_retry_instruction, temperature, think, num_ctx
+        model,
+        prompt + json_retry_instruction,
+        temperature,
+        think,
+        num_ctx,
+        json_schema=json_schema,
     )
     if not text_retry:
         _inc_metric("empty_responses")

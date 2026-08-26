@@ -19,6 +19,7 @@ load_dotenv()
 from src.db.init_db import get_connection  # noqa: E402
 from src.pipeline.fetch import parse_skills_required  # noqa: E402
 from src.utils.candidate_profile import CandidateProfile  # noqa: E402
+from src.utils.llm_schemas import FINAL_SCHEMA, HR_SCHEMA, TECHNICAL_SCHEMA  # noqa: E402
 from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -256,6 +257,7 @@ Responde SOLO este JSON:
         expect_json=True,
         temperature=0.0,
         think=False,
+        json_schema=TECHNICAL_SCHEMA,
     )
     return result if isinstance(result, dict) else {}
 
@@ -325,6 +327,7 @@ Devuelve SOLO este JSON:
         expect_json=True,
         temperature=0.0,
         think=True,
+        json_schema=HR_SCHEMA,
     )
     return result if isinstance(result, dict) else {}
 
@@ -381,6 +384,7 @@ Responde SOLO este JSON:
         expect_json=True,
         temperature=0.0,
         think=True,
+        json_schema=FINAL_SCHEMA,
     )
     return result if isinstance(result, dict) else {}
 
