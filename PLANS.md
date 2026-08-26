@@ -1,6 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Run real E2E (`run.py --skip-cv-check`) + cron diario / Fase 4 (market_signals sobre bronze)
+> **Próximo paso:** Eliminar MAX_DETAILS_PER_SESSION + run de prueba limit_eval=0 / Fase 4 (market_signals sobre bronze)
+> **Sesión 2026-08-26:** Grammar constraints JSON vía Ollama format (ADR-024) + Run E2E #34 completado (8 ofertas, 7 evaluadas, 3 Telegram, 0 JSON parse failures). 274 tests ✅. GPU offload verificado (gemma4:e4b + qwen2.5:7b). ScraplingTransport activo y funcionando.
 > **Sesión 2026-08-25:** PoC Scrapling (T1-T3 PASS, IP fría) + migración por capas: ADR-023 ScraplingTransport con warming + escalada stealth automática + capa bronze `scraper_raw_html` (HTML gzip antes de parsear) + tests frescura DOM. 265 tests ✅
 > T-8 ✅ — Feedback bot funcional y natural
 > T-10 ✅ — Dashboard test checklist completado (ADR-015)

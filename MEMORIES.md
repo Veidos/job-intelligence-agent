@@ -40,6 +40,31 @@
   tests corrieron antes → aserciones siempre por índice (`row[0]`), nunca tupla directa
 - Inyectar fakes en ScraplingTransport exige setear AMBOS `_session` (ctx) Y `_client`
 
+## Grammar constraints JSON vía Ollama format (ADR-024, ago-2026)
+
+### Smoke test think×format
+- `think=true` + `format=true` → **silencia traza think** completamente en gemma4:e4b
+- Esto es comportamiento **pre-existente** desde junio, no es regressión
+- `format=True` (bool) produce JSON crudo sin fences, misma velocidad (~23 tok/s)
+- Razonamiento exigible vive en campos `required` del schema, no en la traza think
+
+### Diseño de schemas
+- Permisivo-en-contenido: strings libres, arrays sin minItems (respuestas variables)
+- Estricto-en-estructura: tipos, enums, required fields
+- Campos anulables con `null` REAL (type: ["string","null"]) — elimina clase del literal "null"
+- "gemma4 nunca scores numéricos sin razonamiento" → reasoning/verdict en required
+
+### GPU driver fix (ago-2026)
+- Kernel module 580.159 vs userspace 580.173 → nvidia-smi NaN, Ollama CPU-only
+- Fix: reboot after driver install (kernel module load requires restart)
+- Post-reboot: driver 580.173.02, GPU detected, models offloaded correctly
+- Benchmarks: qwen2.5:7b=36.1 tok/s (100% GPU), gemma4:e4b=23 tok/s (33% GPU)
+
+### Pipeline E2E validado
+- Run #34: 8 ofertas, 7 evaluadas, 3 Telegram, 0 JSON parse failures
+- MAX_DETAILS_PER_SESSION=8 es bottleneck conocido — sin cap se espera ~40 detalles en ~14 min
+- Lockfile 20h cooldown entre runs — OK para cron diario, no para pruebas inmediatas
+
 ## Configuración del proyecto
 - Python 3.14+ requerido
 - pytest instalado para tests
