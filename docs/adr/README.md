@@ -49,3 +49,10 @@ decision is made.
 | 016 | Custom Scraper to Replace Apify for InfoJobs Offers | 2026-06-09 | active |
 | 017 | Eliminar Phase 3 (enrich_pending) y role_level_label del scoring | 2026-06-11 | active |
 | 018 | CandidateProfile, LLM Metrics, y location_match Status Quo | 2026-06-11 | active |
+| 019 | Geografía — penalización determinista, no bloqueo ni componente de F_fit | 2026-06-17 | active |
+| 020 | Redistribución de peso W_SEC cuando secondary está vacío | 2026-06-17 | active |
+| 021 | Post-merge — skills del scraper siempre en core | 2026-06-17 | active |
+| 022 | Anti-bot hardening del scraper InfoJobs | 2026-06-29 | active |
+| 023 | Transporte Scrapling + capa bronze pura | 2026-08-25 | active |
+| 024 | Grammar constraints vía Ollama `format` para outputs estructurados | 2026-08-26 | active |
+| 025 | Fichas de detalle por navegador real (InfoJobs exige JavaScript) | 2026-10-05 | active |

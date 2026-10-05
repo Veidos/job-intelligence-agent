@@ -12,8 +12,9 @@ from pathlib import Path
 import pytest
 
 import src.pipeline.scrapling_transport as st
-from src.pipeline.infojobs_scraper import InfoJobsScraper
+from src.pipeline.infojobs_scraper import InfoJobsParser, InfoJobsScraper
 from src.pipeline.scrapling_transport import (
+    DETAIL_MODE_AUTO,
     MAX_CONSECUTIVE_DECOYS,
     MAX_TOTAL_FAILURES,
     ScraperBlockedError,
@@ -23,10 +24,18 @@ from src.pipeline.scrapling_transport import (
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "html_poc"
 
+# Reproduce el muro real de Distil (~29 KB) con el aviso en el <h1> muy tarde.
+# Un decoy con la frase al principio daba falso negativo: el test "escalaba" sin
+# que producción lo hiciera. Ver _DECOY_SCAN_LIMIT en InfoJobsParser.
+_DECOY_FILLER = "<div>contenido de relleno sin señal</div>" * 300
 DECOY_HTML = (
-    "<html><head><title>No podemos identificar tu navegador</title></head>"
-    "<body>No podemos identificar tu navegador</body></html>"
+    "<html><head><title>InfoJobs</title></head><body>"
+    + _DECOY_FILLER
+    + "<h1>No podemos identificar tu navegador</h1>"
+    + "</body></html>"
 )
+assert DECOY_HTML.index("No podemos identificar") > 2000  # el bug histórico
+assert len(DECOY_HTML) > 10_000  # tamaño parecido al muro real
 
 
 def load_fixture(name: str) -> str:
@@ -96,6 +105,44 @@ def recorded():
     return hook, events
 
 
+class TestSearchDecoyEscalation:
+    """Un muro en búsqueda debe reintentarse por navegador, no assume página vacía."""
+
+    def test_search_con_muro_reintenta_por_navegador(self, no_sleep, recorded):
+        hook, events = recorded
+        t = ScraplingTransport(on_raw_html=hook)
+        attach_http(t, FakeHttpClient([FakeResp(200, DECOY_HTML)]))
+        stealth_client = FakeHttpClient([FakeResp(200, SEARCH_HTML)])
+        import src.pipeline.scrapling_transport as mod
+
+        original = ScraplingTransport._ensure_stealth_session
+
+        def fake_ensure_stealth(self):
+            if self._stealth_ctx is None:
+                self._stealth_ctx = FakeCtx(stealth_client)
+                self._stealth_client = stealth_client
+            return self._stealth_client
+
+        mod.ScraplingTransport._ensure_stealth_session = fake_ensure_stealth
+        try:
+            stubs = t.search(query="data analyst", page_limit=1)
+            assert len(stubs) > 0  # el muro se recuperó: no se perdió la keyword
+            kinds = [e[0] for e in events]
+            assert kinds == ["search", "search"]  # muro + reintento, ambos archivados
+        finally:
+            mod.ScraplingTransport._ensure_stealth_session = original
+
+    def test_search_pagina_vacia_no_es_muro(self, no_sleep, recorded):
+        """Una búsqueda real sin resultados NO debe tratarse como bloqueo."""
+        hook, _ = recorded
+        vacia = "<html><body><div class='sin-resultados'></div></body></html>"
+        t = ScraplingTransport(on_raw_html=hook)
+        attach_http(t, FakeHttpClient([FakeResp(200, vacia)]))
+
+        assert t.search(query="data analyst", page_limit=2) == []
+        assert t._total_failures == 0  # vacío legítimo no cuenta como fallo
+
+
 class TestSearchWarming:
     def test_search_parsea_stubs_del_fixture_real(self, no_sleep, recorded):
         hook, events = recorded
@@ -126,6 +173,32 @@ class TestSearchWarming:
         assert urls_called[0].startswith(
             "https://www.infojobs.net/jobsearch/search-results/list.xhtml"
         )
+
+
+class TestDecoyDetectionRegression:
+    """El muro con la frase al final DEBE detectarse (bug que tumbó el run del 5-oct)."""
+
+    def test_muro_con_frase_temprana_se_detecta(self):
+        assert InfoJobsParser._is_decoy_page("", DECOY_HTML)
+
+    def test_muro_titulo_vacio_frase_al_final_se_detecta(self):
+        assert InfoJobsParser._is_decoy_page("", DECOY_HTML)
+
+    def test_oferta_real_no_es_muro(self):
+        assert not InfoJobsParser._is_decoy_page("Analista de datos", DETAIL_1_HTML)
+
+    def test_acceso_denegado_en_cuerpo_no_es_muro(self):
+        html = (
+            "<html><head><title>Ingeniero de seguridad</title></head><body>"
+            "<h1>Analista de datos</h1>"
+            "<p>El equipo controla el acceso denegado a sistemas heredados.</p>"
+            "</body></html>"
+        )
+        assert not InfoJobsParser._is_decoy_page("Analista de datos", html)
+
+    def test_acceso_denegado_en_titulo_si_es_muro(self):
+        html = "<html><head><title>Acceso denegado</title></head><body>x</body></html>"
+        assert InfoJobsParser._is_decoy_page("Acceso denegado", html)
 
 
 class TestDetail:
@@ -161,11 +234,13 @@ class TestDetail:
         assert t._total_failures == 1
         assert events[0][0] == "detail"  # el decoy TAMBIÉN se archiva en bronze
 
-    def test_dos_decoys_consecutivos_escalan_a_stealth(self, no_sleep, recorded):
+    def test_dos_decoys_consecutivos_escalan_a_stealth_en_modo_auto(self, no_sleep, recorded):
         hook, _ = recorded
         responses = [FakeResp(200, DECOY_HTML), FakeResp(200, DECOY_HTML)]
         stealth_client = FakeHttpClient([FakeResp(200, DETAIL_1_HTML)])
-        t = ScraplingTransport(on_raw_html=hook, stealth_fallback=True)
+        t = ScraplingTransport(
+            on_raw_html=hook, stealth_fallback=True, detail_mode=DETAIL_MODE_AUTO
+        )
         attach_http(t, FakeHttpClient(responses))
         monkey_target = t
 
@@ -194,6 +269,49 @@ class TestDetail:
             assert monkey_target._consecutive_decoys == 0  # reset tras éxito
         finally:
             mod.ScraplingTransport._ensure_stealth_session = original_ensure
+
+    def test_default_usa_navegador_para_fichas(self, no_sleep, recorded):
+        """Desde oct-2026 el detalle exige JS: el modo por defecto es navegador."""
+        hook, _ = recorded
+        t = ScraplingTransport(on_raw_html=hook)
+        stealth_client = FakeHttpClient([FakeResp(200, DETAIL_1_HTML)])
+        import src.pipeline.scrapling_transport as mod
+
+        original_ensure = ScraplingTransport._ensure_stealth_session
+
+        def fake_ensure_stealth(self):
+            if self._stealth_ctx is None:
+                self._stealth_ctx = FakeCtx(stealth_client)
+                self._stealth_client = stealth_client
+            return self._stealth_client
+
+        mod.ScraplingTransport._ensure_stealth_session = fake_ensure_stealth
+        try:
+            assert t._detail_mode == "stealth"
+            result = t.detail("https://x/of-1", search_url="https://s")
+            assert result is not None
+            assert t._total_failures == 0  # HTTP ni se intenta
+        finally:
+            mod.ScraplingTransport._ensure_stealth_session = original_ensure
+
+    def test_navegador_no_disponible_degrada_a_http(self, no_sleep, recorded):
+        """Si Camoufox no arranca, el run sigue por HTTP en vez de abortar."""
+        hook, _ = recorded
+        t = ScraplingTransport(on_raw_html=hook)
+        import src.pipeline.scrapling_transport as mod
+
+        def boom(self):
+            raise RuntimeError("sin binarios de camoufox")
+
+        original = ScraplingTransport._ensure_stealth_session
+        mod.ScraplingTransport._ensure_stealth_session = boom
+        attach_http(t, FakeHttpClient([FakeResp(200, DETAIL_1_HTML)]))
+        try:
+            result = t.detail("https://x/of-1", search_url="https://s")
+            assert result is not None
+            assert t._detail_mode == "http"  # degradado, no abortado
+        finally:
+            mod.ScraplingTransport._ensure_stealth_session = original
 
     def test_sin_stealth_fallback_no_escala(self, no_sleep, recorded):
         hook, _ = recorded

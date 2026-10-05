@@ -1,7 +1,20 @@
 # HANDOFF.md — Estado de sesión
 
 **Última actualización:** 2026-10-05
-**Fase activa:** Rama `phase1-eligibility` — revisión pendiente, sin merge
+**Fase activa:** Fetch de InfoJobs reparado (ADR-025) — falta verificación end-to-end en vivo
+
+## Sesión 2026-10-05 — Muro de Distil en fichas (ADR-025)
+
+- `phase1-eligibility` ya está merged en `main` con fast-forward; **el proyecto trabaja en una sola rama**.
+- El run 41 devolvió 0 ofertas: 6/6 fichas recibieron el muro de Distil. Diagnóstico y fix en `docs/adr/025-detail-via-browser-javascript.md`.
+- **Causa raíz:** `_is_decoy_page` solo recorría `html[:2000]` y el aviso del muro está en el byte 18.149, así que nunca se detectaba y la escalada a Camoufox nunca se lanzaba. Los tests pasaban porque su decoy sintético tenía la frase en el índice 0.
+- Las fichas van ahora por navegador real (`SCRAPER_DETAIL_MODE=stealth`, por defecto). Las búsquedas siguen por HTTP y reintentan por navegador si reciben el muro.
+- Probado que **no es reputación de IP** (Camoufox entra desde la misma IP) y **no es el fingerprint TLS** (`chrome150` recibe el mismo muro).
+- Medido: arranque Camoufox 0,5 s, ficha 4,7 s, ~173 MB. Un run de 30 fichas pasa de ~1 a ~3 min.
+- Verificación: 312 tests en Python 3.11 y 3.14; Ruff pasa. Detección comprobada sin falsos positivos sobre 141 fichas y 81 búsquedas reales del bronze.
+- **Pendiente:** verificación end-to-end en vivo (no hecha a propósito para no quemar la IP). Basta un fetch con 1 keyword y 2-3 fichas.
+- **Pendiente:** `IMPERSONATE="chrome131"` está obsoleto (curl_cffi 0.16.2 admite `chrome150`). No es la causa, pero conviene revisarlo.
+- **Pendiente:** no hay crontab ni timers de systemd, así que el pipeline no se ejecuta solo. Decidir si instalarlo.
 
 ## Sesión 2026-10-05 — Bloqueos y datos ausentes
 
@@ -14,7 +27,7 @@
 - `sent_at` existe y está poblado en los 44 registros marcados como enviados de la DB local.
 - Auditoría manual read-only: 4 bloqueos con score ≥35; 3 enviados y 1 sin enviar. `FIX_DATE=2026-10-05`, fecha confirmada para los commits de esta fase.
 - Verificación: Python 3.11 y 3.14, 303 tests passing en ambas versiones; Ruff pasa en código y tests revisados.
-- **Estado:** commits separados en `phase1-eligibility`; rama subida para revisión, sin merge.
+- **Estado:** merged en `main` con fast-forward y pusheado; rama `phase1-eligibility` borrada local y remote.
 
 ## Logros de la sesión
 

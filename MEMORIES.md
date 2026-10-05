@@ -892,3 +892,16 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - `experience_min=0` significa que no se especifica requisito y da `F_exp=1`; `experience_min=NULL` significa desconocido, se persiste como NULL y se redistribuye W_EXP entre componentes disponibles después de aplicar W_SEC→core.
 - El backfill histórico usa `offers.experience_min` como autoridad: un `F_exp=1.0` legado no significa que el requisito sea conocido si la columna de la oferta es NULL.
 - `FIX_DATE=2026-10-05` coincide con la fecha de los commits de la corrección. La auditoría abre SQLite con `mode=ro` y no forma parte de CI.
+
+## InfoJobs endureció el detalle: hace falta JavaScript (2026-10-05, ADR-025)
+
+- **El muro de Distil es un reto de JavaScript, no reputación de IP.** Camoufox entra desde la misma IP que curl_cffi, así que "Camoufox descartado por IP estática" (nota anterior de este archivo) **no aplica aquí**: solo vale para bloqueos de IP.
+- Prueba para distinguirlo: si el navegador real pasa, es reto de JS; si recibe el mismo muro, es IP.
+- **Subir el fingerprint TLS no sirve.** `chrome150` (el más fresco de curl_cffi 0.16.2) recibe muro idéntico a `chrome131`. `IMPERSONATE="chrome131"` sigue obsoleto pero no es la causa.
+- Coste real de Camoufox: arranque 0,5 s (amortizable), ficha 4,7 s, ~173 MB. Las búsquedas por HTTP cuestan 0,4 s y siguen funcionando.
+- **`_is_decoy_page` solo miraba `html[:2000]` y el aviso del muro está en el byte 18.149.** Por eso nunca escalaba a navegador. Ahora recorre 60 KB y limita los patrones genéricos ("acceso denegado") a `<title>`/`<h1>` para no marcar ofertas que lo mencionen en el cuerpo.
+- **Los tests codificaban la suposición equivocada**: el decoy sintético tenía la frase en el índice 0, así que CI verde con producción rota. Un fixture debe imitar el HTML real, no una versión idealizada.
+- **`search()` tampoco detectaba muros**: `parse_search_html` devolvía `[]` y se asumía "página vacía", cortando la keyword. Ahora reintenta por navegador. Páginas vacías reales ≈1 MB; un muro ≈29 KB: el tamaño es la señal.
+- Verificado sin falsos positivos sobre 141 fichas y 81 búsquedas reales de la capa bronze (`scraper_raw_html`).
+- Bronze permite auditar cambios de InfoJobs sin red: `content_hash` idéntico para todos los muros del mismo día.
+- No hay automatización instalada: `crontab -l` vacío y sin timers de systemd, por eso no se corría desde el 2026-09-01.
