@@ -882,3 +882,12 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - Camoufox mitiga fingerprinting TLS/HTTP2 pero no la correlación por IP.
 - Con IP estática, Distil correlaciona todas las sesiones independientemente del fingerprint.
 - Si la IP queda bloqueada: proxy residencial rotatorio, no Camoufox.
+
+## Elegibilidad de ofertas y experiencia desconocida (2026-10-05)
+
+- `match_score` representa coincidencia; elegibilidad es una política separada compartida por Telegram y dashboard (`src/utils/eligibility.py`).
+- `requisito_imposible` y `practicas` son bloqueos duros; `otro` y códigos futuros se presentan como `REVISAR` (los códigos desconocidos generan warning).
+- `sent_at` es la referencia para auditar envíos: los 44 registros locales marcados como enviados tenían timestamp.
+- Umbral de envío real: `user_settings.min_score_send` (35 en la DB comprobada); conservar 35 como fallback si no hay ajuste.
+- `experience_min=0` significa que no se especifica requisito y da `F_exp=1`; `experience_min=NULL` significa desconocido, se persiste como NULL y se redistribuye W_EXP entre componentes disponibles después de aplicar W_SEC→core.
+- `FIX_DATE=2026-10-05` coincide con la fecha de los commits de la corrección. La auditoría abre SQLite con `mode=ro` y no forma parte de CI.

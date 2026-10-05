@@ -1,7 +1,18 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-08-26
-**Fase activa:** Pipeline completo E2E validado — Grammar constraints + Run exitoso
+**Última actualización:** 2026-10-05
+**Fase activa:** Rama `phase1-eligibility` — revisión pendiente, sin merge
+
+## Sesión 2026-10-05 — Bloqueos y datos ausentes
+
+- Política centralizada en `src/utils/eligibility.py`: bloqueos duros no se envían; otros bloqueos se etiquetan `REVISAR`.
+- `send.py` usa `user_settings.min_score_send`; valor local comprobado: 35.
+- `experience_min=NULL` produce `F_exp=NULL`; se renormalizan los pesos disponibles y se guarda `exp_redistributed`.
+- No se añadieron columnas ni migraciones. `experience_match` admite NULL en `schema.sql`.
+- `sent_at` existe y está poblado en los 44 registros marcados como enviados de la DB local.
+- Auditoría manual read-only: 4 bloqueos con score ≥35; 3 enviados y 1 sin enviar. `FIX_DATE=2026-10-05`, fecha confirmada para los commits de esta fase.
+- Verificación: Python 3.11 y 3.14, 299 tests passing en ambas versiones; `ruff check src/` y `ruff format --check src/` pasan.
+- **Estado:** commits separados en `phase1-eligibility`; rama subida para revisión, sin merge.
 
 ## Logros de la sesión
 
