@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -128,6 +127,17 @@ class TestEvaluateHR:
         prompt = mock.call_args.kwargs["prompt"]
         assert "Experiencia: desconocida (F_exp=None)" in prompt
         assert "Fit de experiencia: 0%" not in prompt
+
+    def test_final_prompt_lists_apply_block_values_as_individual_enums(self, sample_offer):
+        from src.pipeline.evaluate import evaluate_final
+
+        with patch("src.pipeline.evaluate.ollama_call") as mock:
+            mock.return_value = {}
+            evaluate_final(sample_offer, "Perfil de prueba", {}, {}, final_score=0.5)
+
+        prompt = mock.call_args.kwargs["prompt"]
+        assert '"apply_block": <"otro"|"practicas"|"requisito_imposible"|null>' in prompt
+        assert '"otro|practicas|requisito_imposible"' not in prompt
 
     def test_hr_senior_rejected(self, sample_offer_senior, sample_perfil_text):
         from src.pipeline.evaluate import evaluate_hr

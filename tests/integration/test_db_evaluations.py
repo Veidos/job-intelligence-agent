@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -77,6 +76,40 @@ class TestSaveEvaluation:
             "SELECT is_evaluated FROM offers WHERE id = ?", (offer_id,)
         ).fetchone()
         assert row[0] == 1
+
+    def test_inserts_null_experience_match_with_current_schema(self, test_db, test_conn):
+        test_db.execute(
+            """INSERT INTO offers (source_id, title, is_active, relevance_flag)
+               VALUES ('EVAL-UNKNOWN-EXP', 'Data Analyst', 1, 'core')"""
+        )
+        offer_id = test_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        with patch("src.pipeline.evaluate.get_connection", return_value=test_conn):
+            from src.pipeline.evaluate import compute_effective_weights, save_evaluation
+
+            save_evaluation(
+                offer_id=offer_id,
+                technical_llm={"skills_present": [], "reasoning": "ok"},
+                hr={"context_fit": 0.5, "verdict": "revisar"},
+                final=None,
+                skill_detail={"core": [], "secondary": []},
+                M_core=0.5,
+                M_sec=0.0,
+                F_exp=None,
+                F_fit=0.5,
+                location_match=0.5,
+                final_score=0.5,
+                recommendation="Con expectativas bajas",
+                processing_ms=1,
+                effective_weights=compute_effective_weights(False, False),
+            )
+
+        row = test_db.execute(
+            "SELECT experience_match, scoring_detail FROM offer_evaluations WHERE offer_id=?",
+            (offer_id,),
+        ).fetchone()
+        assert row[0] is None
+        assert json.loads(row[1])["F_exp"] is None
 
     def test_serializa_json_penalty_breakdown(self, test_db, test_conn):
         test_db.execute(

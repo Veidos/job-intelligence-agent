@@ -246,6 +246,21 @@ class TestDashboardAPI:
         detail = client.get(f"/api/offers/{seed_db}").get_json()["offer"]
         assert detail["F_exp"] is None
 
+    def test_pipeline_actionables_excludes_review_items(self, client, seed_db, test_engine):
+        runs = client.get("/api/pipeline-runs").get_json()
+        actionables = [item for run in runs for item in run["actionable"]]
+        assert any(item["id"] == seed_db for item in actionables)
+
+        test_engine.execute(
+            "UPDATE offer_evaluations SET apply_block='otro' WHERE offer_id=?",
+            (seed_db,),
+        )
+        test_engine.commit()
+
+        runs = client.get("/api/pipeline-runs").get_json()
+        actionables = [item for run in runs for item in run["actionable"]]
+        assert not any(item["id"] == seed_db for item in actionables)
+
     def test_api_offers_with_filters(self, client, seed_db):
         resp = client.get("/api/offers?min_score=50&rec=Aplicar&limit=5")
         assert resp.status_code == 200

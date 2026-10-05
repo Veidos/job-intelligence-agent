@@ -368,7 +368,7 @@ def evaluate_final(
     final_score: float,
 ) -> dict:
     """Tercer prompt: valida relevance_flag y detecta bloqueos reales."""
-    apply_block_values = "|".join(sorted(APPLY_BLOCK_CODES))
+    apply_block_values = "|".join(f'"{code}"' for code in sorted(APPLY_BLOCK_CODES))
     prompt = f"""Eres un evaluador senior. Tienes el análisis completo de esta candidatura.
 
 PERFIL DEL CANDIDATO:
@@ -401,7 +401,7 @@ Responde SOLO este JSON:
   "relevance_validation": "<confirmed|corrected>",
   "relevance_corrected": <"core"|"adjacent"|"stretch"|"temporal"|null>,
   "relevance_reasoning": "<una frase>",
-   "apply_block": <"{apply_block_values}"|null>,
+  "apply_block": <{apply_block_values}|null>,
   "apply_block_reason": <"<texto>"|null>,
   "apply_recommendation": "<yes|maybe|no>",
   "verdict": "<síntesis ejecutiva en 2-3 frases, específica para esta oferta>"

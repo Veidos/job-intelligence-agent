@@ -890,4 +890,5 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - `sent_at` es la referencia para auditar envíos: los 44 registros locales marcados como enviados tenían timestamp.
 - Umbral de envío real: `user_settings.min_score_send` (35 en la DB comprobada); conservar 35 como fallback si no hay ajuste.
 - `experience_min=0` significa que no se especifica requisito y da `F_exp=1`; `experience_min=NULL` significa desconocido, se persiste como NULL y se redistribuye W_EXP entre componentes disponibles después de aplicar W_SEC→core.
+- El backfill histórico usa `offers.experience_min` como autoridad: un `F_exp=1.0` legado no significa que el requisito sea conocido si la columna de la oferta es NULL.
 - `FIX_DATE=2026-10-05` coincide con la fecha de los commits de la corrección. La auditoría abre SQLite con `mode=ro` y no forma parte de CI.

@@ -29,6 +29,7 @@ from flask import Flask, jsonify, request, send_from_directory  # noqa: E402
 
 from src.db.init_db import get_connection  # noqa: E402
 from src.utils.eligibility import (  # noqa: E402
+    EligibilityStatus,
     eligibility_order_sql,
     eligibility_status,
     is_eligible,
@@ -531,7 +532,7 @@ def api_pipeline_runs():
         actionable_by_run: dict[str, list] = {}
         for r in act_rows:
             status = eligibility_status(r)
-            if not is_eligible(r, status):
+            if status is not EligibilityStatus.ELIGIBLE:
                 continue
             actionable_by_run.setdefault(r["run_date"], []).append(
                 {

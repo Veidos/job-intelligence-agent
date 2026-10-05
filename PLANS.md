@@ -1,7 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
 > **Próximo paso:** Revisar la rama `phase1-eligibility`; después retomar Fase 4 (market_signals sobre bronze)
-> **Sesión 2026-10-05:** Política compartida de elegibilidad, `min_score_send`, experiencia ausente como NULL con redistribución proporcional, auditoría read-only y CI Python 3.11/3.14. 299 tests passing en ambas versiones; Ruff pasa. Tres commits en rama separada, pendiente de revisión y sin merge. `FIX_DATE=2026-10-05`.
+> **Sesión 2026-10-05:** Política compartida de elegibilidad, `min_score_send`, backfill histórico basado en `offers.experience_min`, prompt apply_block corregido, auditoría read-only y CI Python 3.11/3.14. 303 tests passing en ambas versiones; Ruff pasa. Rama `phase1-eligibility` pendiente de revisión y sin merge. `FIX_DATE=2026-10-05`.
 > **Sesión 2026-08-26:** Grammar constraints JSON vía Ollama format (ADR-024) + Run E2E #34 completado (8 ofertas, 7 evaluadas, 3 Telegram, 0 JSON parse failures). 274 tests ✅. GPU offload verificado (gemma4:e4b + qwen2.5:7b). ScraplingTransport activo y funcionando.
 > **Sesión 2026-08-25:** PoC Scrapling (T1-T3 PASS, IP fría) + migración por capas: ADR-023 ScraplingTransport con warming + escalada stealth automática + capa bronze `scraper_raw_html` (HTML gzip antes de parsear) + tests frescura DOM. 265 tests ✅
 > T-8 ✅ — Feedback bot funcional y natural
