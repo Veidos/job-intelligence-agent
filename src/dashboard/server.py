@@ -28,6 +28,12 @@ load_dotenv()
 from flask import Flask, jsonify, request, send_from_directory  # noqa: E402
 
 from src.db.init_db import get_connection  # noqa: E402
+from src.utils.eligibility import (  # noqa: E402
+    eligibility_order_sql,
+    eligibility_status,
+    is_eligible,
+    recommendation_label,
+)
 
 log = logging.getLogger(__name__)
 
@@ -133,12 +139,9 @@ def api_offers():
 
         wheres = ["e.match_score IS NOT NULL"]
         params = []
-        if min_score:
+        if min_score is not None:
             wheres.append("e.match_score >= ?")
             params.append(min_score)
-        if rec:
-            wheres.append("e.recommendation = ?")
-            params.append(rec)
         if signal:
             wheres.append("e.llm_apply_signal = ?")
             params.append(signal)
@@ -153,6 +156,7 @@ def api_offers():
             params.append(company_id)
 
         where_sql = " AND ".join(wheres)
+        eligibility_order, eligibility_params = eligibility_order_sql("e")
 
         sql = f"""
             SELECT o.id, o.source_id, o.title, o.company_name, o.company_id,
@@ -169,23 +173,29 @@ def api_offers():
             FROM offers o
             JOIN offer_evaluations e ON o.id = e.offer_id
             LEFT JOIN companies c ON o.company_id = c.id
-            WHERE {where_sql}
-            ORDER BY e.match_score DESC
+             WHERE {where_sql}
+             ORDER BY {eligibility_order}, e.match_score DESC
         """
-        if limit:
-            sql += " LIMIT ?"
-            params.append(limit)
-
-        cur.execute(sql, params)
+        cur.execute(sql, [*params, *eligibility_params])
         rows = cur.fetchall()
 
         cols = [d[0] for d in cur.description]
         offers = []
         for row in rows:
             r = dict(zip(cols, row))
+            status = eligibility_status(r)
+            r["eligibility_status"] = status.value
+            r["eligible_for_send"] = is_eligible(r, status)
+            r["display_recommendation"] = recommendation_label(r)
+            if rec and r["display_recommendation"] != rec:
+                continue
+
             pb = _json(r["scoring_detail"]) or {}
             smin = r["salary_min"]
             smax = r["salary_max"]
+            f_exp = pb.get("F_exp")
+            if f_exp is None and r["experience_match"] is not None:
+                f_exp = r["experience_match"] / 100
             if smin is not None and smax is not None:
                 salary_display = f"{round(smin / 1000)}k–{round(smax / 1000)}k"
             elif smin is not None:
@@ -216,10 +226,13 @@ def api_offers():
                     llm_apply_signal=r["llm_apply_signal"] or "",
                     M_core=pb.get("M_core"),
                     M_sec=pb.get("M_sec"),
-                    F_exp=pb.get("F_exp"),
+                    F_exp=f_exp,
                     F_fit=pb.get("F_fit"),
                     apply_block=r["apply_block"],
                     apply_block_reason=r["apply_block_reason"],
+                    eligibility_status=r["eligibility_status"],
+                    eligible_for_send=r["eligible_for_send"],
+                    display_recommendation=r["display_recommendation"],
                     gemma_verdict=r["gemma_verdict"] or "",
                     environment_compatibility=r["environment_compatibility"] or "",
                     strengths=_json(r["strengths"]) or [],
@@ -232,6 +245,9 @@ def api_offers():
                     company_size=r["company_size"] or "",
                 )
             )
+
+        if limit:
+            offers = offers[:limit]
 
     return jsonify(offers)
 
@@ -261,6 +277,15 @@ def api_offer_detail(offer_id):
 
         cols = [d[0] for d in cur.description]
         r = dict(zip(cols, row))
+        status = eligibility_status(r)
+        r["eligibility_status"] = status.value
+        r["eligible_for_send"] = is_eligible(r, status)
+        r["display_recommendation"] = recommendation_label(r)
+        scoring_detail = _json(r.get("scoring_detail")) or {}
+        f_exp = scoring_detail.get("F_exp")
+        if f_exp is None and r.get("experience_match") is not None:
+            f_exp = r["experience_match"] / 100
+        r["F_exp"] = f_exp
 
         feedback = _rows(
             cur.execute(
@@ -485,22 +510,29 @@ def api_pipeline_runs():
                 }
             )
 
-        # --- actionable offers (score >= 50, no block) per run ---
+        # --- actionable offers (score >= 50 and sendable) per run ---
+        eligibility_order, eligibility_params = eligibility_order_sql("e")
         act_rows = _rows(
-            cur.execute("""
+            cur.execute(
+                f"""
             SELECT
                 o.id, o.title, o.company_name, o.city, o.work_mode,
                 e.match_score, e.recommendation, e.llm_apply_signal,
+                e.apply_block, e.apply_block_reason,
                 date(o.fetched_at) as run_date
             FROM offer_evaluations e
             JOIN offers o ON o.id = e.offer_id
             WHERE e.match_score >= 50
-              AND (e.apply_block IS NULL OR e.apply_block = '')
-            ORDER BY o.fetched_at DESC, e.match_score DESC
-        """)
+            ORDER BY {eligibility_order}, o.fetched_at DESC, e.match_score DESC
+        """,
+                eligibility_params,
+            )
         )
         actionable_by_run: dict[str, list] = {}
         for r in act_rows:
+            status = eligibility_status(r)
+            if not is_eligible(r, status):
+                continue
             actionable_by_run.setdefault(r["run_date"], []).append(
                 {
                     "id": r["id"],
@@ -511,6 +543,10 @@ def api_pipeline_runs():
                     "match_score": r["match_score"],
                     "recommendation": r["recommendation"],
                     "llm_apply_signal": r["llm_apply_signal"],
+                    "eligibility_status": status.value,
+                    "display_recommendation": recommendation_label(
+                        {**r, "eligibility_status": status.value}
+                    ),
                 }
             )
 

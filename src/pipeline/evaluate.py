@@ -19,6 +19,11 @@ load_dotenv()
 from src.db.init_db import get_connection  # noqa: E402
 from src.pipeline.fetch import parse_skills_required  # noqa: E402
 from src.utils.candidate_profile import CandidateProfile  # noqa: E402
+from src.utils.eligibility import (  # noqa: E402
+    APPLY_BLOCK_CODES,
+    EligibilityStatus,
+    eligibility_status,
+)
 from src.utils.llm_schemas import FINAL_SCHEMA, HR_SCHEMA, TECHNICAL_SCHEMA  # noqa: E402
 from src.utils.ollama_client import MODEL_HR, MODEL_TECHNICAL, ollama_call  # noqa: E402
 
@@ -340,6 +345,7 @@ def evaluate_final(
     final_score: float,
 ) -> dict:
     """Tercer prompt: valida relevance_flag y detecta bloqueos reales."""
+    apply_block_values = "|".join(sorted(APPLY_BLOCK_CODES))
     prompt = f"""Eres un evaluador senior. Tienes el análisis completo de esta candidatura.
 
 PERFIL DEL CANDIDATO:
@@ -372,7 +378,7 @@ Responde SOLO este JSON:
   "relevance_validation": "<confirmed|corrected>",
   "relevance_corrected": <"core"|"adjacent"|"stretch"|"temporal"|null>,
   "relevance_reasoning": "<una frase>",
-  "apply_block": <"requisito_imposible"|"practicas"|"otro"|null>,
+   "apply_block": <"{apply_block_values}"|null>,
   "apply_block_reason": <"<texto>"|null>,
   "apply_recommendation": "<yes|maybe|no>",
   "verdict": "<síntesis ejecutiva en 2-3 frases, específica para esta oferta>"
@@ -741,12 +747,22 @@ def run_evaluate(limit: int = 10) -> dict:
             update_evaluation_final(offer["id"], final)
 
             block = _normalize_none(final.get("apply_block"))
+            status = eligibility_status(
+                {
+                    "id": offer["id"],
+                    "apply_block": block,
+                    "llm_apply_signal": final.get("apply_recommendation"),
+                }
+            )
+            eligibility_effect = "no" if status is EligibilityStatus.BLOCKED else "sí"
             log.info(
-                "✓ %s → %.2f (%s)%s",
+                "✓ %s → %.2f (%s)%s (elegible: %s; estado: %s)",
                 offer["title"],
                 final_score,
                 recommendation,
                 f" [BLOQUEADO: {block}]" if block else "",
+                eligibility_effect,
+                status.value,
             )
             stats["evaluated"] += 1
             stats["scores"].append(final_score)

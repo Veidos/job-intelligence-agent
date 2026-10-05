@@ -65,7 +65,7 @@ def get_user_settings() -> UserSettings:
         send_time=row[0] or "09:00",
         max_offers_day=int(row[1] or 3),
         send_mode=row[2] or "morning",
-        min_score_send=int(row[3] or 35),
+        min_score_send=int(row[3]) if row[3] is not None else 35,
         weekly_summary=int(row[4] or 1),
         strategic_alerts=int(row[5] or 1),
     )

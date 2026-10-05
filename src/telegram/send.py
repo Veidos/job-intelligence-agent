@@ -14,6 +14,13 @@ from dotenv import load_dotenv
 
 from src.db.init_db import get_connection
 from src.db.models import get_user_settings
+from src.utils.eligibility import (
+    eligibility_order_sql,
+    eligibility_status,
+    is_eligible,
+    recommendation_label,
+    sendable_sql_predicate,
+)
 
 load_dotenv()
 
@@ -51,41 +58,57 @@ def send_message(text: str, parse_mode: str = "HTML") -> bool:
         return False
 
 
-def get_top_offers(max_offers: int = 3, date_scope: str = "latest") -> list[dict]:
-    """Selecciona top ofertas evaluadas no enviadas.
+def get_send_candidates(
+    date_scope: str = "latest",
+    min_score: int | None = None,
+    connection=None,
+) -> list[dict]:
+    """Return all sendable candidates, ordered eligible-first then review.
 
     Args:
-        max_offers: Número máximo de ofertas a devolver.
         date_scope: 'latest' → solo ofertas del día más reciente,
                     'all'    → cualquier fecha (fallback histórico).
+        min_score: Umbral de envío. If omitted, read user_settings (default 35).
+        connection: Optional connection for read-only audits and tests.
 
-    Prioriza por fecha (si 'latest'), luego recommendation → llm_apply_signal → match_score.
+    The eligibility ordering and decision use the shared eligibility policy.
     """
     date_filter = ""
     if date_scope == "latest":
         date_filter = "AND date(o.fetched_at) = (SELECT MAX(date(fetched_at)) FROM offers)"
 
-    conn = get_connection()
+    owns_connection = connection is None
+    conn = connection or get_connection()
     try:
         cur = conn.cursor()
+        if min_score is None:
+            settings_row = cur.execute(
+                "SELECT min_score_send FROM user_settings ORDER BY id LIMIT 1"
+            ).fetchone()
+            min_score = int(settings_row[0]) if settings_row and settings_row[0] is not None else 35
+
+        sendable_predicate, sendable_params = sendable_sql_predicate("e")
+        eligibility_order, eligibility_order_params = eligibility_order_sql("e")
         rows = cur.execute(
-            f"""
-            SELECT
+            f"""SELECT
                 o.id, o.title, o.company_name, o.city, o.work_mode,
                 o.salary_min, o.salary_max, o.url, o.fetched_at,
-                e.id as eval_id, e.match_score, e.recommendation,
+                e.id AS eval_id, e.match_score, e.recommendation,
                 e.hr_concerns, e.strengths, e.interview_prep,
-                o.relevance_flag, o.role_normalized
+                e.apply_block, e.apply_block_reason, e.llm_apply_signal,
+                o.relevance_flag, o.role_normalized, e.sent_at
             FROM offer_evaluations e
             JOIN offers o ON o.id = e.offer_id
             WHERE e.sent_via_telegram = 0
-              AND e.match_score >= 35
+              AND e.match_score >= ?
+              AND {sendable_predicate}
               {date_filter}
             ORDER BY
+              {eligibility_order},
               CASE e.recommendation
-                WHEN 'Aplicar'              THEN 0
+                WHEN 'Aplicar'                THEN 0
                 WHEN 'Con expectativas bajas' THEN 1
-                WHEN 'No aplicar'           THEN 2
+                WHEN 'No aplicar'             THEN 2
                 ELSE 3
               END,
               CASE e.llm_apply_signal
@@ -95,14 +118,31 @@ def get_top_offers(max_offers: int = 3, date_scope: str = "latest") -> list[dict
                 ELSE 3
               END,
               e.match_score DESC
-            LIMIT ?
         """,
-            (max_offers,),
+            (min_score, *sendable_params, *eligibility_order_params),
         ).fetchall()
         cols = [d[0] for d in cur.description]
+        candidates = []
+        for row in rows:
+            offer = dict(zip(cols, row))
+            status = eligibility_status(offer)
+            offer["eligibility_status"] = status.value
+            offer["eligible_for_send"] = is_eligible(offer, status)
+            if offer["eligible_for_send"]:
+                candidates.append(offer)
+        return candidates
     finally:
-        conn.close()
-    return [dict(zip(cols, row)) for row in rows]
+        if owns_connection:
+            conn.close()
+
+
+def get_top_offers(
+    max_offers: int = 3,
+    date_scope: str = "latest",
+    min_score: int | None = None,
+) -> list[dict]:
+    """Return the top offers after applying the shared eligibility policy."""
+    return get_send_candidates(date_scope=date_scope, min_score=min_score)[:max_offers]
 
 
 def format_offer(offer: dict, position: int, is_historical: bool = False) -> str:
@@ -139,10 +179,16 @@ def format_offer(offer: dict, position: int, is_historical: bool = False) -> str
     if score < 55:
         low_score_note = "\n<i>Incluida por falta de opciones superiores</i>"
 
+    action_label = recommendation_label(offer)
+    review_reason = ""
+    if offer.get("eligibility_status") == "review" and offer.get("apply_block_reason"):
+        review_reason = f"\n🔎 Revisar: {offer['apply_block_reason']}"
+
     return (
         f"[{position}] {emoji} <b>{offer['title']}</b> | {offer['company_name']}\n"
         f"📍 {offer.get('work_mode', 'N/A')} | {offer.get('city', 'N/A')}{salary}{date_note}\n"
-        f"✅ Match: {score}/100 — {offer['recommendation']}"
+        f"✅ Match: {score}/100 — {action_label}"
+        f"{review_reason}"
         f"{first_concern}"
         f"{first_prep}"
         f"{low_score_note}\n"
@@ -202,13 +248,14 @@ def send_daily() -> None:
     _validate_config()
     settings = get_user_settings()
     max_offers = settings.max_offers_day if settings else 3
+    min_score = settings.min_score_send if settings else 35
     today = date.today().strftime("%d %b %Y")
 
-    offers = get_top_offers(max_offers, date_scope="latest")
+    offers = get_top_offers(max_offers, date_scope="latest", min_score=min_score)
     is_historical = False
 
     if not offers:
-        offers = get_top_offers(max_offers, date_scope="all")
+        offers = get_top_offers(max_offers, date_scope="all", min_score=min_score)
         if offers:
             is_historical = True
         else:
