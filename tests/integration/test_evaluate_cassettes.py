@@ -111,6 +111,24 @@ class TestEvaluateHR:
         assert result["apply_signal"] == "maybe"
         assert result["verdict"] is not None
 
+    def test_hr_prompt_marks_unknown_experience_as_unknown(self, sample_offer, sample_perfil_text):
+        from src.pipeline.evaluate import evaluate_hr
+
+        with patch("src.pipeline.evaluate.ollama_call") as mock:
+            mock.return_value = CASSETTES["evaluate_hr_core"]
+            evaluate_hr(
+                sample_offer,
+                sample_perfil_text,
+                {"core": [], "secondary": []},
+                M_core=0.5,
+                M_sec=0.0,
+                F_exp=None,
+            )
+
+        prompt = mock.call_args.kwargs["prompt"]
+        assert "Experiencia: desconocida (F_exp=None)" in prompt
+        assert "Fit de experiencia: 0%" not in prompt
+
     def test_hr_senior_rejected(self, sample_offer_senior, sample_perfil_text):
         from src.pipeline.evaluate import evaluate_hr
 

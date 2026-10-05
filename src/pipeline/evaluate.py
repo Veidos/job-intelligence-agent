@@ -59,6 +59,20 @@ W_EXP = 0.25
 W_FIT = 0.15
 
 
+def compute_effective_weights(has_secondary: bool, has_exp: bool) -> dict[str, float]:
+    """Apply the established W_SEC rule, then renormalize available components."""
+    weights = {
+        "W_CORE": W_CORE + (W_SEC if not has_secondary else 0.0),
+        "W_SEC": W_SEC if has_secondary else 0.0,
+        "W_EXP": W_EXP if has_exp else 0.0,
+        "W_FIT": W_FIT,
+    }
+    if not has_exp:
+        available_total = sum(weights.values())
+        weights = {name: round(weight / available_total, 10) for name, weight in weights.items()}
+    return weights
+
+
 def get_gap_multiplier(gap_years: float | None) -> float:
     if gap_years is None:
         return 1.0
@@ -121,12 +135,15 @@ def compute_skill_score(
 def compute_experience_score(
     experience_min: int | None,
     candidate_years: float,
-) -> float:
+) -> float | None:
     """F_exp = years_match (sin gap — el gap es contexto cualitativo HR).
 
-    Si experience_min == 0 → years_match = 1.0.
+    Si experience_min es None, el requisito es desconocido. Si es 0, no hay
+    requisito de experiencia explícito y years_match = 1.0.
     """
-    req = max(int(experience_min or 0), 0)
+    if experience_min is None:
+        return None
+    req = max(int(experience_min), 0)
     years_match = 1.0 if req == 0 else min(candidate_years / req, 1.0)
     return round(years_match, 4)
 
@@ -273,7 +290,7 @@ def evaluate_hr(
     skill_detail: dict,
     M_core: float,
     M_sec: float,
-    F_exp: float,
+    F_exp: float | None,
     employment_gap: float | None = None,
     gap_severity: str = "low",
     company_sector: str | None = None,
@@ -284,13 +301,18 @@ def evaluate_hr(
     El único número que devuelve es context_fit (0.0-1.0).
     gap_severity: low|medium|high — calculado fuera, pasado como contexto.
     """
+    experience_line = (
+        f"- Fit de experiencia: {F_exp:.0%}"
+        if F_exp is not None
+        else "- Experiencia: desconocida (F_exp=None)"
+    )
     prompt = f"""Eres un recruiter senior. Tienes ya el análisis técnico de esta candidatura.
 Tu tarea: evaluar el fit de contexto y generar análisis cualitativo honesto.
 
 SCORES TÉCNICOS (ya calculados, NO los recalcules):
 - Match skills core: {M_core:.0%}
 - Match skills secundarias: {M_sec:.0%}
-- Fit de experiencia: {F_exp:.0%}
+{experience_line}
 - Gap laboral: {employment_gap or 0:.1f} años (severidad: {gap_severity})
 
 DETALLE DE SKILLS:
@@ -309,6 +331,7 @@ EVALÚA el context_fit (0.0-1.0) considerando SOLO:
 - ¿El perfil personal (motivación, reconversión, TDAH) encaja con el entorno laboral?
 - ¿La empresa suele contratar perfiles de reconversión para este tipo de rol?
 
+NO infieras ni penalices el fit de experiencia si figura como desconocida.
 NO penalices el gap ni las skills — eso ya está capturado en los scores técnicos.
 NO penalices ubicación ni modalidad en context_fit. La geografía ya está
 capturada en otro componente del score. Evalúa SOLO cultura, sector y fit personal.
@@ -402,36 +425,37 @@ def _build_evaluation_params(
     skill_detail: dict,
     M_core: float,
     M_sec: float,
-    F_exp: float,
+    F_exp: float | None,
     F_fit: float,
     location_match: float,
     final_score: float,
     recommendation: str,
     processing_ms: int,
-    w_core: float = W_CORE,
-    w_sec: float = W_SEC,
+    effective_weights: dict[str, float] | None = None,
 ) -> tuple:
     final_dict = final or {}
+    weights = effective_weights or compute_effective_weights(
+        has_secondary=bool(skill_detail.get("secondary")),
+        has_exp=F_exp is not None,
+    )
     return (
         offer_id,
         None,
         round(M_core * 100),
-        round(F_exp * 100),
+        round(F_exp * 100) if F_exp is not None else None,
         round(location_match * 100),
         round(F_fit * 100),
         json.dumps(
             {
                 "M_core": round(M_core, 4),
                 "M_sec": round(M_sec, 4),
-                "F_exp": round(F_exp, 4),
+                "F_exp": round(F_exp, 4) if F_exp is not None else None,
                 "F_fit": round(F_fit, 4),
                 "weights": {
-                    "W_CORE": w_core,
-                    "W_SEC": w_sec,
-                    "W_EXP": W_EXP,
-                    "W_FIT": W_FIT,
-                    "secondary_redistributed": w_sec == 0.0,
+                    **weights,
+                    "secondary_redistributed": weights["W_SEC"] == 0.0,
                 },
+                "exp_redistributed": F_exp is None,
                 "skill_detail": skill_detail,
             },
             ensure_ascii=False,
@@ -498,15 +522,14 @@ def save_evaluation(
     skill_detail: dict,
     M_core: float,
     M_sec: float,
-    F_exp: float,
+    F_exp: float | None,
     F_fit: float,
     location_match: float,
     final_score: float,
     recommendation: str,
     processing_ms: int,
     partial: bool = False,
-    w_core: float = W_CORE,
-    w_sec: float = W_SEC,
+    effective_weights: dict[str, float] | None = None,
 ) -> None:
     conn = get_connection()
     cur = conn.cursor()
@@ -524,8 +547,7 @@ def save_evaluation(
         final_score,
         recommendation,
         processing_ms,
-        w_core=w_core,
-        w_sec=w_sec,
+        effective_weights=effective_weights,
     )
 
     existing = cur.execute(
@@ -644,10 +666,9 @@ def run_evaluate(limit: int = 10) -> dict:
             # Parsear skills de la oferta (backward-compat con legacy flat array)
             offer_skills = parse_skills_required(offer.get("skills_required"))
 
-            # Pesos dinámicos: si no hay skills secundarias, redistribuir W_SEC a M_core
+            # Pesos efectivos: aplicar primero W_SEC→core y luego renormalizar
+            # proporcionalmente los componentes disponibles si falta F_exp.
             has_secondary = bool(offer_skills.get("secondary"))
-            w_core = W_CORE + W_SEC if not has_secondary else W_CORE
-            w_sec = 0.0 if not has_secondary else W_SEC
 
             # Paso 1: LLM detecta presencia de skills (sin inventar números)
             technical_llm = evaluate_technical(offer, candidate_skills_map)
@@ -668,6 +689,10 @@ def run_evaluate(limit: int = 10) -> dict:
             F_exp = compute_experience_score(
                 offer.get("experience_min"),
                 candidate_years,
+            )
+            effective_weights = compute_effective_weights(
+                has_secondary=has_secondary,
+                has_exp=F_exp is not None,
             )
 
             # Location match determinista
@@ -702,10 +727,20 @@ def run_evaluate(limit: int = 10) -> dict:
             F_fit = min(max(float(hr.get("context_fit", 0.5)), 0.0), 1.0)
 
             # Paso 5: Score final determinista
+            components = {
+                "W_CORE": M_core,
+                "W_SEC": M_sec,
+                "W_EXP": F_exp,
+                "W_FIT": F_fit,
+            }
             final_score = round(
                 min(
                     max(
-                        w_core * M_core + w_sec * M_sec + W_EXP * F_exp + W_FIT * F_fit,
+                        sum(
+                            effective_weights[name] * value
+                            for name, value in components.items()
+                            if value is not None
+                        ),
                         0.0,
                     ),
                     1.0,
@@ -732,8 +767,7 @@ def run_evaluate(limit: int = 10) -> dict:
                 recommendation,
                 ms,
                 partial=True,
-                w_core=w_core,
-                w_sec=w_sec,
+                effective_weights=effective_weights,
             )
 
             # Paso 6: Validación final (relevance + bloqueos)

@@ -55,9 +55,15 @@ L_i = 0.0  otherwise
 ```
 F_exp = years_match
 
-years_match = 1.0                                  if experience_min = 0 or NULL
+years_match = 1.0                                  if experience_min = 0
 years_match = min(candidate_years / experience_min, 1.0)  otherwise
 ```
+
+If `experience_min` is `NULL`, the requirement is **unknown**, so `F_exp = NULL`
+and it is not treated as a perfect match or a zero score. `W_EXP` is redistributed
+proportionally among the remaining components after applying the existing
+`W_SEC → W_CORE` rule. The effective weights and `exp_redistributed` flag are
+stored in `scoring_detail`.
 
 `candidate_years` is extracted from PERFIL.md via two fallbacks:
 1. Explicit "X años de experiencia" text (regex)
@@ -113,6 +119,18 @@ considering culture, location, work mode, and personal profile.
 | 0.55 ≤ S < 0.75 | Apply |
 | 0.35 ≤ S < 0.55 | Low expectations |
 | 0.00 ≤ S < 0.35 | Skip |
+
+## Eligibility and sending
+
+`match_score` remains a measure of match, not eligibility. Eligibility is derived
+separately from `apply_block`:
+
+- `requisito_imposible` and `practicas` are hard blocks and are never sendable.
+- `otro` and unknown non-empty block codes are sent only as `REVISAR`.
+- An unblocked offer keeps its existing score-based recommendation label.
+
+The shared policy is implemented in `src/utils/eligibility.py`; Telegram and the
+Flask dashboard use the same derived status.
 
 ## Notes
 

@@ -1,11 +1,11 @@
-"""Backfill: recalcula match_score con pesos redistribuidos si secondary está vacío.
+"""Backfill: recalcula match_score usando los pesos efectivos versionados.
 
 Uso:
     python -m src.pipeline.backfill_scores
 
-Lee scoring_detail existente, detecta secondary vacío, recalcula con
-w_core=W_CORE+W_SEC (0.60) en lugar de W_CORE (0.45), y actualiza
-match_score, recommendation y scoring_detail.weights en DB.
+Lee `scoring_detail`, reaplica la redistribución `W_SEC→W_CORE` cuando secondary
+está vacío y renormaliza los componentes disponibles cuando F_exp es desconocido.
+Actualiza `match_score`, `recommendation` y el desglose de pesos en DB.
 """
 
 import contextlib
@@ -13,18 +13,7 @@ import json
 import sqlite3
 
 from src.db.init_db import get_connection
-
-W_CORE, W_SEC, W_EXP, W_FIT = 0.45, 0.15, 0.25, 0.15
-
-
-def get_rating(score: float) -> str:
-    if score >= 0.75:
-        return "Prioritario"
-    if score >= 0.55:
-        return "Aplicar"
-    if score >= 0.35:
-        return "Con expectativas bajas"
-    return "No aplicar"
+from src.pipeline.evaluate import compute_effective_weights, get_rating
 
 
 def main():
@@ -45,35 +34,46 @@ def main():
 
         M_core = sd.get("M_core", 0)
         M_sec = sd.get("M_sec", 0)
-        F_exp = sd.get("F_exp", 0)
+        F_exp = sd.get("F_exp")
         F_fit = sd.get("F_fit", 0)
-
-        if not has_sec and M_sec == 0:
-            w_core = W_CORE + W_SEC
-            w_sec = 0.0
-        else:
-            w_core = W_CORE
-            w_sec = W_SEC
+        weights = compute_effective_weights(has_secondary=has_sec, has_exp=F_exp is not None)
 
         new_score = round(
-            min(max(w_core * M_core + w_sec * M_sec + W_EXP * F_exp + W_FIT * F_fit, 0.0), 1.0), 4
+            min(
+                max(
+                    sum(
+                        weights[name] * value
+                        for name, value in {
+                            "W_CORE": M_core,
+                            "W_SEC": M_sec,
+                            "W_EXP": F_exp,
+                            "W_FIT": F_fit,
+                        }.items()
+                        if value is not None
+                    ),
+                    0.0,
+                ),
+                1.0,
+            ),
+            4,
         )
         new_score_int = round(new_score * 100)
         old_score_int = row["match_score"]
 
-        has_flag = sd.get("weights", {}).get("secondary_redistributed") is not None
-        if new_score_int == old_score_int and has_flag:
+        current_weights = sd.get("weights", {})
+        flags_current = current_weights.get("secondary_redistributed") is not None and sd.get(
+            "exp_redistributed"
+        ) == (F_exp is None)
+        if new_score_int == old_score_int and flags_current:
             continue
 
         new_rec = get_rating(new_score)
 
         sd["weights"] = {
-            "W_CORE": w_core,
-            "W_SEC": w_sec,
-            "W_EXP": W_EXP,
-            "W_FIT": W_FIT,
-            "secondary_redistributed": w_sec == 0.0,
+            **weights,
+            "secondary_redistributed": weights["W_SEC"] == 0.0,
         }
+        sd["exp_redistributed"] = F_exp is None
 
         with contextlib.closing(get_connection()) as conn:
             conn.execute(

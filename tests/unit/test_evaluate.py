@@ -149,3 +149,57 @@ class TestLoadGapFromPerfil:
         profile = CandidateProfile.from_perfil(perfil)
 
         assert profile.employment_gap == 3.7
+
+
+class TestExperienceScoring:
+    def test_none_means_unknown_but_zero_means_no_requirement(self):
+        from src.pipeline.evaluate import compute_experience_score
+
+        assert compute_experience_score(None, 4.0) is None
+        assert compute_experience_score(0, 4.0) == 1.0
+
+    @pytest.mark.parametrize(
+        ("has_secondary", "has_exp", "expected"),
+        [
+            (True, True, {"W_CORE": 0.45, "W_SEC": 0.15, "W_EXP": 0.25, "W_FIT": 0.15}),
+            (False, True, {"W_CORE": 0.60, "W_SEC": 0.0, "W_EXP": 0.25, "W_FIT": 0.15}),
+            (True, False, {"W_CORE": 0.60, "W_SEC": 0.20, "W_EXP": 0.0, "W_FIT": 0.20}),
+            (False, False, {"W_CORE": 0.80, "W_SEC": 0.0, "W_EXP": 0.0, "W_FIT": 0.20}),
+        ],
+    )
+    def test_compute_effective_weights(self, has_secondary, has_exp, expected):
+        from src.pipeline.evaluate import compute_effective_weights
+
+        weights = compute_effective_weights(has_secondary, has_exp)
+        assert weights == expected
+        assert sum(weights.values()) == pytest.approx(1.0)
+
+
+class TestExperienceScoringPersistence:
+    def test_none_experience_is_stored_as_sql_null_and_marked_redistributed(self):
+        import json
+
+        from src.pipeline.evaluate import _build_evaluation_params, compute_effective_weights
+
+        params = _build_evaluation_params(
+            offer_id=1,
+            hr={},
+            final=None,
+            skill_detail={"core": [], "secondary": []},
+            M_core=0.5,
+            M_sec=0.0,
+            F_exp=None,
+            F_fit=0.75,
+            location_match=0.5,
+            final_score=0.55,
+            recommendation="Aplicar",
+            processing_ms=1,
+            effective_weights=compute_effective_weights(False, False),
+        )
+
+        assert params[3] is None
+        details = json.loads(params[6])
+        assert details["F_exp"] is None
+        assert details["exp_redistributed"] is True
+        assert details["weights"]["W_CORE"] == 0.8
+        assert details["weights"]["W_FIT"] == 0.2
