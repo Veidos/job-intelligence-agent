@@ -1,8 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Verificar el fetch en vivo (1 keyword, 2-3 fichas) y decidir si instalar el cron diario
-> **Sesión 2026-10-05 (2ª):** InfoJobs endureció el detalle y exige JavaScript. Fichas por Camoufox (`SCRAPER_DETAIL_MODE=stealth`), búsquedas por HTTP con reintento. Corregido `_is_decoy_page` (miraba 2.000 chars, el aviso está en el byte 18.149) y `search()` no detectaba muros. ADR-025. 312 tests en 3.11 y 3.14. `phase1-eligibility` merged en `main`; proyecto en rama única.
-> **Sesión 2026-10-05:** Política compartida de elegibilidad, `min_score_send`, backfill histórico basado en `offers.experience_min`, prompt apply_block corregido, auditoría read-only y CI Python 3.11/3.14. 303 tests passing en ambas versiones; Ruff pasa. Rama `phase1-eligibility` pendiente de revisión y sin merge. `FIX_DATE=2026-10-05`.
+> **Próximo paso:** Mantener el código pre-2026-10-05; revisar los efectos persistidos del run 42 y decidir una verificación controlada del fetch frente a la protección actual de InfoJobs. No modificar keywords, geografía ni límites.
+> **Sesión 2026-10-07:** Revertidos los cinco commits de 2026-10-05; código restaurado al baseline `2dce06a`. 274 tests pasan en Python 3.11 y 3.14; Ruff limpio. La DB no se restauró: conserva el run 42 y sus resultados. `data/jobs.db.v1` es snapshot de junio y no sirve para revertir octubre.
 > **Sesión 2026-08-26:** Grammar constraints JSON vía Ollama format (ADR-024) + Run E2E #34 completado (8 ofertas, 7 evaluadas, 3 Telegram, 0 JSON parse failures). 274 tests ✅. GPU offload verificado (gemma4:e4b + qwen2.5:7b). ScraplingTransport activo y funcionando.
 > **Sesión 2026-08-25:** PoC Scrapling (T1-T3 PASS, IP fría) + migración por capas: ADR-023 ScraplingTransport con warming + escalada stealth automática + capa bronze `scraper_raw_html` (HTML gzip antes de parsear) + tests frescura DOM. 265 tests ✅
 > T-8 ✅ — Feedback bot funcional y natural

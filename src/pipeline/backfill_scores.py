@@ -1,11 +1,11 @@
-"""Backfill: recalcula match_score usando los pesos efectivos versionados.
+"""Backfill: recalcula match_score con pesos redistribuidos si secondary está vacío.
 
 Uso:
     python -m src.pipeline.backfill_scores
 
-Lee `scoring_detail` junto a `offers.experience_min`, reaplica la redistribución
-`W_SEC→W_CORE` cuando secondary está vacío y renormaliza los componentes disponibles
-cuando `experience_min` es NULL. Actualiza scores, `experience_match` y metadatos.
+Lee scoring_detail existente, detecta secondary vacío, recalcula con
+w_core=W_CORE+W_SEC (0.60) en lugar de W_CORE (0.45), y actualiza
+match_score, recommendation y scoring_detail.weights en DB.
 """
 
 import contextlib
@@ -13,102 +13,72 @@ import json
 import sqlite3
 
 from src.db.init_db import get_connection
-from src.pipeline.evaluate import compute_effective_weights, get_rating
+
+W_CORE, W_SEC, W_EXP, W_FIT = 0.45, 0.15, 0.25, 0.15
 
 
-def recalculate_evaluation(scoring_detail: dict, experience_min: int | None) -> tuple:
-    """Recalculate one historical evaluation from its stored components.
-
-    The offer column is authoritative: NULL means its experience requirement
-    was unknown, while 0 means no minimum requirement was stated.
-    """
-    details = dict(scoring_detail)
-    if experience_min is None:
-        F_exp = None
-    elif experience_min == 0:
-        F_exp = 1.0
-    else:
-        F_exp = details.get("F_exp")
-
-    M_core = details.get("M_core", 0)
-    M_sec = details.get("M_sec", 0)
-    F_fit = details.get("F_fit", 0)
-    skill_detail = details.get("skill_detail") or {}
-    has_secondary = bool(skill_detail.get("secondary"))
-    weights = compute_effective_weights(has_secondary=has_secondary, has_exp=F_exp is not None)
-    components = {
-        "W_CORE": M_core,
-        "W_SEC": M_sec,
-        "W_EXP": F_exp,
-        "W_FIT": F_fit,
-    }
-    new_score = round(
-        min(
-            max(
-                sum(
-                    weights[name] * value for name, value in components.items() if value is not None
-                ),
-                0.0,
-            ),
-            1.0,
-        ),
-        4,
-    )
-
-    details["F_exp"] = F_exp
-    details["weights"] = {
-        **weights,
-        "secondary_redistributed": weights["W_SEC"] == 0.0,
-    }
-    details["exp_redistributed"] = F_exp is None
-    experience_match = round(F_exp * 100) if F_exp is not None else None
-    return round(new_score * 100), get_rating(new_score), details, experience_match
+def get_rating(score: float) -> str:
+    if score >= 0.75:
+        return "Prioritario"
+    if score >= 0.55:
+        return "Aplicar"
+    if score >= 0.35:
+        return "Con expectativas bajas"
+    return "No aplicar"
 
 
 def main():
     with contextlib.closing(get_connection()) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("""
-            SELECT e.id, e.offer_id, e.match_score, e.experience_match,
-                   e.scoring_detail, o.experience_min
-            FROM offer_evaluations e
-            JOIN offers o ON o.id = e.offer_id
-            WHERE e.scoring_detail IS NOT NULL
+            SELECT id, offer_id, match_score, scoring_detail
+            FROM offer_evaluations
+            WHERE scoring_detail IS NOT NULL
         """).fetchall()
 
     updated = 0
     for row in rows:
         sd = json.loads(row["scoring_detail"])
-        new_score_int, new_rec, updated_details, experience_match = recalculate_evaluation(
-            sd, row["experience_min"]
+        sk = sd.get("skill_detail", {})
+        sec = sk.get("secondary", []) or []
+        has_sec = len(sec) > 0
+
+        M_core = sd.get("M_core", 0)
+        M_sec = sd.get("M_sec", 0)
+        F_exp = sd.get("F_exp", 0)
+        F_fit = sd.get("F_fit", 0)
+
+        if not has_sec and M_sec == 0:
+            w_core = W_CORE + W_SEC
+            w_sec = 0.0
+        else:
+            w_core = W_CORE
+            w_sec = W_SEC
+
+        new_score = round(
+            min(max(w_core * M_core + w_sec * M_sec + W_EXP * F_exp + W_FIT * F_fit, 0.0), 1.0), 4
         )
+        new_score_int = round(new_score * 100)
         old_score_int = row["match_score"]
-        current_weights = sd.get("weights", {})
-        expected_weights = updated_details["weights"]
-        weights_current = all(
-            current_weights.get(name) == value for name, value in expected_weights.items()
-        )
-        details_current = sd.get("exp_redistributed") == updated_details["exp_redistributed"]
-        if (
-            new_score_int == old_score_int
-            and row["experience_match"] == experience_match
-            and weights_current
-            and details_current
-        ):
+
+        has_flag = sd.get("weights", {}).get("secondary_redistributed") is not None
+        if new_score_int == old_score_int and has_flag:
             continue
+
+        new_rec = get_rating(new_score)
+
+        sd["weights"] = {
+            "W_CORE": w_core,
+            "W_SEC": w_sec,
+            "W_EXP": W_EXP,
+            "W_FIT": W_FIT,
+            "secondary_redistributed": w_sec == 0.0,
+        }
 
         with contextlib.closing(get_connection()) as conn:
             conn.execute(
-                """UPDATE offer_evaluations
-                   SET match_score=?, recommendation=?, experience_match=?, scoring_detail=?
-                   WHERE id=?""",
-                (
-                    new_score_int,
-                    new_rec,
-                    experience_match,
-                    json.dumps(updated_details, ensure_ascii=False),
-                    row["id"],
-                ),
+                "UPDATE offer_evaluations SET match_score=?, recommendation=?, scoring_detail=? WHERE id=?",
+                (new_score_int, new_rec, json.dumps(sd, ensure_ascii=False), row["id"]),
             )
             conn.commit()
 

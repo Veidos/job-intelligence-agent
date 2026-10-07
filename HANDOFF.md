@@ -1,33 +1,16 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-10-05
-**Fase activa:** Fetch de InfoJobs reparado (ADR-025) — falta verificación end-to-end en vivo
+**Última actualización:** 2026-10-07
+**Fase activa:** Código restaurado al baseline `2dce06a`; pendiente decidir el siguiente fetch
 
-## Sesión 2026-10-05 — Muro de Distil en fichas (ADR-025)
+## Rollback de código — 2026-10-07
 
-- `phase1-eligibility` ya está merged en `main` con fast-forward; **el proyecto trabaja en una sola rama**.
-- El run 41 devolvió 0 ofertas: 6/6 fichas recibieron el muro de Distil. Diagnóstico y fix en `docs/adr/025-detail-via-browser-javascript.md`.
-- **Causa raíz:** `_is_decoy_page` solo recorría `html[:2000]` y el aviso del muro está en el byte 18.149, así que nunca se detectaba y la escalada a Camoufox nunca se lanzaba. Los tests pasaban porque su decoy sintético tenía la frase en el índice 0.
-- Las fichas van ahora por navegador real (`SCRAPER_DETAIL_MODE=stealth`, por defecto). Las búsquedas siguen por HTTP y reintentan por navegador si reciben el muro.
-- Probado que **no es reputación de IP** (Camoufox entra desde la misma IP) y **no es el fingerprint TLS** (`chrome150` recibe el mismo muro).
-- Medido: arranque Camoufox 0,5 s, ficha 4,7 s, ~173 MB. Un run de 30 fichas pasa de ~1 a ~3 min.
-- Verificación: 312 tests en Python 3.11 y 3.14; Ruff pasa. Detección comprobada sin falsos positivos sobre 141 fichas y 81 búsquedas reales del bronze.
-- **Pendiente:** verificación end-to-end en vivo (no hecha a propósito para no quemar la IP). Basta un fetch con 1 keyword y 2-3 fichas.
-- **Pendiente:** `IMPERSONATE="chrome131"` está obsoleto (curl_cffi 0.16.2 admite `chrome150`). No es la causa, pero conviene revisarlo.
-- **Pendiente:** no hay crontab ni timers de systemd, así que el pipeline no se ejecuta solo. Decidir si instalarlo.
-
-## Sesión 2026-10-05 — Bloqueos y datos ausentes
-
-- Política centralizada en `src/utils/eligibility.py`: bloqueos duros no se envían; otros bloqueos se etiquetan `REVISAR`.
-- `send.py` usa `user_settings.min_score_send`; valor local comprobado: 35.
-- `experience_min=NULL` produce `F_exp=NULL`; se renormalizan los pesos disponibles y se guarda `exp_redistributed`.
-- El backfill histórico toma `experience_min` desde `offers`, corrige F_exp/experience_match en filas NULL y actualiza `scoring_detail`.
-- El prompt `apply_block` enumera cada código por separado; el panel `actionable` excluye `REVISAR`.
-- No se añadieron columnas ni migraciones. `experience_match` admite NULL en `schema.sql`.
-- `sent_at` existe y está poblado en los 44 registros marcados como enviados de la DB local.
-- Auditoría manual read-only: 4 bloqueos con score ≥35; 3 enviados y 1 sin enviar. `FIX_DATE=2026-10-05`, fecha confirmada para los commits de esta fase.
-- Verificación: Python 3.11 y 3.14, 303 tests passing en ambas versiones; Ruff pasa en código y tests revisados.
-- **Estado:** merged en `main` con fast-forward y pusheado; rama `phase1-eligibility` borrada local y remote.
+- Revertidos en `main` los cinco commits del 2026-10-05; el código de aplicación vuelve al estado de `2dce06a`.
+- Verificación sobre el estado restaurado: 274 tests pasan en Python 3.11 y 3.14; Ruff limpio.
+- **La base `data/jobs.db` no se revirtió.** Conserva el run 42, sus ofertas, las 12 páginas de verificación mal parseadas y las 3 notificaciones enviadas.
+- `data/jobs.db.v1` es del 2026-06-11; no usar como restauración porque perdería datos posteriores.
+- Run 40 (2026-09-01) funcionó con el scraper anterior; run 41 (2026-10-05), antes del último cambio del scraper, obtuvo 0 raws por los muros nuevos de InfoJobs. Revertir código no revierte el cambio externo del sitio.
+- No se hicieron peticiones a InfoJobs durante el rollback. No lanzar otro run hasta decidir cómo tratar la protección actual y los registros falsos de la DB.
 
 ## Logros de la sesión
 

@@ -203,64 +203,6 @@ class TestDashboardAPI:
         assert data[0]["recommendation"] == "Aplicar"
         assert data[0]["salary_display"] == "30k–40k"
 
-    def test_api_offers_exposes_review_status_not_apply(self, client, seed_db, test_engine):
-        test_engine.execute(
-            "UPDATE offer_evaluations SET apply_block='otro', llm_apply_signal='maybe' WHERE offer_id=?",
-            (seed_db,),
-        )
-        test_engine.commit()
-
-        response = client.get("/api/offers")
-        offer = response.get_json()[0]
-        assert offer["eligibility_status"] == "review"
-        assert offer["eligible_for_send"] is True
-        assert offer["display_recommendation"] == "REVISAR"
-
-        detail = client.get(f"/api/offers/{seed_db}").get_json()["offer"]
-        assert detail["eligibility_status"] == "review"
-        assert detail["display_recommendation"] == "REVISAR"
-
-    def test_api_offers_marks_hard_block_not_eligible(self, client, seed_db, test_engine):
-        test_engine.execute(
-            "UPDATE offer_evaluations SET apply_block='practicas' WHERE offer_id=?",
-            (seed_db,),
-        )
-        test_engine.commit()
-
-        offer = client.get("/api/offers").get_json()[0]
-        assert offer["eligibility_status"] == "blocked"
-        assert offer["eligible_for_send"] is False
-        assert offer["display_recommendation"] == "NO ELEGIBLE"
-
-    def test_api_offers_keeps_unknown_experience_null(self, client, seed_db, test_engine):
-        test_engine.execute(
-            "UPDATE offer_evaluations SET experience_match=NULL, scoring_detail=? WHERE offer_id=?",
-            (json.dumps({"M_core": 0.6, "M_sec": 0.0, "F_exp": None, "F_fit": 0.7}), seed_db),
-        )
-        test_engine.commit()
-
-        offer = client.get("/api/offers").get_json()[0]
-        assert offer["F_exp"] is None
-        assert offer["experience_match"] is None
-
-        detail = client.get(f"/api/offers/{seed_db}").get_json()["offer"]
-        assert detail["F_exp"] is None
-
-    def test_pipeline_actionables_excludes_review_items(self, client, seed_db, test_engine):
-        runs = client.get("/api/pipeline-runs").get_json()
-        actionables = [item for run in runs for item in run["actionable"]]
-        assert any(item["id"] == seed_db for item in actionables)
-
-        test_engine.execute(
-            "UPDATE offer_evaluations SET apply_block='otro' WHERE offer_id=?",
-            (seed_db,),
-        )
-        test_engine.commit()
-
-        runs = client.get("/api/pipeline-runs").get_json()
-        actionables = [item for run in runs for item in run["actionable"]]
-        assert not any(item["id"] == seed_db for item in actionables)
-
     def test_api_offers_with_filters(self, client, seed_db):
         resp = client.get("/api/offers?min_score=50&rec=Aplicar&limit=5")
         assert resp.status_code == 200

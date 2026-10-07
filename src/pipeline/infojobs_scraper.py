@@ -77,21 +77,6 @@ class InfoJobsParser:
         "conocimientos": "skills",
     }
 
-    # Patrones del muro de Distil: inequívocos, se buscan en casi todo el HTML
-    _DECOY_TEXT_PATTERNS = (
-        "no podemos identificar tu navegador",
-        "no podemos identificar su navegador",
-    )
-    # Genéricos: pueden aparecer en el cuerpo de una oferta real, solo title/h1
-    _DECOY_HEAD_PATTERNS = (
-        "acceso denegado",
-        "access denied",
-    )
-    # El muro real pone el aviso en el <h1> hacia el byte 18.000 de ~29 KB
-    _DECOY_SCAN_LIMIT = 60_000
-    # <title>/<h1> aparecen al principio del documento, muy por debajo de este límite
-    _HEAD_SCAN_LIMIT = 30_000
-
     @staticmethod
     def parse_search_html(html: str) -> list[SearchStub]:
         """Parsea la página de resultados de búsqueda.
@@ -263,23 +248,21 @@ class InfoJobsParser:
         InfoJobs sirve "No podemos identificar tu navegador" en lugar de la oferta
         real cuando Distil Networks detecta comportamiento automatizado, pero sin
         llegar a devolver 403.
-
-        El muro mide ~29 KB y coloca el aviso en el <h1> hacia el byte 18.000, así que
-        el HTML se recorre casi entero: mirar solo los primeros 2.000 caracteres hacía
-        que el muro pasara por oferta válida (ver test_dos_decoys_consecutivos_escalan_a_stealth).
-
-        "acceso denegado" es genérico y puede aparecer en la descripción de una oferta
-        real (p.ej. seguridad informática), así que solo se acepta en title/h1.
         """
+        decoy_patterns = [
+            "no podemos identificar tu navegador",
+            "no podemos identificar su navegador",
+            "acceso denegado",
+        ]
         title_lower = title.lower()
-        for pattern in InfoJobsParser._DECOY_TEXT_PATTERNS:
+        for pattern in decoy_patterns:
             if pattern in title_lower:
                 return True
-        for pattern in InfoJobsParser._DECOY_TEXT_PATTERNS:
-            if pattern in html[: InfoJobsParser._DECOY_SCAN_LIMIT].lower():
+        html_lower = html[:2000].lower()
+        for pattern in decoy_patterns:
+            if pattern in html_lower:
                 return True
-        head = InfoJobsParser._extract_head_text(html)
-        return any(pattern in head for pattern in InfoJobsParser._DECOY_HEAD_PATTERNS)
+        return False
 
     @staticmethod
     def _extract_title(soup: BeautifulSoup) -> str:
@@ -289,24 +272,6 @@ class InfoJobsParser:
             return el.get_text(strip=True)
         el = soup.select_one("h1")
         return el.get_text(strip=True) if el else ""
-
-    @staticmethod
-    def _extract_head_text(html: str) -> str:
-        """Texto de <title> y <h1> en minúsculas, sin parsear el documento entero.
-
-        Se usa para validar patrones genéricos ("acceso denegado") que pueden
-        aparecer legitimamente en la descripción de una oferta.
-        """
-        head = html[: InfoJobsParser._HEAD_SCAN_LIMIT]
-        chunks = [
-            m.group(1)
-            for m in re.finditer(
-                r"<(?:title|h1)[^>]*>(.*?)</(?:title|h1)>",
-                head,
-                re.IGNORECASE | re.DOTALL,
-            )
-        ]
-        return re.sub(r"<[^>]+>", " ", " ".join(chunks)).lower()
 
     @staticmethod
     def _extract_company(soup: BeautifulSoup) -> str:

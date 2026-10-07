@@ -82,14 +82,7 @@ function tag(text, clsName) {
 }
 
 function recTag(r) {
-  const map = {
-    'Aplicar': 'green',
-    'Con expectativas bajas': 'yellow',
-    'No aplicar': 'red',
-    'Prioritario': 'blue',
-    'REVISAR': 'yellow',
-    'NO ELEGIBLE': 'red',
-  };
+  const map = { 'Aplicar': 'green', 'Con expectativas bajas': 'yellow', 'No aplicar': 'red', 'Prioritario': 'blue' };
   return tag(r, map[r] || 'gray');
 }
 
@@ -106,12 +99,6 @@ function relTag(r) {
 function blockTag(b) {
   if (!b || b === 'null') return tag('Sin bloqueo', 'green');
   return tag(b, 'red');
-}
-
-function eligibilityTag(status) {
-  if (status === 'review') return tag('REVISAR', 'yellow');
-  if (status === 'blocked') return tag('NO ELEGIBLE', 'red');
-  return '';
 }
 
 function workModeValue(w) {
@@ -218,9 +205,9 @@ function getFilteredData() {
 
   let filtered = OFFERS.filter(d => {
     if ((d.match_score || 0) < minScore) return false;
-    if (fRec && d.display_recommendation !== fRec) return false;
+    if (fRec && d.recommendation !== fRec) return false;
     if (fRel && d.relevance_flag !== fRel) return false;
-    if (!showBlocked && d.eligibility_status === 'blocked') return false;
+    if (!showBlocked && d.apply_block && d.apply_block !== 'null') return false;
     if (hideApplied && appliedIds.has(d.id)) return false;
     if (hideExpired && isExpired(d.published_at)) return false;
     if (allowedModes.length && d.work_mode && !allowedModes.includes(workModeValue(d.work_mode))) return false;
@@ -292,9 +279,9 @@ function renderTable(data) {
       <td>${workModeLabel(d.work_mode)}</td>
       <td class="num nowrap">${getOfferAgeBadge(daysSince(d.published_at))}${dateFmt(d.published_at)}</td>
       <td class="num nowrap">${d.salary_display || '\u2014'}</td>
-      <td>${recTag(d.display_recommendation || d.recommendation)}</td>
+      <td>${recTag(d.recommendation)}</td>
       <td>${signalTag(d.llm_apply_signal)}</td>
-      <td>${eligibilityTag(d.eligibility_status)} ${blockTag(d.apply_block)}</td>
+      <td>${blockTag(d.apply_block)}</td>
     </tr>`;
   }).join('');
 }
@@ -412,15 +399,11 @@ function openModal(id) {
         <div class="verdict-row">
           <div class="verdict-item">
             <span class="label">Recomendaci\u00f3n</span>
-            ${recTag(d.display_recommendation || d.recommendation)}
+            ${recTag(d.recommendation)}
           </div>
           <div class="verdict-item">
             <span class="label">Se\u00f1al</span>
             ${signalTag(d.llm_apply_signal)}
-          </div>
-          <div class="verdict-item">
-            <span class="label">Elegibilidad</span>
-            ${eligibilityTag(d.eligibility_status)}${d.eligibility_status === 'eligible' ? tag('ELEGIBLE', 'green') : ''}
           </div>
           <div class="verdict-item">
             <span class="label">Bloqueo</span>
@@ -479,7 +462,7 @@ function openModal(id) {
         <div class="scoring-grid">
           <div class="scoring-item"><span>M_core</span><span>${pct(d.M_core)}</span></div>
           <div class="scoring-item"><span>M_sec</span><span>${pct(d.M_sec)}</span></div>
-          <div class="scoring-item"><span>F_exp</span><span>${d.F_exp == null ? 'Desconocido' : pct(d.F_exp)}</span></div>
+          <div class="scoring-item"><span>F_exp</span><span>${pct(d.F_exp)}</span></div>
           <div class="scoring-item"><span>F_fit</span><span>${pct(d.F_fit)}</span></div>
         </div>
       </details>
@@ -1849,7 +1832,7 @@ function renderActionableTable(run) {
       <td>${o.company_name}</td>
       <td>${o.city || '\u2014'}</td>
       <td>${o.work_mode || '\u2014'}</td>
-      <td>${recTag(o.display_recommendation || o.recommendation)}</td>
+      <td>${recTag(o.recommendation)}</td>
       <td>${signalTag(o.llm_apply_signal)}</td>
     </tr>
   `).join('');
@@ -1883,9 +1866,7 @@ function renderLlmIndicators(offers) {
   if (!container) return;
 
   const mCore = offers.map(o => (o.M_core ?? 0) * 100);
-  const expKnown = offers.filter(o => o.F_exp != null && o.F_fit != null);
-  const fExp = expKnown.map(o => o.F_exp * 100);
-  const fFitForExp = expKnown.map(o => o.F_fit * 100);
+  const fExp = offers.map(o => (o.F_exp ?? 0) * 100);
   const fFit = offers.map(o => (o.F_fit ?? 0) * 100);
 
   const scores = offers.map(o => o.match_score).filter(v => v != null);
@@ -1894,7 +1875,7 @@ function renderLlmIndicators(offers) {
   const sigma = Math.sqrt(scores.reduce((s, v) => s + (v - mean) ** 2, 0) / n);
 
   const r1 = pearsonCorr(mCore, fFit);
-  const r2 = pearsonCorr(fExp, fFitForExp);
+  const r2 = pearsonCorr(fExp, fFit);
 
   function indicatorCard(label, prefix, value, cls, verdict, desc) {
     return `<div class="llm-card ${cls}">
@@ -1935,7 +1916,7 @@ function renderLlmIndicators(offers) {
 
   container.innerHTML = [
     rCard('M_core vs F_fit', r1, 'Skills \u2260 cultura \u2014 deben ser independientes'),
-    rCard('F_exp vs F_fit', r2, 'Experiencia \u2260 encaje cultural · ofertas con experiencia conocida: ' + expKnown.length),
+    rCard('F_exp vs F_fit', r2, 'Experiencia \u2260 encaje cultural'),
     indicatorCard('Discriminaci\u00f3n del score', '\u03c3 = ', sigma.toFixed(1) + ' pts', sigmaCls, sigmaVerdict, 'Spread del modelo sobre ' + n + ' ofertas'),
     indicatorCard('match_score \u00d7 apply_signal', 'Yes ' + avgYes + ' \u00b7 No ' + avgNo + ' \u00b7 Quiz\u00e1s ' + avgMaybe, '', signalCls, signalVerdict, 'Diferencia deseada: \u226530 pts entre Yes y No'),
   ].join('');

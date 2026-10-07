@@ -19,8 +19,6 @@ onboarding quedan para medición posterior.
 
 from __future__ import annotations
 
-from src.utils.eligibility import APPLY_BLOCK_CODES
-
 SKILL_PRESENT_ITEM = {
     "type": "object",
     "properties": {
@@ -79,7 +77,7 @@ FINAL_SCHEMA = {
         "relevance_reasoning": {"type": "string"},
         "apply_block": {
             "type": ["string", "null"],
-            "enum": [*sorted(APPLY_BLOCK_CODES), None],
+            "enum": ["requisito_imposible", "practicas", "otro", None],
         },
         "apply_block_reason": {"type": ["string", "null"]},
         "apply_recommendation": {"type": "string", "enum": ["yes", "maybe", "no"]},

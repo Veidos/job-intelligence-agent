@@ -6,26 +6,14 @@ delegando TODO el parseo en InfoJobsParser (fuente única del parser).
 Diseño validado empíricamente en scraper_lab/scrapling_poc (T1-T3 PASS):
 - FetcherSession(impersonate=chrome131) con cookie jar persistente
 - La primera búsqueda actúa de warm request (gana cookies Distil)
-- Las búsquedas van por HTTP barato; si Distil devuelve el muro, se reintenta
-  por navegador antes de abandonar la keyword
-
-Estado desde oct-2026 (InfoJobs endureció la protección, ver ADR-025):
-- Las **fichas de detalle exigen JavaScript**: curl_cffi recibe siempre el muro
-  de Distil (HTTP 200, ~29 KB, "No podemos identificar tu navegador"). Por eso
-  van por navegador real (Camoufox) de forma nativa: `SCRAPER_DETAIL_MODE=stealth`.
-- Antes de oct-2026 el detalle por HTTP funcionaba (141 fichas seguidas hasta el
-  1-sep-2026). El cambio está en InfoJobs, no en el código.
-- `_is_decoy_page` recorre casi todo el HTML: el aviso del muro está hacia el
-  byte 18.000, así que mirar solo los primeros 2.000 daba falso negativo y
-  dejaba la escalada anti-decoy sin dispararse.
-
-Medido (oct-2026): arranque Camoufox 0,5 s, ficha 4,7 s, búsqueda HTTP 0,4 s,
-navegador ~173 MB. El arranque es amortizable dentro del run.
+- Los detalles llevan Referer de la búsqueda que los generó
+- Ante 2 decoys consecutivos: escalada automática a StealthySession
+  (solo los detalles van por browser; las búsquedas siguen en HTTP barato)
+- Tras 8 fallos totales: ScraperBlockedError sin tormentas de reintentos
 
 Variables .env:
 - SCRAPER_BACKEND=scrapling|curl_cffi  (rollback instantáneo)
-- SCRAPER_STEALTH_FALLBACK=1|0         (permite escalada a navegador, default 1)
-- SCRAPER_DETAIL_MODE=stealth|http|auto (transporte de fichas, default stealth)
+- SCRAPER_STEALTH_FALLBACK=1|0         (escalada automática, default 1)
 
 Rollback documentado en docs/adr/ADR-023-scrapling-transport-bronze-layer.md
 """
@@ -56,17 +44,6 @@ MAX_CONSECUTIVE_DECOYS = 2
 MAX_TOTAL_FAILURES = 8
 
 STEALTH_TIMEOUT_MS = 60_000
-
-# Modo de transporte para las fichas de detalle.
-# - "stealth" (default): siempre navegador real. InfoJobs exige JavaScript en
-#   detalle desde oct-2026, así que curl_cffi siempre recibe el muro de Distil.
-# - "http": solo HTTP (rollback / diagnóstico; hoy devuelve muro en detalle).
-# - "auto": HTTP primero y escalada a navegador al primer decoy (comportamiento
-#   previo, útil solo si InfoJobs relaja la protección).
-DETAIL_MODE_STEALTH = "stealth"
-DETAIL_MODE_HTTP = "http"
-DETAIL_MODE_AUTO = "auto"
-_VALID_DETAIL_MODES = (DETAIL_MODE_STEALTH, DETAIL_MODE_HTTP, DETAIL_MODE_AUTO)
 
 # Firma del hook bronze: (kind, url, http_status, html, offer_id)
 RawHtmlCallback = Callable[[str, str, int | None, str, str | None], None]
@@ -127,7 +104,6 @@ class ScraplingTransport:
         self,
         on_raw_html: RawHtmlCallback | None = None,
         stealth_fallback: bool | None = None,
-        detail_mode: str | None = None,
     ):
         self._on_raw_html = on_raw_html
         if stealth_fallback is None:
@@ -135,16 +111,7 @@ class ScraplingTransport:
         self._stealth_enabled = stealth_fallback
         self._session = None  # contexto FetcherSession activo (lazy)
         self._stealth_ctx = None  # contexto StealthySession activo (lazy)
-        self._detail_mode = (detail_mode or os.getenv("SCRAPER_DETAIL_MODE", "")).lower()
-        if not self._detail_mode:
-            self._detail_mode = DETAIL_MODE_STEALTH
-        if self._detail_mode not in _VALID_DETAIL_MODES:
-            log.warning(
-                "SCRAPER_DETAIL_MODE=%r desconocido — usando %r",
-                self._detail_mode,
-                DETAIL_MODE_STEALTH,
-            )
-            self._detail_mode = DETAIL_MODE_STEALTH
+        self._detail_mode = "http"  # 'http' | 'stealth' — las búsquedas SIEMPRE http
         self._consecutive_decoys = 0
         self._total_failures = 0
         self._last_request = 0.0
@@ -165,27 +132,8 @@ class ScraplingTransport:
 
             self._stealth_ctx = StealthySession(headless=True)
             self._stealth_client = self._stealth_ctx.__enter__()
-            log.info("Browser stealth activo para detail pages")
+            log.warning("Escalada a browser stealth activada para detail pages")
         return self._stealth_client
-
-    def _fetch_detail(self, url: str, headers: dict | None = None) -> FetchResult:
-        """Descarga una ficha según el modo configurado.
-
-        En modo "stealth" el navegador puede no arrancar (binarios ausentes, falta de
-        display): en ese caso se degrada a HTTP con un aviso, porque es preferible
-        perder detalle que abortar el run. En "http"/"auto" manda curl_cffi y la
-        escalada la decide `detail()` al detectar el muro.
-        """
-        if self._detail_mode != DETAIL_MODE_STEALTH:
-            return self._fetch_http(url, headers=headers)
-        try:
-            return self._fetch_stealth(url)
-        except ScraperBlockedError:
-            raise
-        except Exception as e:
-            log.warning("Browser stealth no disponible (%s) — fallback a HTTP", e)
-            self._detail_mode = DETAIL_MODE_HTTP
-            return self._fetch_http(url, headers=headers)
 
     @staticmethod
     def _resp_to_html(resp) -> str:
@@ -266,36 +214,13 @@ class ScraplingTransport:
 
             url = f"{self.BASE_URL}{self.SEARCH_PATH}?{urlencode(params)}"
             try:
-                result = self._fetch_http(url)  # búsquedas por HTTP barato
+                result = self._fetch_http(url)  # búsquedas siempre por HTTP barato
             except Exception as e:
                 self._count_failure(f"search '{query}' p{page}")
                 log.warning("Fallo en search '%s' página %d: %s", query, page, e)
                 break
 
             self._emit_raw("search", url, result.status, result.html)
-
-            if InfoJobsParser._is_decoy_page("", result.html):
-                log.warning(
-                    "Búsqueda '%s' p%d devolvió muro de Distil — reintento por navegador",
-                    query,
-                    page,
-                )
-                try:
-                    result = self._fetch_stealth(url)
-                except ScraperBlockedError:
-                    raise
-                except Exception as e:
-                    self._count_failure(f"search stealth '{query}' p{page}")
-                    log.warning("Fallo en search stealth '%s' p%d: %s", query, page, e)
-                    break
-                self._emit_raw("search", url, result.status, result.html)
-                if InfoJobsParser._is_decoy_page("", result.html):
-                    self._count_failure(f"search muro '{query}' p{page}")
-                    log.warning(
-                        "Muro persiste tras navegador en search '%s' p%d — fin", query, page
-                    )
-                    break
-
             stubs = InfoJobsParser.parse_search_html(result.html)
             if not stubs:
                 log.info("Sin más ofertas en página %d — fin", page)
@@ -309,11 +234,7 @@ class ScraplingTransport:
         return all_stubs
 
     def detail(self, url: str, search_url: str | None = None) -> RawOfferDetail | None:
-        """Obtiene y parsea una oferta individual.
-
-        Por defecto va por navegador real (`DETAIL_MODE_STEALTH`): InfoJobs exige
-        JavaScript en las fichas, así que curl_cffi recibe siempre el muro de Distil.
-        """
+        """Obtiene y parsea una oferta individual, con escalada anti-decoy."""
         headers = None
         if search_url:
             headers = {
@@ -322,7 +243,10 @@ class ScraplingTransport:
                 "Sec-Fetch-Mode": "navigate",
             }
         try:
-            result = self._fetch_detail(url, headers)
+            if self._detail_mode == "stealth":
+                result = self._fetch_stealth(url)
+            else:
+                result = self._fetch_http(url, headers=headers)
         except ScraperBlockedError:
             raise
         except Exception as e:
@@ -336,14 +260,13 @@ class ScraplingTransport:
             self._consecutive_decoys += 1
             self._count_failure("detail decoy")
             log.warning(
-                "Decoy detectado (%d consecutivos, modo=%s): %s",
+                "Decoy detectado (%d consecutivos): %s",
                 self._consecutive_decoys,
-                self._detail_mode,
                 url[:80],
             )
             if (
                 self._consecutive_decoys >= MAX_CONSECUTIVE_DECOYS
-                and self._detail_mode == DETAIL_MODE_AUTO
+                and self._detail_mode == "http"
                 and self._stealth_enabled
             ):
                 self._escalate()
@@ -353,10 +276,10 @@ class ScraplingTransport:
         return InfoJobsParser.parse_detail_html(result.html, url=url)
 
     def _escalate(self) -> None:
-        """Activa el modo stealth para los próximos detalles (solo desde modo auto)."""
+        """Activa el modo stealth para los próximos detalles."""
         if not self._stealth_enabled:
             return
-        self._detail_mode = DETAIL_MODE_STEALTH
+        self._detail_mode = "stealth"
         log.warning(
             "%d decoys consecutivos — próximos details irán por browser stealth",
             self._consecutive_decoys,
