@@ -890,3 +890,5 @@ para per-file-ignores. No blocker: ruff format y tests pasan.
 - El run 42 agregó 26 filas nuevas: 14 ofertas reales y 12 respuestas de verificación mal interpretadas. Se enviaron 3 mensajes Telegram; ya no son reversibles desde Git.
 - La DB actual se conservó. `data/jobs.db.v1` es un snapshot del 2026-06-11 (288 ofertas), no restaurar sobre la DB actual (320 ofertas).
 - No hacer más peticiones a InfoJobs hasta acordar una prueba controlada. No modificar keywords, geografía ni límites de búsqueda.
+- La sonda de 2026-10-07 hizo exactamente 3 peticiones HTTP sin persistencia: 1 search devolvió 2 stubs; 2/2 fichas parsearon sin captcha. Una fue un puesto inmobiliario pese a query `Data Analyst`, así que conectividad/parser responden, pero la relevancia de resultados sigue sin verificar.
+- Run 42 tuvo 12 respuestas HTTP 405 con título “¿Eres humano o un robot?” que se insertaron como ofertas. El parser no contemplaba esa firma ni el fetch validaba status/completitud. Por instrucción se eliminaron las 26 ofertas nuevas del run y sus evaluaciones; se preservaron raws/bronze y el registro histórico. Ver ADR-025.

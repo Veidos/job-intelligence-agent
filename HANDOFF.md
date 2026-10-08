@@ -11,6 +11,8 @@
 - `data/jobs.db.v1` es del 2026-06-11; no usar como restauración porque perdería datos posteriores.
 - Run 40 (2026-09-01) funcionó con el scraper anterior; run 41 (2026-10-05), antes del último cambio del scraper, obtuvo 0 raws por los muros nuevos de InfoJobs. Revertir código no revierte el cambio externo del sitio.
 - No se hicieron peticiones a InfoJobs durante el rollback. No lanzar otro run hasta decidir cómo tratar la protección actual y los registros falsos de la DB.
+- Sonda controlada posterior al rollback: 1 búsqueda + 2 fichas HTTP (3 peticiones, callback solo en memoria, sin DB ni Telegram). 3/3 respuestas reales, sin captcha; fichas completas (3.216 y 2.536 chars de descripción). Una coincidió con «Data Analyst»; la otra fue «Agente Inmobiliario - Cantabria», fuera de tema. Esto confirma conectividad puntual, no fiabilidad de una ejecución larga ni precisión de búsqueda.
+- Por petición del usuario, se eliminaron las 26 ofertas del run 42 (IDs 311–336), sus 26 evaluaciones y el rol falso `screening_test_administrator`. Se conservaron 26 scraper raws, 52 bronze rows y `search_runs.id=42`; copia previa íntegra en `data/jobs.db.pre-run42-cleanup-20261008.sqlite`. ADR-025 documenta causa, fallo de revisión y limpieza.
 
 ## Logros de la sesión
 
