@@ -1,18 +1,20 @@
 # HANDOFF.md — Estado de sesión
 
-**Última actualización:** 2026-10-07
-**Fase activa:** Código restaurado al baseline `2dce06a`; pendiente decidir el siguiente fetch
+**Última actualización:** 2026-10-08
+**Fase activa:** Baseline `2dce06a`; próxima revisión: parsing JS de fechas con zona horaria
 
 ## Rollback de código — 2026-10-07
 
 - Revertidos en `main` los cinco commits del 2026-10-05; el código de aplicación vuelve al estado de `2dce06a`.
 - Verificación sobre el estado restaurado: 274 tests pasan en Python 3.11 y 3.14; Ruff limpio.
-- **La base `data/jobs.db` no se revirtió.** Conserva el run 42, sus ofertas, las 12 páginas de verificación mal parseadas y las 3 notificaciones enviadas.
+- La base `data/jobs.db` no se restauró. Se conservaron los registros raw/bronze y el run histórico; las ofertas del run 42 se limpiaron por petición.
 - `data/jobs.db.v1` es del 2026-06-11; no usar como restauración porque perdería datos posteriores.
 - Run 40 (2026-09-01) funcionó con el scraper anterior; run 41 (2026-10-05), antes del último cambio del scraper, obtuvo 0 raws por los muros nuevos de InfoJobs. Revertir código no revierte el cambio externo del sitio.
 - No se hicieron peticiones a InfoJobs durante el rollback. No lanzar otro run hasta decidir cómo tratar la protección actual y los registros falsos de la DB.
 - Sonda controlada posterior al rollback: 1 búsqueda + 2 fichas HTTP (3 peticiones, callback solo en memoria, sin DB ni Telegram). 3/3 respuestas reales, sin captcha; fichas completas (3.216 y 2.536 chars de descripción). Una coincidió con «Data Analyst»; la otra fue «Agente Inmobiliario - Cantabria», fuera de tema. Esto confirma conectividad puntual, no fiabilidad de una ejecución larga ni precisión de búsqueda.
 - Por petición del usuario, se eliminaron las 26 ofertas del run 42 (IDs 311–336), sus 26 evaluaciones y el rol falso `screening_test_administrator`. Se conservaron 26 scraper raws, 52 bronze rows y `search_runs.id=42`; copia previa íntegra en `data/jobs.db.pre-run42-cleanup-20261008.sqlite`. ADR-025 documenta causa, fallo de revisión y limpieza.
+- También se eliminó manualmente la oferta id 49 (`Junior engineer - Sales Department`) y su evaluación: `published_at=2026-06-11T17:04:31.238881+00:00` se convertía en `Invalid Date` en `app.js`, por lo que el filtro >30 días no la ocultaba. Se conservó su raw; copia previa en `data/jobs.db.pre-offer49-delete-20261008.sqlite`.
+- Estado DB tras ambas limpiezas: 317 ofertas; `integrity_check=ok`, 0 referencias FK rotas. La búsqueda temporal del dashboard aún requiere corregir `_parseDate` para sufijos de zona horaria.
 
 ## Logros de la sesión
 

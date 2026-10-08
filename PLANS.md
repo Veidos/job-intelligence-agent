@@ -1,7 +1,7 @@
 # PLANS.md — Estado del Proyecto (Método Ledger)
 
-> **Próximo paso:** Antes de otro pipeline completo, validar offline una barrera que descarte respuestas de verificación humana; no cambiar búsqueda, geografía ni límites.
-> **Sesión 2026-10-08:** Eliminadas por petición las 26 ofertas/evaluaciones del run 42 y el rol falso; datos raw/bronze y fila histórica se conservan. ADR-025. Backup íntegro previo en `data/jobs.db.pre-run42-cleanup-20261008.sqlite`. Código sigue en baseline `2dce06a` / rollback `e26fbbf`; no se hicieron peticiones a InfoJobs para esta limpieza.
+> **Próximo paso:** Corregir y probar `_parseDate` con timestamps que ya traen offset UTC; después validar offline que `hideExpired` oculte ofertas >30 días. No modificar búsqueda, geografía ni límites.
+> **Sesión 2026-10-08:** Run 42 limpiado por petición (26 offers + evaluations; raw/bronze y run audit conservados; ADR-025). Oferta id49 eliminada por fecha con offset mal parseada por el dashboard. Copias previas bajo `data/jobs.db.pre-run42-cleanup-20261008.sqlite` y `data/jobs.db.pre-offer49-delete-20261008.sqlite`. DB actual: 317 ofertas, íntegra. Código de aplicación sigue en baseline `2dce06a` / rollback `e26fbbf`.
 > **Sesión 2026-08-26:** Grammar constraints JSON vía Ollama format (ADR-024) + Run E2E #34 completado (8 ofertas, 7 evaluadas, 3 Telegram, 0 JSON parse failures). 274 tests ✅. GPU offload verificado (gemma4:e4b + qwen2.5:7b). ScraplingTransport activo y funcionando.
 > **Sesión 2026-08-25:** PoC Scrapling (T1-T3 PASS, IP fría) + migración por capas: ADR-023 ScraplingTransport con warming + escalada stealth automática + capa bronze `scraper_raw_html` (HTML gzip antes de parsear) + tests frescura DOM. 265 tests ✅
 > T-8 ✅ — Feedback bot funcional y natural
